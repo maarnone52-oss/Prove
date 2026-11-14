@@ -30,7 +30,7 @@ header{display:flex;align-items:center;gap:6px;padding:6px 10px;padding-top:max(
 #modeBtn.play{background:var(--acc);color:#111;border-color:var(--acc)}
 #main{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
 #canvasWrap{flex:1;position:relative;min-height:120px;order:0}
-#scroller{position:absolute;inset:0;overflow:auto;display:flex;padding:12px;-webkit-overflow-scrolling:touch;background:#0b0d11 radial-gradient(#1d212a 1px,transparent 1.4px) 0 0/14px 14px}
+#scroller{position:absolute;inset:0;overflow:auto;display:flex;padding:12px 12px 64px;-webkit-overflow-scrolling:touch;background:#0b0d11 radial-gradient(#1d212a 1px,transparent 1.4px) 0 0/14px 14px}
 #holder{position:relative;margin:auto;flex:0 0 auto}
 #stage{position:absolute;left:0;top:0;transform-origin:0 0;overflow:hidden;box-shadow:0 0 0 1px #3a4150,0 10px 40px #000a;touch-action:pan-x pan-y}
 #zoomBar{position:absolute;right:8px;bottom:8px;display:flex;gap:4px;align-items:center;background:#000b;border-radius:10px;padding:4px;z-index:5}
@@ -102,6 +102,9 @@ input[type=color]{width:46px;height:34px;border:1px solid var(--line);border-rad
 .hdl.grip:after{content:'✥';width:calc(var(--hd)*2.4);height:calc(var(--hd)*2.4);background:var(--pan);color:#08130c;border-color:#fff;display:flex;align-items:center;justify-content:center;font-size:calc(var(--hd)*1.7);line-height:1;border-radius:30%}
 #sel.pan{outline-color:var(--pan);outline-style:dashed}
 #sel.pan .hdl:not(.grip):after{border-color:var(--pan);background:#eafff1;border-radius:3px}
+.hdl.pgh{z-index:9999}
+.hdl.pgh:after{background:var(--acc);border-color:#fff;border-radius:3px}
+.pgsize{position:absolute;right:calc(var(--hs) * 1.2);bottom:calc(var(--hs) * 0.4);font:600 calc(var(--hd) * 1.1)/1 -apple-system,Arial,sans-serif;color:var(--acc);background:#000a;padding:calc(var(--hd)*.3) calc(var(--hd)*.5);border-radius:calc(var(--hd)*.4);pointer-events:none;z-index:9998}
 .hdl:after{content:'';position:absolute;left:50%;top:50%;width:var(--hd);height:var(--hd);transform:translate(-50%,-50%);background:#fff;border:var(--bw) solid var(--sel);border-radius:50%;box-sizing:border-box}
 .g-island{position:absolute;top:11px;width:126px;height:37px;border-radius:19px;background:#000;z-index:9000;pointer-events:none}
 .g-home{position:absolute;width:134px;height:5px;border-radius:3px;background:#ffffff99;z-index:9000;pointer-events:none}
@@ -273,7 +276,7 @@ var $=function(s){return document.querySelector(s)};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function uid(){return Math.random().toString(36).slice(2,9)}
 function clone(o){return JSON.parse(JSON.stringify(o))}
-var VERSIONE='1.3.2';
+var VERSIONE='1.3.3';
 var ACC='#ff9f1c',TXT='#e8eaf0',DIM='#9aa1ad',P2='#20242d',LINE='#2c313c';
 
 var DEVICES={
@@ -483,11 +486,11 @@ function openProject(p){if(mode==='play')setMode('edit');P=p;fitMode=+P.pageH>0?
 function getSel(){if(!selId)return null;for(var i=0;i<P.elements.length;i++)if(P.elements[i].id===selId)return P.elements[i];return null}
 function byId(id){for(var i=0;i<P.elements.length;i++)if(P.elements[i].id===id)return P.elements[i];return null}
 function nm(id){var e=byId(id);return e?e.name:'?'}
-function dev(){var b=DEVICES[P.device]||DEVICES.iphone15;if(+P.pageH>b.h){var c={};for(var k in b)c[k]=b[k];c.h=+P.pageH;c.n=b.n+' (pagina lunga)';return c}return b}
+function dev(){var b=DEVICES[P.device]||DEVICES.iphone15,H=+P.pageH>0?+P.pageH:b.h,W=+P.pageW>0?+P.pageW:b.w;if(H!==b.h||W!==b.w){var c={};for(var k in b)c[k]=b[k];c.h=H;c.w=W;c.n=b.n+(W!==b.w?' (larghezza '+W+')':'')+(H>b.h?' (pagina lunga)':H<b.h?' (altezza '+H+')':'');if(W!==b.w)c.safeR=b.safeR;return c}return b}
 
 /* ---------- zoom ---------- */
 var fitMode='all';
-function fit(){var d=dev();var W=scroller.clientWidth-24,H=scroller.clientHeight-24;return Math.max(.08,fitMode==='width'?W/d.w:Math.min(W/d.w,H/d.h))}
+function fit(){var d=dev();var W=scroller.clientWidth-24,H=scroller.clientHeight-76;return Math.max(.08,fitMode==='width'?W/d.w:Math.min(W/d.w,H/d.h))}
 function applyZoom(){if(zoomFit)scale=fit();var d=dev();holder.style.width=d.w*scale+'px';holder.style.height=d.h*scale+'px';stage.style.transform='scale('+scale+')';stage.style.setProperty('--hs',(26/scale)+'px');stage.style.setProperty('--hd',(12/scale)+'px');stage.style.setProperty('--rh',(34/scale)+'px');stage.style.setProperty('--bw',(2/scale)+'px');$('#zoomLbl').textContent=Math.round(scale*100)+'%';if(P)gridBg()}
 function zoomBy(f){zoomFit=false;scale=Math.min(4,Math.max(.1,scale*f));applyZoom()}
 
@@ -606,6 +609,9 @@ function segSVG(str,digits,col){
   return '<svg viewBox="-4 -2 '+(x+8)+' 50" preserveAspectRatio="xMidYMid meet" style="width:100%;height:72%;filter:drop-shadow(0 0 3px '+col+'88)"><g transform="skewX(-6) translate(4 0)" fill="'+col+'"><g opacity=".1">'+off+'</g>'+on+'</g></svg>'}
 function hpos(k){return 'left:'+(k.indexOf('w')>=0?'0':k.indexOf('e')>=0?'100%':'50%')+';top:'+(k.indexOf('n')>=0?'0':k.indexOf('s')>=0?'100%':'50%')}
 var bgMode=false;
+function scaleAll(f){var d=dev();P.pageW=Math.round(d.w*f);P.pageH=Math.round(d.h*f);var bw=(DEVICES[P.device]||DEVICES.iphone15).w;if(P.pageW===bw)P.pageW=0;
+  P.elements.forEach(function(e){['x','y','w','h'].forEach(function(k){e[k]=Math.round(e[k]*f)});if(e.fs)e.fs=Math.round(e.fs*f*10)/10;if(e.radius)e.radius=Math.round(e.radius*f);if(e.bw)e.bw=Math.max(1,Math.round(e.bw*f))});
+  zoomFit=true;snapshot();applyZoom();renderStage();renderProps();toast('Contenuto scalato al '+Math.round(f*100)+'%')}
 function inside(a,b){var cx=a.x+a.w/2,cy=a.y+a.h/2;return cx>=b.x&&cx<=b.x+b.w&&cy>=b.y&&cy<=b.y+b.h&&a.w<=b.w+4&&a.h<=b.h+4}
 function kidsOf(p){var i=P.elements.indexOf(p);return P.elements.filter(function(x,j){return x!==p&&j>i&&inside(x,p)}).map(function(x){return {e:x,x:x.x,y:x.y}})}
 function snapG(){return (P.snap!==false&&+P.grid>0)?+P.grid:1}
@@ -625,6 +631,7 @@ function renderStage(){
     h+='<div class="el t-'+e.type+(e.locked?' locked':'')+(!play&&!e.visible?' ghost':'')+(pressId===e.id?' press':'')+'" data-id="'+e.id+'" style="left:'+e.x+'px;top:'+e.y+'px;width:'+e.w+'px;height:'+e.h+'px;z-index:'+(i+1)+';'+wrapStyle(s)+'">'+inner(s,play)+'</div>'});
   h+=guides(d);
   if(!play){var e=getSel();if(e)h+='<div id="sel"'+(e.type==='panel'?' class="pan"':'')+' style="left:'+e.x+'px;top:'+e.y+'px;width:'+e.w+'px;height:'+e.h+'px;'+(+e.rot?'transform:rotate('+(+e.rot)+'deg)':'')+'">'+(e.locked&&e.type!=='panel'?'':(e.type==='panel'?'<div class="rline" style="border-color:var(--pan)"></div><div class="hdl grip" data-d="mv" style="left:50%;top:calc(-1*var(--rh))" title="Trascina per spostare la finestra con il suo contenuto"></div>':'<div class="rline"></div><div class="hdl rot" data-d="rot" style="left:50%;top:calc(-1*var(--rh))"></div>')+['nw','n','ne','e','se','s','sw','w'].map(function(k){return '<div class="hdl" data-d="'+k+'" style="'+hpos(k)+'"></div>'}).join(''))+'</div>'}
+  if(!play&&!getSel()&&!bgMode){h+='<div class="pgsize">'+d.w+' × '+d.h+'</div>'+[['pe','left:calc(100% - var(--hs)/2);top:50%'],['ps','left:50%;top:calc(100% - var(--hs)/2)'],['pse','left:calc(100% - var(--hs)/2 - '+Math.round((d.r||0)*.3)+'px);top:calc(100% - var(--hs)/2 - '+Math.round((d.r||0)*.3)+'px)']].map(function(x){return '<div class="hdl pgh" data-d="'+x[0]+'" style="'+x[1]+'" title="Trascina per cambiare la misura della pagina"></div>'}).join('')}
   if(play&&popId&&RT[popId]){var t=RT[popId],ref=byId(popId),o=opts(t);var top=ref.y+ref.h+4;var ph=o.length*46;if(top+ph>d.h)top=Math.max(0,ref.y-ph-4);
     h+='<div class="pop" data-id="'+t.id+'" style="left:'+ref.x+'px;top:'+top+'px;width:'+Math.max(ref.w,160)+'px">'+o.map(function(x,i){return '<div data-i="'+i+'" class="'+(i==t.value?'s':'')+'">'+esc(x)+'</div>'}).join('')+'</div>'}
   stage.innerHTML=h;
@@ -636,7 +643,8 @@ function select(id){selId=id;renderStage();renderProps();updUI()}
 stage.addEventListener('pointerdown',function(ev){
   if(mode==='play'){playDown(ev);return}
   var hd=ev.target.closest('.hdl'),ex=ev.target.closest('.el'),e;
-  if(hd&&hd.getAttribute('data-d')==='mv'){e=getSel();if(!e)return;drag={k:'mv',sx:ev.clientX,sy:ev.clientY,o:{x:e.x,y:e.y,w:e.w,h:e.h},moved:false,kids:kidsOf(e)}}
+  if(hd&&/^p(e|s|se)$/.test(hd.getAttribute('data-d'))){var dd0=dev();zoomFit=false;drag={k:'page',d:hd.getAttribute('data-d'),sx:ev.clientX,sy:ev.clientY,o:{w:dd0.w,h:dd0.h},moved:false}}
+  else if(hd&&hd.getAttribute('data-d')==='mv'){e=getSel();if(!e)return;drag={k:'mv',sx:ev.clientX,sy:ev.clientY,o:{x:e.x,y:e.y,w:e.w,h:e.h},moved:false,kids:kidsOf(e)}}
   else if(hd&&hd.getAttribute('data-d')==='rot'){e=getSel();if(!e)return;var sr=stage.querySelector('#sel').getBoundingClientRect();drag={k:'rot',cx:sr.left+sr.width/2,cy:sr.top+sr.height/2,o:{rot:e.rot||0},moved:false}}
   else if(hd){e=getSel();if(!e)return;drag={k:'rs',d:hd.getAttribute('data-d'),sx:ev.clientX,sy:ev.clientY,o:{x:e.x,y:e.y,w:e.w,h:e.h},moved:false}}
   else if(ex){var id=ex.getAttribute('data-id'),now=Date.now();
@@ -649,7 +657,12 @@ stage.addEventListener('pointerdown',function(ev){
 stage.addEventListener('pointermove',function(ev){
   if(pinch)return;
   if(mode==='play'){playMove(ev);return}
-  if(!drag)return;var e=getSel();if(!e)return;
+  if(!drag)return;
+  if(drag.k==='page'){var pdx=(ev.clientX-drag.sx)/scale,pdy=(ev.clientY-drag.sy)/scale,pg=snapG();drag.moved=true;
+    if(drag.d.indexOf('e')>=0)P.pageW=Math.max(200,Math.round((drag.o.w+pdx)/pg)*pg);
+    if(drag.d.indexOf('s')>=0)P.pageH=Math.max(200,Math.round((drag.o.h+pdy)/pg)*pg);
+    applyZoom();schedule();return}
+  var e=getSel();if(!e)return;
   if(drag.k==='rot'){var an=Math.atan2(ev.clientY-drag.cy,ev.clientX-drag.cx)*180/Math.PI+90;an=ev.shiftKey?Math.round(an):Math.round(an/15)*15;an=((an%360)+360)%360;if(an!==(+e.rot||0)){e.rot=an;drag.moved=true;schedule();updGeo()}return}
   var dx=(ev.clientX-drag.sx)/scale,dy=(ev.clientY-drag.sy)/scale;
   if(!drag.moved&&Math.abs(dx*scale)<4&&Math.abs(dy*scale)<4)return;
@@ -800,6 +813,8 @@ function renderProps(){
     h+='<div class="row"><label>Risoluzione griglia (punti)</label><input type="number" inputmode="numeric" min="1" max="200" data-pk="grid" value="'+(+P.grid||8)+'"></div>';
     h+='<div class="row"><label>Mostra la griglia</label><input type="checkbox" data-pk="showGrid"'+(P.showGrid!==false?' checked':'')+'></div>';
     h+='<div class="row"><label>Guide (isola, aree sicure)</label><input type="checkbox" data-pk="guides"'+(P.guides?' checked':'')+'></div>';
+    h+='<div class="row"><label>Larghezza pagina</label><input type="number" inputmode="numeric" data-pk="pageW" value="'+(+P.pageW||'')+'" placeholder="'+(DEVICES[P.device]||DEVICES.iphone15).w+'"></div>';
+    h+='<div class="brow"><button class="btn small" data-scale="1">⤢ Scala tutto il contenuto…</button><button class="btn small" data-pgreset="1">Misure del dispositivo</button></div>';
     h+='<div class="row"><label>Altezza pagina (per app che scorrono)</label><input type="number" inputmode="numeric" data-pk="pageH" value="'+(+P.pageH||'')+'" placeholder="'+(DEVICES[P.device]||DEVICES.iphone15).h+'"></div>';
     var cth=themeById(P.theme||'arno');
     h+='<div class="row"><label>Modello grafico</label><button class="btn small" data-themes="1" style="flex:1;text-align:left">🎨 '+esc(cth?cth.name:'—')+' ›</button></div>';
@@ -837,7 +852,7 @@ function renderProps(){
 }
 function updGeo(){var e=getSel();if(!e)return;['x','y','w','h','rot'].forEach(function(k){var n=propsBody.querySelector('[data-k="'+k+'"]');if(n&&document.activeElement!==n)n.value=e[k]})}
 function applyField(t){
-  if(t.getAttribute('data-pk')){var pk=t.getAttribute('data-pk');P[pk]=t.type==='checkbox'?t.checked:(pk==='grid'||pk==='refOp'||pk==='pageH'?+t.value:t.value);if(pk==='grid'){P.grid=Math.max(1,Math.min(200,Math.round(+t.value)||1))}if(pk==='snap'&&t.checked&&!(+P.grid>0))P.grid=8;updGridBtn();if(pk==='pageH'){zoomFit=true;applyZoom()}
+  if(t.getAttribute('data-pk')){var pk=t.getAttribute('data-pk');P[pk]=t.type==='checkbox'?t.checked:(pk==='grid'||pk==='refOp'||pk==='pageH'||pk==='pageW'?+t.value:t.value);if(pk==='pageW'){zoomFit=true;applyZoom()}if(pk==='grid'){P.grid=Math.max(1,Math.min(200,Math.round(+t.value)||1))}if(pk==='snap'&&t.checked&&!(+P.grid>0))P.grid=8;updGridBtn();if(pk==='pageH'){zoomFit=true;applyZoom()}
     if(pk==='device'){zoomFit=true;applyZoom()}if(pk==='name')updUI();renderStage();return true}
   if(t.hasAttribute('data-a')){var e0=getSel();if(!e0)return false;var a=e0.actions[+t.getAttribute('data-a')];if(a)a[t.getAttribute('data-ak')]=t.value;return true}
   var k=t.getAttribute('data-k');if(!k)return false;var e=getSel();if(!e)return false;var v,ty=t.getAttribute('data-t');
@@ -858,6 +873,10 @@ propsBody.addEventListener('click',function(ev){
   var b=ev.target.closest('button');if(!b)return;var e=getSel();
   if(b.getAttribute('data-desel')){select(null);return}
   if(b.getAttribute('data-themes')){showThemes();return}
+  if(b.getAttribute('data-pgreset')){P.pageW=0;P.pageH=0;zoomFit=true;snapshot();applyZoom();renderStage();renderProps();return}
+  if(b.getAttribute('data-scale')){var d0=dev();modal('Scala tutto il contenuto','<p class="hint">Ingrandisce o rimpicciolisce tutti gli elementi e la pagina in proporzione (posizioni, misure, testi, arrotondamenti). Si annulla con ↶.</p><div class="row"><label>Percentuale</label><input type="number" inputmode="numeric" id="scPct" value="100"></div><div class="brow">'+[50,75,90,110,125,150,200].map(function(v){return '<button class="btn small" data-scv="'+v+'">'+v+'%</button>'}).join('')+'</div><p class="hint">Oppure adatta alla larghezza di: <button class="btn small" data-scw="393">iPhone 15 (393)</button> <button class="btn small" data-scw="820">iPad (820)</button> <button class="btn small" data-scw="1280">Mac (1280)</button></p>',
+      [{l:'Annulla'},{l:'Scala',c:'acc',fn:function(){var f=(+$('#scPct').value||100)/100;if(f<=0||f===1)return;scaleAll(f)}}]);
+    $('#modal').querySelector('.mb').addEventListener('click',function(ev2){var v=ev2.target.closest('[data-scv]'),w=ev2.target.closest('[data-scw]');if(v)$('#scPct').value=v.getAttribute('data-scv');if(w)$('#scPct').value=Math.round(+w.getAttribute('data-scw')/d0.w*1000)/10});return}
   if(b.getAttribute('data-refdel')){P.ref='';snapshot();renderStage();renderProps();return}
   if(!e)return;
   if(b.getAttribute('data-clear')){e[b.getAttribute('data-clear')]='';snapshot();renderStage();renderProps()}
@@ -944,7 +963,7 @@ function menuAct(m){
   if(m==='json'){var j=JSON.stringify(P,null,1);modal('Esporta file progetto','<p class="hint">Questo è il progetto completo. Conservalo (Note, File, email) per riaprirlo con «Importa» su un altro dispositivo.</p><textarea class="out" readonly>'+esc(j)+'</textarea>',[{l:'Copia',c:'acc',fn:function(){copyText(j);return false}},{l:'Scarica .json',fn:function(){download(fileName('json'),j,'application/json');return false}},{l:'Chiudi'}]);return}
   if(m==='import'){var body=modal('Importa progetto','<p class="hint">Incolla qui il testo di un progetto esportato (va bene anche il testo «Esporta per Claude»), oppure scegli un file.</p><textarea id="impTxt" placeholder="Incolla qui…"></textarea><div class="brow"><label class="btn">Scegli file…<input type="file" id="impFile" accept=".json,.txt,application/json,text/plain" style="display:none"></label></div>',[{l:'Annulla'},{l:'Importa',c:'acc',fn:doImport}]);
     body.querySelector('#impFile').onchange=function(){var f=this.files&&this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){$('#impTxt').value=r.result};r.readAsText(f)};return}
-  if(m==='help'){modal('Come si usa','<p class="hint"><b>＋ Aggiungi</b>: scegli un elemento, compare al centro dello schermo.<br><b>Spostare</b>: tocca e trascina l\'elemento.<br><b>Ridimensionare</b>: trascina i pallini bianchi.<br><b>Finestre e riquadri di fondo</b>: toccali e compaiono maniglie <b>verdi</b> (gli oggetti le hanno blu): i pallini verdi cambiano le misure, la maniglia ✥ in alto sposta la finestra con tutto il suo contenuto, il doppio tocco apre colori e bordi.<br><b>Sfondi</b> (barra in basso): rende modificabili i riquadri di fondo (posizione, misure, colori, bordi); gli altri elementi vanno in trasparenza finché non lo spegni.<br><b>Griglia ⌗</b> (in basso a destra): accende o spegne l\'aggancio e sceglie la risoluzione in punti.<br><b>Ruotare</b>: trascina il pallino blu ↻ sopra l\'elemento (scatti di 15°), oppure usa ⟲ ⟳ 90° nelle proprietà.<br><b>Importa un\'app</b> (menu ☰): scegli una tua app (ARNOCLICK, ARNOVIDEO, POD Pro Remote) o un file HTML, portala alla schermata giusta e tocca 📸 Cattura: diventa un progetto modificabile. Poi «✉ Invia le modifiche a Claude» prepara il messaggio da incollare in chat.<br><b>Modelli grafici</b> (menu ☰): Mixer, Pannello strumenti, Chiaro… si applicano a tutto il progetto o solo ai nuovi elementi; puoi salvare il tuo stile come modello e richiamarlo.<br><b>Foto di riferimento</b>: tocca uno spazio vuoto, apri ⚙ e mettila dietro lo schermo per ricalcarla.<br><b>Stile</b>: colori, carattere, bordo, ombra, opacità e arrotondamento per ogni elemento; «Copia stile» e «Incolla stile» per uniformarli.<br><b>Proprietà</b>: doppio tocco sull\'elemento o tasto ⚙: testo, colori, valori e misure precise.<br><b>Funzioni</b>: nelle proprietà, «+ Aggiungi funzione» collega un comando a un altro elemento (aumenta, imposta, copia valore, mostra/nascondi, ripetizione a tempo di BPM…).<br><b>▶ Prova</b>: i comandi diventano attivi per provare ergonomia e funzioni; i valori tornano come prima quando esci.<br><b>Livelli</b>: tocca uno spazio vuoto e apri ⚙ per vedere tutti gli elementi, anche quelli nascosti.<br><b>↶ ↷</b>: annulla e ripeti.<br><b>Esporta per Claude</b>: il testo da passarmi per costruire l\'app vera.<br><br>Il lavoro si salva da solo su questo dispositivo; per sicurezza esporta ogni tanto il progetto.<br><br>ARNODESIGN versione '+VERSIONE+' · © 2026 Maurizio Arnone. Tutti i diritti riservati.</p>');return}
+  if(m==='help'){modal('Come si usa','<p class="hint"><b>＋ Aggiungi</b>: scegli un elemento, compare al centro dello schermo.<br><b>Spostare</b>: tocca e trascina l\'elemento.<br><b>Ridimensionare</b>: trascina i pallini bianchi.<br><b>Misura della pagina</b>: con nulla selezionato compaiono i pallini <b>arancioni</b> sul bordo destro e in basso: trascinali per cambiare larghezza e altezza dell\'app; in ⚙ c\'è anche «Scala tutto il contenuto».<br><b>Finestre e riquadri di fondo</b>: toccali e compaiono maniglie <b>verdi</b> (gli oggetti le hanno blu): i pallini verdi cambiano le misure, la maniglia ✥ in alto sposta la finestra con tutto il suo contenuto, il doppio tocco apre colori e bordi.<br><b>Sfondi</b> (barra in basso): rende modificabili i riquadri di fondo (posizione, misure, colori, bordi); gli altri elementi vanno in trasparenza finché non lo spegni.<br><b>Griglia ⌗</b> (in basso a destra): accende o spegne l\'aggancio e sceglie la risoluzione in punti.<br><b>Ruotare</b>: trascina il pallino blu ↻ sopra l\'elemento (scatti di 15°), oppure usa ⟲ ⟳ 90° nelle proprietà.<br><b>Importa un\'app</b> (menu ☰): scegli una tua app (ARNOCLICK, ARNOVIDEO, POD Pro Remote) o un file HTML, portala alla schermata giusta e tocca 📸 Cattura: diventa un progetto modificabile. Poi «✉ Invia le modifiche a Claude» prepara il messaggio da incollare in chat.<br><b>Modelli grafici</b> (menu ☰): Mixer, Pannello strumenti, Chiaro… si applicano a tutto il progetto o solo ai nuovi elementi; puoi salvare il tuo stile come modello e richiamarlo.<br><b>Foto di riferimento</b>: tocca uno spazio vuoto, apri ⚙ e mettila dietro lo schermo per ricalcarla.<br><b>Stile</b>: colori, carattere, bordo, ombra, opacità e arrotondamento per ogni elemento; «Copia stile» e «Incolla stile» per uniformarli.<br><b>Proprietà</b>: doppio tocco sull\'elemento o tasto ⚙: testo, colori, valori e misure precise.<br><b>Funzioni</b>: nelle proprietà, «+ Aggiungi funzione» collega un comando a un altro elemento (aumenta, imposta, copia valore, mostra/nascondi, ripetizione a tempo di BPM…).<br><b>▶ Prova</b>: i comandi diventano attivi per provare ergonomia e funzioni; i valori tornano come prima quando esci.<br><b>Livelli</b>: tocca uno spazio vuoto e apri ⚙ per vedere tutti gli elementi, anche quelli nascosti.<br><b>↶ ↷</b>: annulla e ripeti.<br><b>Esporta per Claude</b>: il testo da passarmi per costruire l\'app vera.<br><br>Il lavoro si salva da solo su questo dispositivo; per sicurezza esporta ogni tanto il progetto.<br><br>ARNODESIGN versione '+VERSIONE+' · © 2026 Maurizio Arnone. Tutti i diritti riservati.</p>');return}
 }
 function themePreview(th){
   var S=[['panel',{x:6,y:6,w:288,h:108,text:''}],['counter',{x:16,y:16,w:112,h:62,text:'BPM',value:120,min:20,max:300,fs:26,pm:false}],['knob',{x:138,y:14,w:60,h:66,text:''}],

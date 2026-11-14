@@ -1,6 +1,6 @@
 // ARNODESIGN: tiene la pagina sul dispositivo per usarla anche senza internet.
 // Cambiare VERSIONE a ogni aggiornamento della pagina.
-const VERSIONE = 'arnodesign-1.3.2';
+const VERSIONE = 'arnodesign-1.3.3';
 const FILE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
