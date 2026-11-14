@@ -352,6 +352,7 @@ body.showhelp .help:not([hidden]){display:block!important}
         <button class="btn play" data-m="play" id="play2" aria-label="Riproduci">▶</button>
         <button class="btn" data-m="ffw" aria-label="Avanti 5 secondi">⏩&#xFE0E;</button>
         <button class="btn" data-m="nextItem" aria-label="Elemento successivo">⏭&#xFE0E;</button>
+        <button class="btn" data-m="frame" aria-label="Esporta il fotogramma">📷</button>
         <span class="lcd" id="clock2">0:00.0</span>
       </div></div>
     <div class="displays">
@@ -393,6 +394,7 @@ body.showhelp .help:not([hidden]){display:block!important}
     <p class="note help" style="text-align:center">⏪︎ ⏩︎ un tocco: salta di 5 secondi · tenendo premuto: scorre veloce mostrando le immagini (più a lungo tieni, più accelera). ⏮︎ ⏭︎ inizio dell'elemento precedente o successivo. Puoi anche trascinare la barra.</p>
     <div class="row c" style="margin-top:12px">
       <button class="btn rec" id="expBtn" disabled>● Esporta MP4</button>
+      <button class="btn" id="frameBtn" disabled>📷 Esporta fotogramma</button>
       <button class="btn sm" id="stopBtn" hidden>■ Ferma esportazione</button>
     </div>
     <p class="note help" style="text-align:center" id="expNoteMac" hidden>Sul Mac il video viene creato dal Mac stesso: molto più veloce del tempo reale e a qualità piena. Alla fine scegli dove salvarlo.</p>
@@ -430,6 +432,11 @@ body.showhelp .help:not([hidden]){display:block!important}
           <option value="10" selected>Alta</option>
           <option value="16">Massima</option>
         </select></label>
+      <label><span class="lbl">Formato del fotogramma</span>
+        <select id="frameFmt">
+          <option value="jpg" selected>JPEG (foto, file più piccolo)</option>
+          <option value="png">PNG (senza perdita di qualità)</option>
+        </select></label>
     </div>
   </section>
 
@@ -439,7 +446,7 @@ body.showhelp .help:not([hidden]){display:block!important}
 
 <script>
 'use strict';
-const VERSION='1.10.2';
+const VERSION='1.11.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -636,7 +643,7 @@ $('helpBtn').onclick=()=>setHelp(!showHelp);setHelp(showHelp);
     const dis=$('playBtn').disabled;document.querySelectorAll('#mirrorBox [data-m]').forEach(b=>b.disabled=dis);}
   requestAnimationFrame(loop);
   $('mirrorBox').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(!b||b.disabled)return;unlockPv();const m=b.dataset.m;
-    if(m==='play')$('playBtn').click();else if(m==='prevItem'||m==='nextItem')$(m).click();
+    if(m==='play')$('playBtn').click();else if(m==='frame')$('frameBtn').click();else if(m==='prevItem'||m==='nextItem')$(m).click();
     else if(items.length&&!exporting)jumpTo(playT+(m==='rew'?-5:5));});})();
 
 /* ---------- timeline ---------- */
@@ -765,7 +772,7 @@ $('clearBtn').onclick=()=>{if(busy||!items.length)return;pushUndo('svuota timeli
 function render(){
   renderLib();renderTrack();
   $('totDur').textContent=fmtT(totalDur());$('totN').textContent=items.length;
-  const none=!items.length;$('expBtn').disabled=none||busy;$('clearBtn').disabled=none||busy;
+  const none=!items.length;$('expBtn').disabled=none||busy;$('frameBtn').disabled=none||busy||frameBusyExp;$('clearBtn').disabled=none||busy;
   updUndo();
   document.querySelectorAll('.tpb').forEach(b=>b.disabled=none||exporting);$('scrub').disabled=none||exporting;
   $('scrub').max=totalDur();
@@ -1071,13 +1078,45 @@ async function nativeSaveChunks(ns,blob,name){   // nell'app il file passa a pez
     const s=await b64(blob.slice(i*CH,(i+1)*CH));ns.postMessage({name,id,index:i,count,base64:s});await sleep(0);}
   setStatus('Scegli dove salvare (per la galleria: «Salva video»).');
 }
-$('saveBtn').onclick=async()=>{if(!lastBlob)return;
-  const ns=nativeSave();if(ns)return nativeSaveChunks(ns,lastBlob,lastName);
-  try{const f=new File([lastBlob],lastName,{type:lastBlob.type});
+async function saveBlob(blob,name){
+  const ns=nativeSave();if(ns)return nativeSaveChunks(ns,blob,name);
+  try{const f=new File([blob],name,{type:blob.type});
     const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
     if(mobile&&navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});return;}}catch(e){if(e&&e.name==='AbortError')return;}
-  const a=document.createElement('a');a.href=URL.createObjectURL(lastBlob);a.download=lastName;document.body.appendChild(a);a.click();
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);
+}
+$('saveBtn').onclick=()=>{if(lastBlob)saveBlob(lastBlob,lastName);};
+
+/* ---------- esportazione del fotogramma nella posizione attuale, alla risoluzione originale ---------- */
+let frameBusyExp=false;
+$('frameBtn').onclick=async()=>{
+  if(frameBusyExp||exporting||!items.length)return;frameBusyExp=true;$('frameBtn').disabled=true;
+  try{
+    await stopPlay();
+    const L=locate(playT),c=items[L.i],png=$('frameFmt').value==='png';
+    setStatus('Preparo il fotogramma…');
+    const cv=document.createElement('canvas');let v=null,t=0;
+    if(c.type==='img'){cv.width=c.el.naturalWidth;cv.height=c.el.naturalHeight;cv.getContext('2d').drawImage(c.el,0,0);}
+    else{
+      v=makeVideo();v.muted=true;v.src=c.url;
+      await once(v,'loadedmetadata',20000);if(v.readyState<2){try{await once(v,'loadeddata',5000);}catch(e){}}
+      await primeVideo(v);
+      t=Math.max(0.001,Math.min(L.off,c.dur-0.02));v.currentTime=t;try{await once(v,'seeked',6000);}catch(e){}
+      if(v.requestVideoFrameCallback)await Promise.race([new Promise(r=>v.requestVideoFrameCallback(()=>r())),sleep(400)]);
+      else await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+      if(v.readyState<2||!v.videoWidth)throw new Error('il fotogramma non è disponibile');
+      cv.width=v.videoWidth;cv.height=v.videoHeight;cv.getContext('2d').drawImage(v,0,0,cv.width,cv.height);
+    }
+    const blob=await new Promise((res,rej)=>{try{cv.toBlob(b=>b?res(b):rej(new Error('immagine non creata')),png?'image/png':'image/jpeg',0.95);}catch(e){rej(e);}});
+    if(v){v.removeAttribute('src');v.load();v.remove();}
+    const base=c.name.replace(/\.[^.]+$/,'').replace(/[^\w\-À-ÿ ]+/g,'_').slice(0,40);
+    const f=Math.floor(t*FPS+1e-6),mm=Math.floor(t/60),ss=Math.floor(t%60),p2=n=>String(n).padStart(2,'0');
+    const name='ARNOVIDEO-'+base+(c.type==='vid'?'-'+p2(mm)+'m'+p2(ss)+'s-f'+p2(f%FPS):'')+(png?'.png':'.jpg');
+    await saveBlob(blob,name);
+    setStatus('Fotogramma '+cv.width+'×'+cv.height+(c.type==='vid'?' di «'+c.name+'» a '+fmtT(t)+' (fotogramma '+(f%FPS)+')':'')+' esportato.');
+  }catch(e){setStatus('Fotogramma non esportato: '+(e&&e.message||e),true);}
+  frameBusyExp=false;$('frameBtn').disabled=!items.length||busy;
 };
 
 /* ---------- annulla / ripeti (fino a 30 livelli) ---------- */
