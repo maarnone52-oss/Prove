@@ -243,19 +243,57 @@ body.showhelp .help:not([hidden]){display:block!important}
 #zslider.drag #zthumb::after{transform:scale(1.15)}
 #zLbl{min-width:70px}
 
-/* === PROVA 14/11/2026: modifiche fatte in ARNODESIGN === */
-/* logo: ARNO sopra, VIDEO sotto e spostato a destra */
-.wordmark .a,.wordmark .b{display:block;text-align:left}
-.wordmark .b{margin-left:86px;margin-top:-12px}
-/* schermo della timeline più piccolo e centrato */
-#mirrorBox{max-width:211px}
-/* anteprima più piccola e centrata */
-#pvScreen{max-width:189px;margin-left:auto;margin-right:auto}
-/* «Adatta» sopra la barra dello zoom, all'altezza del «+» */
-.zoombox{flex-wrap:wrap}
-.zoombox::before{content:'';flex-basis:100%;height:0;order:0}
-#zFit{order:-1;margin:0 78px 6px auto}
-#zslider{margin-left:76px}
+/* === PROVA 14/11/2026 (2ª serie): modifiche fatte in ARNODESIGN sullo schermo iPhone 15 === */
+@media (max-width:520px){
+/* intestazione: riquadro del logo più stretto e alto, ARNO sopra e VIDEO sotto spostato a destra,
+   versione bianca in grassetto a destra, «Aiuto» a sinistra */
+.brand{position:relative;height:146px;margin:4px 0 18px}
+.brand>*{position:absolute;margin:0}
+.wordmark{left:68px;top:calc(-1 * min(29px, max(18px, env(safe-area-inset-top, 0px))));width:238px;height:100px;padding:0;box-sizing:border-box}
+.wordmark .a,.wordmark .b{position:absolute;height:48px;line-height:48px;text-align:center}
+.wordmark .a{left:12px;top:12px;width:129px}
+.wordmark .b{left:96px;top:54px;width:138px}
+.ver{left:218px;top:71px;width:138px;height:26px;line-height:26px;color:#fff;font-size:15px;font-weight:700;letter-spacing:0;white-space:nowrap}
+.ver b{color:#fff}
+#helpBtn{left:18px;top:79px;margin:0;width:77px;min-height:35px;height:35px;padding:0}
+.tag{left:0;right:0;top:129px;line-height:30px}
+/* 1 · elenco: i due pulsanti uno sopra l'altro allineati a destra, elenco più alto */
+#addBtn{min-height:26px;height:26px;width:202px;padding:0;white-space:nowrap;letter-spacing:-.02em;overflow:visible}
+.rack .row.c:has(#addBtn){flex-direction:column;align-items:flex-end;gap:8px;width:202px;margin:-6px auto 0;position:relative;left:2px}
+#allBtn{width:180px;padding:0;white-space:nowrap}
+#lib{min-height:156px;margin-top:10px!important;box-sizing:border-box}
+/* 2 · timeline: «Adatta», zoom e «3.7 s» su una riga subito sotto la timeline; finestra più bassa */
+.under{margin-top:0}
+.zoombox{order:-1;flex:1 1 100%;margin:0;align-items:flex-end}
+#zFit{min-height:25px;height:25px;min-width:58px;width:58px;padding:0;margin:0 0 5px 17px}
+#zslider{flex:1 1 auto;width:auto}
+#zLbl{min-width:64px;width:64px;height:30px;line-height:30px;text-align:right}
+#selBar:empty{display:none}
+.rack:has(#track){padding-bottom:8px;margin-bottom:24px}
+/* 3 · anteprima: schermo nero più grande con bordo, comandi tutti su una riga */
+.rack>.lbl:first-child{margin-bottom:12px}
+.pvbox:not(.float){position:relative}
+.pvbox:not(.float) .pvhead{margin:-3px 0 0;align-items:flex-start;height:44px}
+.pvbox:not(.float) .pvhead .lbl{display:block;width:84px;height:42px;margin:0 0 0 3px}
+.pvbox:not(.float) #pvDetach{min-width:99px;margin:2px 5px 0 0}
+.pvbox:not(.float) .screen{width:332px;height:190px;box-sizing:border-box;margin:0 0 0 -5px;padding:10px;align-items:flex-start}
+.pvbox:not(.float) #cv{width:314px;height:166px;max-width:none;max-height:none;flex:none;object-fit:contain}
+.pvbox:not(.float) #scrub{margin:16px 0 0 3px}
+.pvbox:not(.float) #scrub+.row{display:flex;flex-direction:column;align-items:flex-start;gap:0}
+.pvbox:not(.float) #clock{order:-1;display:block;width:165px;margin:-4px 0 0 159px;line-height:22px}
+.pvbox:not(.float) #status{margin:30px 0 0 0!important}
+.pvbox:not(.float) .transport{flex-wrap:nowrap;justify-content:flex-start;align-items:flex-start;gap:0;margin:12px -12px 0 -5px}
+.pvbox:not(.float) .transport .btn{min-width:58px;width:58px;min-height:45px;height:45px;padding:0}
+.pvbox:not(.float) .transport .btn.big{min-width:78px;width:78px;min-height:52px;height:52px}
+.pvbox:not(.float) #rew{margin-left:8px}
+.pvbox:not(.float) #playBtn{margin-left:6px}
+.pvbox:not(.float) #ffw{margin-left:10px}
+.pvbox:not(.float) #nextItem{margin:2px 0 0 10px}
+.pvbox:not(.float) #speed{position:absolute;right:0;bottom:62px}
+#expBtn{min-height:27px;height:27px;width:166px;padding:0}
+.rack:has(#pvBox){padding-bottom:14px}
+.rack .row.c:has(#expBtn){margin-top:32px!important}
+}
 /* === fine modifiche di prova === */
 </style>
 </head>
