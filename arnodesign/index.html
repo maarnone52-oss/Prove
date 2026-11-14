@@ -1230,6 +1230,10 @@ renderPalette();hist=[JSON.stringify(P)];hi=0;
 document.body.classList.toggle('wide',mq.matches);
 lastSavedJson=JSON.stringify(P);fitMode=+P.pageH>0?'width':'all';applyZoom();renderStage();renderProps();updUI();saveNow();
 initShared();
+/* aperto dal pulsante «✎ Modifica» di una versione di prova: parte subito l'importazione */
+try{var mh=location.hash.match(/^#importa-([a-z0-9-]+)$/i);if(mh){var cart=mh[1].toLowerCase(),fa=null;APPS.forEach(function(a){if(a[1].toLowerCase()==='/prove/'+cart+'/')fa=a});
+  if(!fa)fa=[cart.toUpperCase()+' · versione di prova','/Prove/'+cart+'/'];try{history.replaceState(null,'',location.pathname)}catch(e){}
+  setTimeout(function(){openWiz(fa[0],fa[1],null,window.innerWidth>=700?'ipad':'iphone15')},300)}}catch(e){}
 /* progetti preparati da Claude (file pronti.json pubblicato accanto alla pagina) */
 try{fetch('pronti.json',{cache:'no-cache'}).then(function(r){return r.ok?r.json():null}).then(function(d){if(!d||!Array.isArray(d.projects))return;var seen={};try{seen=JSON.parse(localStorage.getItem('arnodesign.pronti'))||{}}catch(e){}
   var added=[];d.projects.forEach(function(p){if(!p||!p.id||!Array.isArray(p.elements)||seen[p.id+'@'+(p.updated||0)])return;seen[p.id+'@'+(p.updated||0)]=1;var loc=store.projects[p.id];if(loc&&(loc.updated||0)>=(p.updated||0))return;store.projects[p.id]=p;added.push(p);if(SYNC.p)SYNC.p.push(p)});
