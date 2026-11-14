@@ -17,6 +17,6 @@
  {
   "cartella": "arnodesign",
   "nome": "ARNODESIGN",
-  "stato": "1.3.0 in prova: tasto «Sfondi» per modificare i riquadri di fondo, griglia con aggancio a risoluzione regolabile (⌗), import delle versioni di prova"
+  "stato": "1.3.1 in prova: «Sfondi» per spostare e ridimensionare le finestre (con il loro contenuto) e i riquadri, finestre chiamate col loro titolo, griglia con aggancio regolabile (⌗)"
  }
 ]
