@@ -320,6 +320,38 @@ body.showhelp .help:not([hidden]){display:block!important}
 }
 /* === fine modifiche 1.10.1 === */
 
+/* === 1.13.1: ritocchi da ARNODESIGN (iPhone 15) === */
+@media (max-width:520px){
+.ver{left:216px;top:70px}
+/* anteprima sopra la timeline: comandi su tutta la larghezza, volume di ascolto nell'angolo dell'immagine */
+#mirrorBox{position:relative}
+#mirrorBox .mini{position:relative;display:block;height:44px;margin-top:8px}
+#mirrorBox .mini>*{position:absolute;top:0}
+#mirrorBox .mini .btn{min-width:46px;width:46px;height:40px;min-height:40px;padding:0}
+#mirrorBox .mini [data-m=prevItem]{display:none}
+#mirrorBox .mini [data-m=rew]{left:-17px}
+#mirrorBox .mini [data-m=play]{left:39px;width:58px;min-width:58px;top:1px}
+#mirrorBox .mini [data-m=ffw]{left:99px}
+#mirrorBox .mini [data-m=nextItem]{left:153px}
+#mirrorBox .mini [data-m=frame]{left:205px}
+#mirrorBox .mini #clock2{left:259px;top:12px;width:56px;min-width:0}
+/* anteprima principale: comandi un po' più a sinistra */
+.pvbox:not(.float) .transport{margin-left:-17px}
+.pvbox:not(.float) #rew{margin-top:3px}
+.pvbox:not(.float) #playBtn{margin:-5px 0 0 8px}
+.pvbox:not(.float) #ffw{margin:3px 0 0 8px}
+.pvbox:not(.float) #nextItem{margin:1px 0 0 6px}
+/* volume di ascolto: icona nell'angolo in basso a destra di ogni anteprima; toccandola compare il cursore */
+.pvbox:not(.float){position:relative}
+.volrow.corner{position:absolute;z-index:5;display:block}
+#mirrorBox .volrow.corner{left:263px;top:148px}
+.pvbox:not(.float) .volrow.corner{left:271px;top:190px}
+.volrow.corner .vi{display:flex;align-items:center;justify-content:center;width:38px;height:30px;font-size:20px;border-radius:8px;background:rgba(0,0,0,.55)}
+.pvbox:not(.float) .volrow.corner .vi{width:42px;height:38px;font-size:22px}
+.volrow.corner .fader,.volrow.corner .vv{display:none}
+.volrow.corner.open .fader{display:block;position:absolute;right:calc(100% + 6px);top:-2px;width:150px!important;background:rgba(10,4,3,.85);border-radius:8px;border:1px solid #4b5058}
+.volrow.corner.open .vv{display:block;position:absolute;right:calc(100% + 162px);top:6px;background:rgba(10,4,3,.85);border-radius:6px;padding:2px 4px}
+}
 /* === 1.10.2: ritocchi da ARNODESIGN === */
 @media (max-width:520px){
 .tag{top:114px;line-height:31px}
@@ -378,7 +410,7 @@ body.showhelp .help:not([hidden]){display:block!important}
         <button class="btn" data-m="nextItem" aria-label="Elemento successivo">⏭&#xFE0E;</button>
         <button class="btn" data-m="frame" aria-label="Esporta il fotogramma">📷</button>
         <span class="lcd" id="clock2">0:00.0</span>
-        <span class="volrow"><span class="vi" id="monIcon2">🎧</span><span class="fader" id="monFader2" style="width:90px"></span></span>
+        <span class="volrow mon" id="monRow2"><span class="vi" id="monIcon2">🎧</span><span class="fader" id="monFader2" style="width:90px"></span></span>
       </div></div>
     <div class="displays">
       <div class="dwin"><div class="lcd" id="totDur">0:00.0</div><span class="lbl">durata totale</span></div>
@@ -413,7 +445,7 @@ body.showhelp .help:not([hidden]){display:block!important}
       <button class="btn tpb" id="ffw" disabled aria-label="Avanti veloce">⏩︎</button>
       <button class="btn tpb" id="nextItem" disabled aria-label="Elemento successivo">⏭︎</button>
       <span id="speed"></span>
-      <span class="volrow" title="Volume di ascolto (non cambia il video esportato)"><span class="vi" id="monIcon">🎧</span><span class="fader" id="monFader"></span><span class="vv" id="monVal"></span></span>
+      <span class="volrow mon" id="monRow" title="Volume di ascolto (non cambia il video esportato)"><span class="vi" id="monIcon">🎧</span><span class="fader" id="monFader"></span><span class="vv" id="monVal"></span></span>
     </div>
     <div class="pvgrip" id="pvGrip" aria-label="Ridimensiona"></div>
     </div>
@@ -473,7 +505,7 @@ body.showhelp .help:not([hidden]){display:block!important}
 
 <script>
 'use strict';
-const VERSION='1.13.0';
+const VERSION='1.13.1';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -949,6 +981,17 @@ let monPrev=0.8;
 [['monFader','monIcon'],['monFader2','monIcon2']].forEach(([f,ic])=>{makeFader($(f),()=>monVol,v=>{monVol=v;applyMon();},{reset:0.8});
   $(ic).onclick=()=>{if(monVol>0){monPrev=monVol;monVol=0;}else monVol=monPrev||0.8;applyMon();};});
 requestAnimationFrame(applyMon);
+// iPhone: il volume di ascolto sta nell'angolo dell'anteprima; toccando l'icona compare il cursore (fuori dal telefono: l'icona zittisce)
+const narrow=window.matchMedia('(max-width:520px)');
+function placeMon(){const r1=$('monRow'),r2=$('monRow2');
+  if(narrow.matches){$('pvBox').appendChild(r1);$('mirrorBox').appendChild(r2);r1.classList.add('corner');r2.classList.add('corner');}
+  else{$('speed').after(r1);$('clock2').after(r2);[r1,r2].forEach(r=>r.classList.remove('corner','open'));}
+  [$('monFader'),$('monFader2')].forEach(f=>f._pos&&requestAnimationFrame(f._pos));}
+if(narrow.addEventListener)narrow.addEventListener('change',placeMon);placeMon();
+[['monRow','monIcon'],['monRow2','monIcon2']].forEach(([r,ic])=>{const old=$(ic).onclick;$(ic).onclick=e=>{
+  if($(r).classList.contains('corner')){e.stopPropagation();$(r).classList.toggle('open');const f=$(r).querySelector('.fader');if(f&&f._pos)requestAnimationFrame(f._pos);return;}
+  old&&old(e);};});
+document.addEventListener('pointerdown',e=>{document.querySelectorAll('.volrow.corner.open').forEach(r=>{if(!r.contains(e.target))r.classList.remove('open');});});
 // volume della clip che sta suonando: si può cambiare anche durante la riproduzione
 let curClip=null,curPlayer=null;
 function clipGain(c){return Math.max(0,Math.min(1,c&&c.vol!=null?c.vol:1));}
