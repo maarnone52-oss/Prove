@@ -1041,7 +1041,7 @@ function captureDoc(D,W){
   out.push({kind:'text',text:t,x:Math.round(rr.left),y:Math.round(rr.top+sy),w:Math.round(rr.width)+2,h:Math.round(rr.height),color:hex(cs.color),fs:parseFloat(cs.fontSize),bold:+cs.fontWeight>=600,align:cs.textAlign==='center'?'center':(cs.textAlign==='right'||cs.textAlign==='end'?'right':'left'),caps:cs.textTransform==='uppercase',bg:''})});
  return {items:out,H:D.documentElement.scrollHeight,W:D.documentElement.clientWidth,bodyBg:bgOf(D.body)||bgOf(D.documentElement)};
 }
-var APPS=[['ARNOCLICK','/ArnoClick/'],['ARNOVIDEO','/Arnovideo/'],['POD Pro Remote','/pod-pro-remote-ios/'],['ARNOCLICK · versione di prova','/prove/arnoclick/'],['ARNOVIDEO · versione di prova','/prove/arnovideo/'],['POD Pro Remote · versione di prova','/prove/podpro/']];
+var APPS=[['ARNOCLICK','/ArnoClick/'],['ARNOVIDEO','/Arnovideo/'],['POD Pro Remote','/pod-pro-remote-ios/'],['ARNOCLICK · versione di prova','/Prove/arnoclick/'],['ARNOVIDEO · versione di prova','/Prove/arnovideo/'],['POD Pro Remote · versione di prova','/Prove/podpro/']];
 function sameHost(){return location.hostname==='maarnone52-oss.github.io'||location.hostname==='localhost'}
 function startImport(){var on=sameHost();
   var h='<p class="hint"><b>Passo 1 di 3</b> · Scegli l\'app da importare. La vedrai funzionare normalmente: la porti alla schermata che vuoi modificare, io la «fotografo» e la trasformo in elementi ARNODESIGN da spostare, ridimensionare e ricolorare.</p>';
