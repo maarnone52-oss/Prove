@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 <style>
-:root{--bg:#0f1115;--p1:#171a21;--p2:#20242d;--line:#2c313c;--tx:#e8eaf0;--dim:#9aa1ad;--acc:#ff9f1c;--sel:#3fb6ff;--red:#ff5a5f}
+:root{--pan:#2fd27a;--bg:#0f1115;--p1:#171a21;--p2:#20242d;--line:#2c313c;--tx:#e8eaf0;--dim:#9aa1ad;--acc:#ff9f1c;--sel:#3fb6ff;--red:#ff5a5f}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:15px/1.3 -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;overflow:hidden;-webkit-tap-highlight-color:transparent}
 input,textarea{-webkit-user-select:text;user-select:text}
@@ -98,6 +98,10 @@ input[type=color]{width:46px;height:34px;border:1px solid var(--line);border-rad
 .hdl.rot{width:calc(var(--hs)*1.2);height:calc(var(--hs)*1.2)}
 .hdl.rot:after{content:'↻';width:calc(var(--hd)*1.8);height:calc(var(--hd)*1.8);background:var(--sel);color:#fff;border-color:#fff;display:flex;align-items:center;justify-content:center;font-size:calc(var(--hd)*1.3);line-height:1}
 .rline{position:absolute;left:50%;top:calc(-1*var(--rh));height:var(--rh);border-left:var(--bw) solid var(--sel);pointer-events:none}
+.hdl.grip{width:calc(var(--hs)*1.5);height:calc(var(--hs)*1.5)}
+.hdl.grip:after{content:'✥';width:calc(var(--hd)*2.4);height:calc(var(--hd)*2.4);background:var(--pan);color:#08130c;border-color:#fff;display:flex;align-items:center;justify-content:center;font-size:calc(var(--hd)*1.7);line-height:1;border-radius:30%}
+#sel.pan{outline-color:var(--pan);outline-style:dashed}
+#sel.pan .hdl:not(.grip):after{border-color:var(--pan);background:#eafff1;border-radius:3px}
 .hdl:after{content:'';position:absolute;left:50%;top:50%;width:var(--hd);height:var(--hd);transform:translate(-50%,-50%);background:#fff;border:var(--bw) solid var(--sel);border-radius:50%;box-sizing:border-box}
 .g-island{position:absolute;top:11px;width:126px;height:37px;border-radius:19px;background:#000;z-index:9000;pointer-events:none}
 .g-home{position:absolute;width:134px;height:5px;border-radius:3px;background:#ffffff99;z-index:9000;pointer-events:none}
@@ -269,7 +273,7 @@ var $=function(s){return document.querySelector(s)};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function uid(){return Math.random().toString(36).slice(2,9)}
 function clone(o){return JSON.parse(JSON.stringify(o))}
-var VERSIONE='1.3.1';
+var VERSIONE='1.3.2';
 var ACC='#ff9f1c',TXT='#e8eaf0',DIM='#9aa1ad',P2='#20242d',LINE='#2c313c';
 
 var DEVICES={
@@ -602,7 +606,7 @@ function segSVG(str,digits,col){
   return '<svg viewBox="-4 -2 '+(x+8)+' 50" preserveAspectRatio="xMidYMid meet" style="width:100%;height:72%;filter:drop-shadow(0 0 3px '+col+'88)"><g transform="skewX(-6) translate(4 0)" fill="'+col+'"><g opacity=".1">'+off+'</g>'+on+'</g></svg>'}
 function hpos(k){return 'left:'+(k.indexOf('w')>=0?'0':k.indexOf('e')>=0?'100%':'50%')+';top:'+(k.indexOf('n')>=0?'0':k.indexOf('s')>=0?'100%':'50%')}
 var bgMode=false;
-function inside(a,b){return a.x>=b.x-2&&a.y>=b.y-2&&a.x+a.w<=b.x+b.w+2&&a.y+a.h<=b.y+b.h+2}
+function inside(a,b){var cx=a.x+a.w/2,cy=a.y+a.h/2;return cx>=b.x&&cx<=b.x+b.w&&cy>=b.y&&cy<=b.y+b.h&&a.w<=b.w+4&&a.h<=b.h+4}
 function kidsOf(p){var i=P.elements.indexOf(p);return P.elements.filter(function(x,j){return x!==p&&j>i&&inside(x,p)}).map(function(x){return {e:x,x:x.x,y:x.y}})}
 function snapG(){return (P.snap!==false&&+P.grid>0)?+P.grid:1}
 function gridBg(){var play=mode==='play',g=+P.grid||0,on=!play&&g>0&&P.showGrid!==false;
@@ -620,7 +624,7 @@ function renderStage(){
   P.elements.forEach(function(e,i){var s=play?RT[e.id]:e;if(!s)return;if(play&&!s.visible)return;
     h+='<div class="el t-'+e.type+(e.locked?' locked':'')+(!play&&!e.visible?' ghost':'')+(pressId===e.id?' press':'')+'" data-id="'+e.id+'" style="left:'+e.x+'px;top:'+e.y+'px;width:'+e.w+'px;height:'+e.h+'px;z-index:'+(i+1)+';'+wrapStyle(s)+'">'+inner(s,play)+'</div>'});
   h+=guides(d);
-  if(!play){var e=getSel();if(e)h+='<div id="sel" style="left:'+e.x+'px;top:'+e.y+'px;width:'+e.w+'px;height:'+e.h+'px;'+(+e.rot?'transform:rotate('+(+e.rot)+'deg)':'')+'">'+(e.locked&&!(bgMode&&e.type==='panel')?'':'<div class="rline"></div><div class="hdl rot" data-d="rot" style="left:50%;top:calc(-1*var(--rh))"></div>'+['nw','n','ne','e','se','s','sw','w'].map(function(k){return '<div class="hdl" data-d="'+k+'" style="'+hpos(k)+'"></div>'}).join(''))+'</div>'}
+  if(!play){var e=getSel();if(e)h+='<div id="sel"'+(e.type==='panel'?' class="pan"':'')+' style="left:'+e.x+'px;top:'+e.y+'px;width:'+e.w+'px;height:'+e.h+'px;'+(+e.rot?'transform:rotate('+(+e.rot)+'deg)':'')+'">'+(e.locked&&e.type!=='panel'?'':(e.type==='panel'?'<div class="rline" style="border-color:var(--pan)"></div><div class="hdl grip" data-d="mv" style="left:50%;top:calc(-1*var(--rh))" title="Trascina per spostare la finestra con il suo contenuto"></div>':'<div class="rline"></div><div class="hdl rot" data-d="rot" style="left:50%;top:calc(-1*var(--rh))"></div>')+['nw','n','ne','e','se','s','sw','w'].map(function(k){return '<div class="hdl" data-d="'+k+'" style="'+hpos(k)+'"></div>'}).join(''))+'</div>'}
   if(play&&popId&&RT[popId]){var t=RT[popId],ref=byId(popId),o=opts(t);var top=ref.y+ref.h+4;var ph=o.length*46;if(top+ph>d.h)top=Math.max(0,ref.y-ph-4);
     h+='<div class="pop" data-id="'+t.id+'" style="left:'+ref.x+'px;top:'+top+'px;width:'+Math.max(ref.w,160)+'px">'+o.map(function(x,i){return '<div data-i="'+i+'" class="'+(i==t.value?'s':'')+'">'+esc(x)+'</div>'}).join('')+'</div>'}
   stage.innerHTML=h;
@@ -632,7 +636,8 @@ function select(id){selId=id;renderStage();renderProps();updUI()}
 stage.addEventListener('pointerdown',function(ev){
   if(mode==='play'){playDown(ev);return}
   var hd=ev.target.closest('.hdl'),ex=ev.target.closest('.el'),e;
-  if(hd&&hd.getAttribute('data-d')==='rot'){e=getSel();if(!e)return;var sr=stage.querySelector('#sel').getBoundingClientRect();drag={k:'rot',cx:sr.left+sr.width/2,cy:sr.top+sr.height/2,o:{rot:e.rot||0},moved:false}}
+  if(hd&&hd.getAttribute('data-d')==='mv'){e=getSel();if(!e)return;drag={k:'mv',sx:ev.clientX,sy:ev.clientY,o:{x:e.x,y:e.y,w:e.w,h:e.h},moved:false,kids:kidsOf(e)}}
+  else if(hd&&hd.getAttribute('data-d')==='rot'){e=getSel();if(!e)return;var sr=stage.querySelector('#sel').getBoundingClientRect();drag={k:'rot',cx:sr.left+sr.width/2,cy:sr.top+sr.height/2,o:{rot:e.rot||0},moved:false}}
   else if(hd){e=getSel();if(!e)return;drag={k:'rs',d:hd.getAttribute('data-d'),sx:ev.clientX,sy:ev.clientY,o:{x:e.x,y:e.y,w:e.w,h:e.h},moved:false}}
   else if(ex){var id=ex.getAttribute('data-id'),now=Date.now();
     if(id===selId&&now-lastTap<350){lastTap=0;openSheet('props');return}
@@ -939,7 +944,7 @@ function menuAct(m){
   if(m==='json'){var j=JSON.stringify(P,null,1);modal('Esporta file progetto','<p class="hint">Questo è il progetto completo. Conservalo (Note, File, email) per riaprirlo con «Importa» su un altro dispositivo.</p><textarea class="out" readonly>'+esc(j)+'</textarea>',[{l:'Copia',c:'acc',fn:function(){copyText(j);return false}},{l:'Scarica .json',fn:function(){download(fileName('json'),j,'application/json');return false}},{l:'Chiudi'}]);return}
   if(m==='import'){var body=modal('Importa progetto','<p class="hint">Incolla qui il testo di un progetto esportato (va bene anche il testo «Esporta per Claude»), oppure scegli un file.</p><textarea id="impTxt" placeholder="Incolla qui…"></textarea><div class="brow"><label class="btn">Scegli file…<input type="file" id="impFile" accept=".json,.txt,application/json,text/plain" style="display:none"></label></div>',[{l:'Annulla'},{l:'Importa',c:'acc',fn:doImport}]);
     body.querySelector('#impFile').onchange=function(){var f=this.files&&this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){$('#impTxt').value=r.result};r.readAsText(f)};return}
-  if(m==='help'){modal('Come si usa','<p class="hint"><b>＋ Aggiungi</b>: scegli un elemento, compare al centro dello schermo.<br><b>Spostare</b>: tocca e trascina l\'elemento.<br><b>Ridimensionare</b>: trascina i pallini bianchi.<br><b>Sfondi</b> (barra in basso): rende modificabili i riquadri di fondo (posizione, misure, colori, bordi); gli altri elementi vanno in trasparenza finché non lo spegni.<br><b>Griglia ⌗</b> (in basso a destra): accende o spegne l\'aggancio e sceglie la risoluzione in punti.<br><b>Ruotare</b>: trascina il pallino blu ↻ sopra l\'elemento (scatti di 15°), oppure usa ⟲ ⟳ 90° nelle proprietà.<br><b>Importa un\'app</b> (menu ☰): scegli una tua app (ARNOCLICK, ARNOVIDEO, POD Pro Remote) o un file HTML, portala alla schermata giusta e tocca 📸 Cattura: diventa un progetto modificabile. Poi «✉ Invia le modifiche a Claude» prepara il messaggio da incollare in chat.<br><b>Modelli grafici</b> (menu ☰): Mixer, Pannello strumenti, Chiaro… si applicano a tutto il progetto o solo ai nuovi elementi; puoi salvare il tuo stile come modello e richiamarlo.<br><b>Foto di riferimento</b>: tocca uno spazio vuoto, apri ⚙ e mettila dietro lo schermo per ricalcarla.<br><b>Stile</b>: colori, carattere, bordo, ombra, opacità e arrotondamento per ogni elemento; «Copia stile» e «Incolla stile» per uniformarli.<br><b>Proprietà</b>: doppio tocco sull\'elemento o tasto ⚙: testo, colori, valori e misure precise.<br><b>Funzioni</b>: nelle proprietà, «+ Aggiungi funzione» collega un comando a un altro elemento (aumenta, imposta, copia valore, mostra/nascondi, ripetizione a tempo di BPM…).<br><b>▶ Prova</b>: i comandi diventano attivi per provare ergonomia e funzioni; i valori tornano come prima quando esci.<br><b>Livelli</b>: tocca uno spazio vuoto e apri ⚙ per vedere tutti gli elementi, anche quelli nascosti.<br><b>↶ ↷</b>: annulla e ripeti.<br><b>Esporta per Claude</b>: il testo da passarmi per costruire l\'app vera.<br><br>Il lavoro si salva da solo su questo dispositivo; per sicurezza esporta ogni tanto il progetto.<br><br>ARNODESIGN versione '+VERSIONE+' · © 2026 Maurizio Arnone. Tutti i diritti riservati.</p>');return}
+  if(m==='help'){modal('Come si usa','<p class="hint"><b>＋ Aggiungi</b>: scegli un elemento, compare al centro dello schermo.<br><b>Spostare</b>: tocca e trascina l\'elemento.<br><b>Ridimensionare</b>: trascina i pallini bianchi.<br><b>Finestre e riquadri di fondo</b>: toccali e compaiono maniglie <b>verdi</b> (gli oggetti le hanno blu): i pallini verdi cambiano le misure, la maniglia ✥ in alto sposta la finestra con tutto il suo contenuto, il doppio tocco apre colori e bordi.<br><b>Sfondi</b> (barra in basso): rende modificabili i riquadri di fondo (posizione, misure, colori, bordi); gli altri elementi vanno in trasparenza finché non lo spegni.<br><b>Griglia ⌗</b> (in basso a destra): accende o spegne l\'aggancio e sceglie la risoluzione in punti.<br><b>Ruotare</b>: trascina il pallino blu ↻ sopra l\'elemento (scatti di 15°), oppure usa ⟲ ⟳ 90° nelle proprietà.<br><b>Importa un\'app</b> (menu ☰): scegli una tua app (ARNOCLICK, ARNOVIDEO, POD Pro Remote) o un file HTML, portala alla schermata giusta e tocca 📸 Cattura: diventa un progetto modificabile. Poi «✉ Invia le modifiche a Claude» prepara il messaggio da incollare in chat.<br><b>Modelli grafici</b> (menu ☰): Mixer, Pannello strumenti, Chiaro… si applicano a tutto il progetto o solo ai nuovi elementi; puoi salvare il tuo stile come modello e richiamarlo.<br><b>Foto di riferimento</b>: tocca uno spazio vuoto, apri ⚙ e mettila dietro lo schermo per ricalcarla.<br><b>Stile</b>: colori, carattere, bordo, ombra, opacità e arrotondamento per ogni elemento; «Copia stile» e «Incolla stile» per uniformarli.<br><b>Proprietà</b>: doppio tocco sull\'elemento o tasto ⚙: testo, colori, valori e misure precise.<br><b>Funzioni</b>: nelle proprietà, «+ Aggiungi funzione» collega un comando a un altro elemento (aumenta, imposta, copia valore, mostra/nascondi, ripetizione a tempo di BPM…).<br><b>▶ Prova</b>: i comandi diventano attivi per provare ergonomia e funzioni; i valori tornano come prima quando esci.<br><b>Livelli</b>: tocca uno spazio vuoto e apri ⚙ per vedere tutti gli elementi, anche quelli nascosti.<br><b>↶ ↷</b>: annulla e ripeti.<br><b>Esporta per Claude</b>: il testo da passarmi per costruire l\'app vera.<br><br>Il lavoro si salva da solo su questo dispositivo; per sicurezza esporta ogni tanto il progetto.<br><br>ARNODESIGN versione '+VERSIONE+' · © 2026 Maurizio Arnone. Tutti i diritti riservati.</p>');return}
 }
 function themePreview(th){
   var S=[['panel',{x:6,y:6,w:288,h:108,text:''}],['counter',{x:16,y:16,w:112,h:62,text:'BPM',value:120,min:20,max:300,fs:26,pm:false}],['knob',{x:138,y:14,w:60,h:66,text:''}],
