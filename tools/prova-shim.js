@@ -29,7 +29,7 @@
     var m=location.pathname.match(/\/Prove\/([^\/]+)\//i),app=m?m[1]:'',edit=app&&app.toLowerCase()!=='arnodesign';
     var b=document.createElement(edit?'a':'div');b.id='provaBadge';b.textContent=edit?'PROVA · ✎ Modifica':'PROVA';
     if(edit){b.href=location.pathname.replace(/\/[^\/]+\/[^\/]*$/,'/')+'arnodesign/#importa-'+app;b.title='Apri questa app in ARNODESIGN per modificarne la grafica'}
-    b.style.cssText='position:fixed;z-index:2147483647;left:50%;transform:translateX(-50%);top:env(safe-area-inset-top,0);margin-top:2px;background:#e0262b;color:#fff;font:700 11px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:1.5px;padding:5px 10px;border-radius:0 0 8px 8px;box-shadow:0 2px 6px #0008;opacity:.95;text-decoration:none;white-space:nowrap;'+(edit?'':'pointer-events:none;left:auto;right:8px;transform:none;top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 70px);border-radius:8px;');
+    b.style.cssText='position:fixed;z-index:2147483647;left:50%;transform:translateX(-50%);top:env(safe-area-inset-top,0);margin-top:2px;background:#e0262b;color:#fff;font:700 11px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:1.5px;padding:5px 10px;border-radius:0 0 8px 8px;box-shadow:0 2px 6px #0008;opacity:.95;text-decoration:none;white-space:nowrap;'+(edit?'':'pointer-events:none;left:8px;right:auto;transform:none;top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 72px);border-radius:8px;');
     document.body.appendChild(b)}
   function mark(){badge();try{if(document.title.indexOf('PROVA')!==0)document.title='PROVA – '+document.title}catch(e){}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mark);else mark();

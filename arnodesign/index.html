@@ -20,6 +20,7 @@ button{font-family:inherit;cursor:pointer}
 #app{display:flex;flex-direction:column;height:100%;height:100dvh}
 header{display:flex;align-items:center;gap:6px;padding:6px 10px;padding-top:max(6px,env(safe-area-inset-top));padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right));background:var(--p1);border-bottom:1px solid var(--line);flex:0 0 auto}
 .brand{font-weight:800;letter-spacing:.4px;font-size:15px;margin-right:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand{min-width:0;flex:1 1 auto}.hb{flex:0 0 auto}
 .brand b{color:var(--acc)}
 .brand small{display:block;font-weight:400;font-size:11px;color:var(--dim);letter-spacing:0;overflow:hidden;text-overflow:ellipsis}
 .hb{background:var(--p2);border:1px solid var(--line);color:var(--tx);border-radius:9px;height:36px;min-width:38px;padding:0 10px;font-size:16px;white-space:nowrap}
@@ -33,6 +34,10 @@ header{display:flex;align-items:center;gap:6px;padding:6px 10px;padding-top:max(
 #holder{position:relative;margin:auto;flex:0 0 auto}
 #stage{position:absolute;left:0;top:0;transform-origin:0 0;overflow:hidden;box-shadow:0 0 0 1px #3a4150,0 10px 40px #000a;touch-action:pan-x pan-y}
 #zoomBar{position:absolute;right:8px;bottom:8px;display:flex;gap:4px;align-items:center;background:#000b;border-radius:10px;padding:4px;z-index:5}
+#stage.bgmode .el:not(.t-panel){opacity:.25;pointer-events:none}
+#stage.bgmode .el.t-panel{touch-action:none}
+.fb.on{color:var(--acc);background:#ff9f1c1f}
+#zGrid.on{background:var(--acc);color:#111;border-color:var(--acc)}
 #zoomBar button{background:var(--p2);border:1px solid var(--line);color:var(--tx);border-radius:7px;height:30px;min-width:32px;font-size:14px}
 #zoomLbl{font-size:11px;color:var(--dim);min-width:36px;text-align:center}
 .sheet{display:none;flex-direction:column;background:var(--p1);border-top:1px solid var(--line);min-height:0;order:1}
@@ -233,7 +238,7 @@ body.wide .mbox{border-radius:16px}
   <div id="main">
     <section id="canvasWrap">
       <div id="scroller"><div id="holder"><div id="stage" class="edit"></div></div></div>
-      <div id="zoomBar"><button id="zOut">−</button><span id="zoomLbl">100%</span><button id="zIn">+</button><button id="zFit">Adatta</button></div>
+      <div id="zoomBar"><button id="zOut">−</button><span id="zoomLbl">100%</span><button id="zIn">+</button><button id="zFit">Adatta</button><button id="zGrid" title="Griglia e aggancio">⌗</button></div>
     </section>
     <aside id="palette" class="sheet">
       <div class="sh"><span>Aggiungi elemento</span><button class="x" data-close>✕</button></div>
@@ -250,6 +255,7 @@ body.wide .mbox{border-radius:16px}
     <button class="fb" id="fDup">⧉<small>Duplica</small></button>
     <button class="fb" id="fUp">⤒<small>Avanti</small></button>
     <button class="fb" id="fDown">⤓<small>Indietro</small></button>
+    <button class="fb" id="fBg">▭<small>Sfondi</small></button>
     <button class="fb" id="fDel">🗑<small>Elimina</small></button>
   </footer>
 </div>
@@ -263,7 +269,7 @@ var $=function(s){return document.querySelector(s)};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function uid(){return Math.random().toString(36).slice(2,9)}
 function clone(o){return JSON.parse(JSON.stringify(o))}
-var VERSIONE='1.2.1';
+var VERSIONE='1.3.0';
 var ACC='#ff9f1c',TXT='#e8eaf0',DIM='#9aa1ad',P2='#20242d',LINE='#2c313c';
 
 var DEVICES={
@@ -478,7 +484,7 @@ function dev(){var b=DEVICES[P.device]||DEVICES.iphone15;if(+P.pageH>b.h){var c=
 /* ---------- zoom ---------- */
 var fitMode='all';
 function fit(){var d=dev();var W=scroller.clientWidth-24,H=scroller.clientHeight-24;return Math.max(.08,fitMode==='width'?W/d.w:Math.min(W/d.w,H/d.h))}
-function applyZoom(){if(zoomFit)scale=fit();var d=dev();holder.style.width=d.w*scale+'px';holder.style.height=d.h*scale+'px';stage.style.transform='scale('+scale+')';stage.style.setProperty('--hs',(26/scale)+'px');stage.style.setProperty('--hd',(12/scale)+'px');stage.style.setProperty('--rh',(34/scale)+'px');stage.style.setProperty('--bw',(2/scale)+'px');$('#zoomLbl').textContent=Math.round(scale*100)+'%'}
+function applyZoom(){if(zoomFit)scale=fit();var d=dev();holder.style.width=d.w*scale+'px';holder.style.height=d.h*scale+'px';stage.style.transform='scale('+scale+')';stage.style.setProperty('--hs',(26/scale)+'px');stage.style.setProperty('--hd',(12/scale)+'px');stage.style.setProperty('--rh',(34/scale)+'px');stage.style.setProperty('--bw',(2/scale)+'px');$('#zoomLbl').textContent=Math.round(scale*100)+'%';if(P)gridBg()}
 function zoomBy(f){zoomFit=false;scale=Math.min(4,Math.max(.1,scale*f));applyZoom()}
 
 /* ---------- render ---------- */
@@ -595,19 +601,24 @@ function segSVG(str,digits,col){
     var dt='<circle cx="'+(x+29)+'" cy="42" r="2.6"/>';if(c.dot)on+=dt;else off+=dt;x+=33});
   return '<svg viewBox="-4 -2 '+(x+8)+' 50" preserveAspectRatio="xMidYMid meet" style="width:100%;height:72%;filter:drop-shadow(0 0 3px '+col+'88)"><g transform="skewX(-6) translate(4 0)" fill="'+col+'"><g opacity=".1">'+off+'</g>'+on+'</g></svg>'}
 function hpos(k){return 'left:'+(k.indexOf('w')>=0?'0':k.indexOf('e')>=0?'100%':'50%')+';top:'+(k.indexOf('n')>=0?'0':k.indexOf('s')>=0?'100%':'50%')}
+var bgMode=false;
+function snapG(){return (P.snap!==false&&+P.grid>0)?+P.grid:1}
+function gridBg(){var play=mode==='play',g=+P.grid||0,on=!play&&g>0&&P.showGrid!==false;
+  if(!on){stage.style.backgroundImage='none';stage.style.backgroundSize='';return}
+  var sp=g;while(sp*scale<7)sp*=2;var c=P.snap!==false?'#ffffff1f':'#ffffff10';
+  stage.style.backgroundImage='linear-gradient(to right,'+c+' 1px,transparent 1px),linear-gradient(to bottom,'+c+' 1px,transparent 1px)';
+  stage.style.backgroundSize=sp+'px '+sp+'px'}
 function renderStage(){
   var d=dev(),play=mode==='play';
   stage.className=play?'play':'edit';
   stage.style.width=d.w+'px';stage.style.height=d.h+'px';stage.style.backgroundColor=P.bg;stage.style.borderRadius=(d.r||0)+'px';
-  var g=+P.grid||0;
-  stage.style.backgroundImage=(!play&&g)?'radial-gradient(#ffffff1c 1px,transparent 1.3px)':'none';
-  stage.style.backgroundSize=g?(g*2)+'px '+(g*2)+'px':'';
+  if(bgMode&&!play)stage.classList.add('bgmode');gridBg();
   var h='';
   if(!play&&P.ref)h+='<img class="refimg" src="'+P.ref+'" style="opacity:'+((P.refOp==null?40:+P.refOp)/100)+'" alt="">';
   P.elements.forEach(function(e,i){var s=play?RT[e.id]:e;if(!s)return;if(play&&!s.visible)return;
     h+='<div class="el t-'+e.type+(e.locked?' locked':'')+(!play&&!e.visible?' ghost':'')+(pressId===e.id?' press':'')+'" data-id="'+e.id+'" style="left:'+e.x+'px;top:'+e.y+'px;width:'+e.w+'px;height:'+e.h+'px;z-index:'+(i+1)+';'+wrapStyle(s)+'">'+inner(s,play)+'</div>'});
   h+=guides(d);
-  if(!play){var e=getSel();if(e)h+='<div id="sel" style="left:'+e.x+'px;top:'+e.y+'px;width:'+e.w+'px;height:'+e.h+'px;'+(+e.rot?'transform:rotate('+(+e.rot)+'deg)':'')+'">'+(e.locked?'':'<div class="rline"></div><div class="hdl rot" data-d="rot" style="left:50%;top:calc(-1*var(--rh))"></div>'+['nw','n','ne','e','se','s','sw','w'].map(function(k){return '<div class="hdl" data-d="'+k+'" style="'+hpos(k)+'"></div>'}).join(''))+'</div>'}
+  if(!play){var e=getSel();if(e)h+='<div id="sel" style="left:'+e.x+'px;top:'+e.y+'px;width:'+e.w+'px;height:'+e.h+'px;'+(+e.rot?'transform:rotate('+(+e.rot)+'deg)':'')+'">'+(e.locked&&!(bgMode&&e.type==='panel')?'':'<div class="rline"></div><div class="hdl rot" data-d="rot" style="left:50%;top:calc(-1*var(--rh))"></div>'+['nw','n','ne','e','se','s','sw','w'].map(function(k){return '<div class="hdl" data-d="'+k+'" style="'+hpos(k)+'"></div>'}).join(''))+'</div>'}
   if(play&&popId&&RT[popId]){var t=RT[popId],ref=byId(popId),o=opts(t);var top=ref.y+ref.h+4;var ph=o.length*46;if(top+ph>d.h)top=Math.max(0,ref.y-ph-4);
     h+='<div class="pop" data-id="'+t.id+'" style="left:'+ref.x+'px;top:'+top+'px;width:'+Math.max(ref.w,160)+'px">'+o.map(function(x,i){return '<div data-i="'+i+'" class="'+(i==t.value?'s':'')+'">'+esc(x)+'</div>'}).join('')+'</div>'}
   stage.innerHTML=h;
@@ -623,7 +634,7 @@ stage.addEventListener('pointerdown',function(ev){
   else if(hd){e=getSel();if(!e)return;drag={k:'rs',d:hd.getAttribute('data-d'),sx:ev.clientX,sy:ev.clientY,o:{x:e.x,y:e.y,w:e.w,h:e.h},moved:false}}
   else if(ex){var id=ex.getAttribute('data-id'),now=Date.now();
     if(id===selId&&now-lastTap<350){lastTap=0;openSheet('props');return}
-    lastTap=now;if(id!==selId)select(id);e=getSel();if(!e||e.locked)return;
+    lastTap=now;if(id!==selId)select(id);e=getSel();if(!e||(e.locked&&!(bgMode&&e.type==='panel')))return;
     drag={k:'mv',sx:ev.clientX,sy:ev.clientY,o:{x:e.x,y:e.y,w:e.w,h:e.h},moved:false}}
   else{if(selId)select(null);return}
   ev.preventDefault();try{stage.setPointerCapture(ev.pointerId)}catch(_){}
@@ -635,7 +646,7 @@ stage.addEventListener('pointermove',function(ev){
   if(drag.k==='rot'){var an=Math.atan2(ev.clientY-drag.cy,ev.clientX-drag.cx)*180/Math.PI+90;an=ev.shiftKey?Math.round(an):Math.round(an/15)*15;an=((an%360)+360)%360;if(an!==(+e.rot||0)){e.rot=an;drag.moved=true;schedule();updGeo()}return}
   var dx=(ev.clientX-drag.sx)/scale,dy=(ev.clientY-drag.sy)/scale;
   if(!drag.moved&&Math.abs(dx*scale)<4&&Math.abs(dy*scale)<4)return;
-  drag.moved=true;var o=drag.o,g=+P.grid||1,sn=function(v){return Math.round(v/g)*g};
+  drag.moved=true;var o=drag.o,g=snapG(),sn=function(v){return Math.round(v/g)*g};
   if(drag.k==='mv'){e.x=sn(o.x+dx);e.y=sn(o.y+dy)}
   else if(+e.rot){var th=(+e.rot)*Math.PI/180,co=Math.cos(th),si=Math.sin(th),lx=dx*co+dy*si,ly=-dx*si+dy*co,dd=drag.d,
       sx=dd.indexOf('e')>=0?1:dd.indexOf('w')>=0?-1:0,sy=dd.indexOf('s')>=0?1:dd.indexOf('n')>=0?-1:0;
@@ -778,7 +789,9 @@ function renderProps(){
     h+='<div class="row"><label>Nome</label><input type="text" data-pk="name" value="'+esc(P.name)+'"></div>';
     h+='<div class="row"><label>Dispositivo</label><select data-pk="device">'+Object.keys(DEVICES).map(function(k){return '<option value="'+k+'"'+(P.device===k?' selected':'')+'>'+DEVICES[k].n+' ('+DEVICES[k].w+'×'+DEVICES[k].h+')</option>'}).join('')+'</select></div>';
     h+='<div class="row"><label>Sfondo</label><input type="color" data-pk="bg" value="'+P.bg+'"></div>';
-    h+='<div class="row"><label>Griglia magnetica</label><select data-pk="grid">'+[[0,'Spenta'],[4,'4 punti'],[8,'8 punti'],[16,'16 punti']].map(function(o){return '<option value="'+o[0]+'"'+(+P.grid===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select></div>';
+    h+='<div class="row"><label>Aggancio alla griglia</label><input type="checkbox" data-pk="snap"'+(P.snap!==false&&+P.grid>0?' checked':'')+'></div>';
+    h+='<div class="row"><label>Risoluzione griglia (punti)</label><input type="number" inputmode="numeric" min="1" max="200" data-pk="grid" value="'+(+P.grid||8)+'"></div>';
+    h+='<div class="row"><label>Mostra la griglia</label><input type="checkbox" data-pk="showGrid"'+(P.showGrid!==false?' checked':'')+'></div>';
     h+='<div class="row"><label>Guide (isola, aree sicure)</label><input type="checkbox" data-pk="guides"'+(P.guides?' checked':'')+'></div>';
     h+='<div class="row"><label>Altezza pagina (per app che scorrono)</label><input type="number" inputmode="numeric" data-pk="pageH" value="'+(+P.pageH||'')+'" placeholder="'+(DEVICES[P.device]||DEVICES.iphone15).h+'"></div>';
     var cth=themeById(P.theme||'arno');
@@ -817,7 +830,7 @@ function renderProps(){
 }
 function updGeo(){var e=getSel();if(!e)return;['x','y','w','h','rot'].forEach(function(k){var n=propsBody.querySelector('[data-k="'+k+'"]');if(n&&document.activeElement!==n)n.value=e[k]})}
 function applyField(t){
-  if(t.getAttribute('data-pk')){var pk=t.getAttribute('data-pk');P[pk]=t.type==='checkbox'?t.checked:(pk==='grid'||pk==='refOp'||pk==='pageH'?+t.value:t.value);if(pk==='pageH'){zoomFit=true;applyZoom()}
+  if(t.getAttribute('data-pk')){var pk=t.getAttribute('data-pk');P[pk]=t.type==='checkbox'?t.checked:(pk==='grid'||pk==='refOp'||pk==='pageH'?+t.value:t.value);if(pk==='grid'){P.grid=Math.max(1,Math.min(200,Math.round(+t.value)||1))}if(pk==='snap'&&t.checked&&!(+P.grid>0))P.grid=8;updGridBtn();if(pk==='pageH'){zoomFit=true;applyZoom()}
     if(pk==='device'){zoomFit=true;applyZoom()}if(pk==='name')updUI();renderStage();return true}
   if(t.hasAttribute('data-a')){var e0=getSel();if(!e0)return false;var a=e0.actions[+t.getAttribute('data-a')];if(a)a[t.getAttribute('data-ak')]=t.value;return true}
   var k=t.getAttribute('data-k');if(!k)return false;var e=getSel();if(!e)return false;var v,ty=t.getAttribute('data-t');
@@ -861,7 +874,7 @@ function addEl(type,label,ov,exact){
   var T=TYPES[type],base=label||T.label,n=1;while(P.elements.some(function(x){return x.name===base+' '+n}))n++;
   var e=mk(type,{});if(exact)styleFromTheme(e,{types:{}},true);var o2=clone(ov||{});for(var kk in o2)e[kk]=o2[kk];e.name=base+' '+n;
   var d=dev(),cx=(scroller.scrollLeft+scroller.clientWidth/2-holder.offsetLeft)/scale,cy=(scroller.scrollTop+scroller.clientHeight/2-holder.offsetTop)/scale;
-  var g=+P.grid||1;e.x=Math.round(Math.max(0,Math.min(d.w-e.w,cx-e.w/2))/g)*g;e.y=Math.round(Math.max(0,Math.min(d.h-e.h,cy-e.h/2))/g)*g;
+  var g=snapG();e.x=Math.round(Math.max(0,Math.min(d.w-e.w,cx-e.w/2))/g)*g;e.y=Math.round(Math.max(0,Math.min(d.h-e.h,cy-e.h/2))/g)*g;
   P.elements.push(e);selId=e.id;snapshot();if(!document.body.classList.contains('wide'))closeSheets();renderStage();renderProps();updUI();
 }
 
@@ -876,11 +889,18 @@ $('#fDup').onclick=function(){var e=getSel();if(!e)return;var c=clone(e);c.id=ui
 $('#fUp').onclick=function(){var e=getSel();if(!e)return;var i=P.elements.indexOf(e);if(i<P.elements.length-1){P.elements.splice(i,1);P.elements.splice(i+1,0,e);snapshot();renderStage();renderProps()}};
 $('#fDown').onclick=function(){var e=getSel();if(!e)return;var i=P.elements.indexOf(e);if(i>0){P.elements.splice(i,1);P.elements.splice(i-1,0,e);snapshot();renderStage();renderProps()}};
 $('#fDel').onclick=delSel;
+$('#fBg').onclick=function(){bgMode=!bgMode;this.classList.toggle('on',bgMode);var e=getSel();if(bgMode&&e&&e.type!=='panel')selId=null;renderStage();renderProps();updUI();
+  toast(bgMode?'Modifica sfondi: tocca un riquadro per spostarlo o ridimensionarlo; doppio tocco per colori e bordi. Gli altri elementi sono in trasparenza.':'Modifica sfondi terminata')};
+function updGridBtn(){var b=$('#zGrid');if(!b)return;var on=P.snap!==false&&+P.grid>0;b.classList.toggle('on',on);b.textContent=on?'⌗ '+P.grid:'⌗'}
+$('#zGrid').onclick=function(){var cur=+P.grid||8;
+  var b=modal('Griglia e aggancio','<p class="hint">Con l\'aggancio attivo, spostamenti e ridimensionamenti scattano sulla griglia.</p><div class="row"><label>Aggancio attivo</label><input type="checkbox" id="gSnap"'+(P.snap!==false&&+P.grid>0?' checked':'')+'></div><div class="row"><label>Risoluzione (punti)</label><input type="number" inputmode="numeric" min="1" max="200" id="gRes" value="'+cur+'"></div><div class="brow">'+[1,2,4,5,8,10,16,20,25,50].map(function(v){return '<button class="btn small" data-gv="'+v+'">'+v+'</button>'}).join('')+'</div><div class="row"><label>Mostra la griglia</label><input type="checkbox" id="gShow"'+(P.showGrid!==false?' checked':'')+'></div>',
+    [{l:'Annulla'},{l:'Applica',c:'acc',fn:function(){P.grid=Math.max(1,Math.min(200,Math.round(+$('#gRes').value)||8));P.snap=$('#gSnap').checked;P.showGrid=$('#gShow').checked;snapshot();renderStage();renderProps();updGridBtn();toast(P.snap?'Aggancio a '+P.grid+' punti':'Aggancio spento')}}]);
+  b.addEventListener('click',function(ev){var x=ev.target.closest('[data-gv]');if(x){$('#gRes').value=x.getAttribute('data-gv');$('#gSnap').checked=true}})};
 function delSel(){var e=getSel();if(!e)return;P.elements.splice(P.elements.indexOf(e),1);P.elements.forEach(function(x){x.actions=(x.actions||[]).filter(function(a){return a.target!==e.id});x.actions.forEach(function(a){if(a.bpmFrom===e.id)a.bpmFrom=''})});selId=null;snapshot();renderStage();renderProps();updUI()}
 $('#undoB').onclick=undo;$('#redoB').onclick=redo;
 $('#modeBtn').onclick=function(){setMode(mode==='play'?'edit':'play')};
 $('#zIn').onclick=function(){zoomBy(1.25)};$('#zOut').onclick=function(){zoomBy(0.8)};$('#zFit').onclick=function(){if(zoomFit)fitMode=fitMode==='all'?'width':'all';zoomFit=true;applyZoom();toast(fitMode==='width'?'Adattato alla larghezza: scorri per vedere il resto':'Schermo intero')};
-function updUI(){
+function updUI(){updGridBtn();
   $('#undoB').disabled=hi<=0||mode==='play';$('#redoB').disabled=hi>=hist.length-1||mode==='play';
   var no=!getSel()||mode==='play';['#fDup','#fUp','#fDown','#fDel'].forEach(function(s){$(s).disabled=no});
   $('#fAdd').disabled=$('#fProps').disabled=mode==='play';
@@ -917,7 +937,7 @@ function menuAct(m){
   if(m==='json'){var j=JSON.stringify(P,null,1);modal('Esporta file progetto','<p class="hint">Questo è il progetto completo. Conservalo (Note, File, email) per riaprirlo con «Importa» su un altro dispositivo.</p><textarea class="out" readonly>'+esc(j)+'</textarea>',[{l:'Copia',c:'acc',fn:function(){copyText(j);return false}},{l:'Scarica .json',fn:function(){download(fileName('json'),j,'application/json');return false}},{l:'Chiudi'}]);return}
   if(m==='import'){var body=modal('Importa progetto','<p class="hint">Incolla qui il testo di un progetto esportato (va bene anche il testo «Esporta per Claude»), oppure scegli un file.</p><textarea id="impTxt" placeholder="Incolla qui…"></textarea><div class="brow"><label class="btn">Scegli file…<input type="file" id="impFile" accept=".json,.txt,application/json,text/plain" style="display:none"></label></div>',[{l:'Annulla'},{l:'Importa',c:'acc',fn:doImport}]);
     body.querySelector('#impFile').onchange=function(){var f=this.files&&this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){$('#impTxt').value=r.result};r.readAsText(f)};return}
-  if(m==='help'){modal('Come si usa','<p class="hint"><b>＋ Aggiungi</b>: scegli un elemento, compare al centro dello schermo.<br><b>Spostare</b>: tocca e trascina l\'elemento.<br><b>Ridimensionare</b>: trascina i pallini bianchi.<br><b>Ruotare</b>: trascina il pallino blu ↻ sopra l\'elemento (scatti di 15°), oppure usa ⟲ ⟳ 90° nelle proprietà.<br><b>Importa un\'app</b> (menu ☰): scegli una tua app (ARNOCLICK, ARNOVIDEO, POD Pro Remote) o un file HTML, portala alla schermata giusta e tocca 📸 Cattura: diventa un progetto modificabile. Poi «✉ Invia le modifiche a Claude» prepara il messaggio da incollare in chat.<br><b>Modelli grafici</b> (menu ☰): Mixer, Pannello strumenti, Chiaro… si applicano a tutto il progetto o solo ai nuovi elementi; puoi salvare il tuo stile come modello e richiamarlo.<br><b>Foto di riferimento</b>: tocca uno spazio vuoto, apri ⚙ e mettila dietro lo schermo per ricalcarla.<br><b>Stile</b>: colori, carattere, bordo, ombra, opacità e arrotondamento per ogni elemento; «Copia stile» e «Incolla stile» per uniformarli.<br><b>Proprietà</b>: doppio tocco sull\'elemento o tasto ⚙: testo, colori, valori e misure precise.<br><b>Funzioni</b>: nelle proprietà, «+ Aggiungi funzione» collega un comando a un altro elemento (aumenta, imposta, copia valore, mostra/nascondi, ripetizione a tempo di BPM…).<br><b>▶ Prova</b>: i comandi diventano attivi per provare ergonomia e funzioni; i valori tornano come prima quando esci.<br><b>Livelli</b>: tocca uno spazio vuoto e apri ⚙ per vedere tutti gli elementi, anche quelli nascosti.<br><b>↶ ↷</b>: annulla e ripeti.<br><b>Esporta per Claude</b>: il testo da passarmi per costruire l\'app vera.<br><br>Il lavoro si salva da solo su questo dispositivo; per sicurezza esporta ogni tanto il progetto.<br><br>ARNODESIGN versione '+VERSIONE+' · © 2026 Maurizio Arnone. Tutti i diritti riservati.</p>');return}
+  if(m==='help'){modal('Come si usa','<p class="hint"><b>＋ Aggiungi</b>: scegli un elemento, compare al centro dello schermo.<br><b>Spostare</b>: tocca e trascina l\'elemento.<br><b>Ridimensionare</b>: trascina i pallini bianchi.<br><b>Sfondi</b> (barra in basso): rende modificabili i riquadri di fondo (posizione, misure, colori, bordi); gli altri elementi vanno in trasparenza finché non lo spegni.<br><b>Griglia ⌗</b> (in basso a destra): accende o spegne l\'aggancio e sceglie la risoluzione in punti.<br><b>Ruotare</b>: trascina il pallino blu ↻ sopra l\'elemento (scatti di 15°), oppure usa ⟲ ⟳ 90° nelle proprietà.<br><b>Importa un\'app</b> (menu ☰): scegli una tua app (ARNOCLICK, ARNOVIDEO, POD Pro Remote) o un file HTML, portala alla schermata giusta e tocca 📸 Cattura: diventa un progetto modificabile. Poi «✉ Invia le modifiche a Claude» prepara il messaggio da incollare in chat.<br><b>Modelli grafici</b> (menu ☰): Mixer, Pannello strumenti, Chiaro… si applicano a tutto il progetto o solo ai nuovi elementi; puoi salvare il tuo stile come modello e richiamarlo.<br><b>Foto di riferimento</b>: tocca uno spazio vuoto, apri ⚙ e mettila dietro lo schermo per ricalcarla.<br><b>Stile</b>: colori, carattere, bordo, ombra, opacità e arrotondamento per ogni elemento; «Copia stile» e «Incolla stile» per uniformarli.<br><b>Proprietà</b>: doppio tocco sull\'elemento o tasto ⚙: testo, colori, valori e misure precise.<br><b>Funzioni</b>: nelle proprietà, «+ Aggiungi funzione» collega un comando a un altro elemento (aumenta, imposta, copia valore, mostra/nascondi, ripetizione a tempo di BPM…).<br><b>▶ Prova</b>: i comandi diventano attivi per provare ergonomia e funzioni; i valori tornano come prima quando esci.<br><b>Livelli</b>: tocca uno spazio vuoto e apri ⚙ per vedere tutti gli elementi, anche quelli nascosti.<br><b>↶ ↷</b>: annulla e ripeti.<br><b>Esporta per Claude</b>: il testo da passarmi per costruire l\'app vera.<br><br>Il lavoro si salva da solo su questo dispositivo; per sicurezza esporta ogni tanto il progetto.<br><br>ARNODESIGN versione '+VERSIONE+' · © 2026 Maurizio Arnone. Tutti i diritti riservati.</p>');return}
 }
 function themePreview(th){
   var S=[['panel',{x:6,y:6,w:288,h:108,text:''}],['counter',{x:16,y:16,w:112,h:62,text:'BPM',value:120,min:20,max:300,fs:26,pm:false}],['knob',{x:138,y:14,w:60,h:66,text:''}],
@@ -1211,7 +1231,7 @@ document.addEventListener('keydown',function(ev){
   if(!e)return;
   if(ev.key==='Backspace'||ev.key==='Delete'){ev.preventDefault();delSel();return}
   if(mod&&ev.key.toLowerCase()==='d'){ev.preventDefault();$('#fDup').onclick();return}
-  var st=ev.shiftKey?(+P.grid||10):1,mv={ArrowLeft:[-st,0],ArrowRight:[st,0],ArrowUp:[0,-st],ArrowDown:[0,st]}[ev.key];
+  var st=ev.shiftKey?(snapG()>1?snapG():10):1,mv={ArrowLeft:[-st,0],ArrowRight:[st,0],ArrowUp:[0,-st],ArrowDown:[0,st]}[ev.key];
   if(mv&&!e.locked){ev.preventDefault();e.x+=mv[0];e.y+=mv[1];renderStage();updGeo();clearTimeout(window._nT);window._nT=setTimeout(snapshot,300)}
 });
 document.addEventListener('gesturestart',function(e){e.preventDefault()});
