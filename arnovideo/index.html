@@ -205,6 +205,11 @@ body:not(.showhelp) #kzone::after{display:none!important}
  background:radial-gradient(circle at 35% 35%,#ff9b8a,#ff4530 55%,#b0200d);border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.8),0 0 10px #ff4530}
 #phead.drag #pknob{transform:scale(1.2)}
 #phead::before{content:"";position:absolute;top:0;left:-6px;border:7px solid transparent;border-top-color:#ff4530}
+/* timeline molto compressa: clip strette */
+.tclip.narrow .tname,.tclip.narrow .tdur{display:none}.tclip.narrow .tgrip{left:7px;width:16px}
+.tclip.tiny .trim,.tclip.tiny .tgrip,.tclip.tiny .tiles i b{display:none}.tclip.tiny{border-width:1px}
+.tclip.narrow .trim{width:7px}.tclip.narrow .trim::before{width:2px;border:0;background:rgba(0,0,0,.55)}
+#ins::after{content:"inserisci qui";position:absolute;top:-20px;left:50%;transform:translateX(-50%);white-space:nowrap;font:700 10px Helvetica,Arial;color:#06210f;background:#46ff7a;border-radius:4px;padding:1px 5px}
 #ins{position:absolute;top:24px;bottom:2px;width:4px;margin-left:-2px;background:#46ff7a;border-radius:2px;box-shadow:0 0 10px #46ff7a;display:none;z-index:4}
 .dragghost{position:fixed;z-index:90;pointer-events:none;opacity:.92;border-radius:8px;overflow:hidden;box-shadow:0 14px 30px rgba(0,0,0,.8);border:2px solid #46ff7a;
  width:120px;height:68px;background:#000 center/contain no-repeat}
@@ -586,6 +591,13 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
         <div class="row" style="margin-top:6px;flex-wrap:nowrap"><span class="lcd" id="spaceLcd" style="font-size:16px;flex:1">–</span><button class="btn sm" id="cacheBtn" type="button">Svuota cache</button></div>
         <div class="ramrow"><span class="lbl">cache in RAM</span><span class="lcd g" id="ramLcd">–</span></div>
         <div id="cacheRes" hidden></div></label>
+      <label id="macZoomRow" hidden><span class="lbl">Dimensione dell'interfaccia (Mac)</span>
+        <select id="macZoomSel">
+          <option value="1">100% (normale)</option>
+          <option value="0.85">85%</option>
+          <option value="0.75">75%</option>
+          <option value="0.5">50% (massimo spazio di lavoro)</option>
+        </select></label>
       <label id="uisRow" hidden><span class="lbl">Dimensione dell'interfaccia</span>
         <select id="uisSel">
           <option value="1">100% (normale)</option>
@@ -623,7 +635,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.31.0';
+const VERSION='1.32.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1034,6 +1046,11 @@ $('helpBtn').onclick=()=>setHelp(!showHelp);
 (function(){if(!/iPhone|iPod/i.test(navigator.userAgent)){try{localStorage.removeItem('arnovideo.uiScale');}catch(e){}return;}   // solo iPhone
   let v=1;try{v=parseFloat(localStorage.getItem('arnovideo.uiScale'))||1;}catch(e){}$('uisRow').hidden=false;$('uisSel').value=v<0.7?'0.6':v<0.999?'0.8':'1';
   $('uisSel').onchange=async()=>{try{localStorage.setItem('arnovideo.uiScale',$('uisSel').value);}catch(e){}setStatus('Cambio la dimensione…');try{await saveNow();}catch(e){}location.reload();};})();
+(function(){const nr=nativeRender();if(!nr)return;   // app del Mac: la pagina si rimpicciolisce come con ⌘− in Safari
+  let z=1;try{z=parseFloat(localStorage.getItem('arnovideo-maczoom'))||1;}catch(e){}
+  $('macZoomRow').hidden=false;$('macZoomSel').value=String(z);if(z!==1)nr.postMessage({cmd:'zoom',value:z});
+  $('macZoomSel').onchange=()=>{const v=parseFloat($('macZoomSel').value);try{localStorage.setItem('arnovideo-maczoom',String(v));}catch(e){}
+    nr.postMessage({cmd:'zoom',value:v});setTimeout(()=>{fitCv&&fitCv();render();},300);};})();
 setHelp(showHelp);
 
 /* ---------- anteprima ripetuta sopra la timeline (copia dell'anteprima principale) ---------- */
@@ -1056,12 +1073,13 @@ setHelp(showHelp);
 
 /* ---------- timeline ---------- */
 let pps=40,autoFit=true,selId=null,layout=[];   // pixel per secondo; posizioni degli elementi
-const FPS=30,TILE_W=Math.round(84*16/9),PPS_MIN=2,PPS_MAX=TILE_W*FPS;   // al massimo: un riquadro = un fotogramma
-function computeLayout(){let x=0;layout=items.map(c=>{const w=Math.max(56,c.dur*pps);const r={x,w};x+=w+2;return r;});return x;}
+const FPS=30,TILE_W=Math.round(84*16/9),PPS_MIN=0.15,PPS_MAX=TILE_W*FPS;   // al massimo: un riquadro = un fotogramma
+function computeLayout(){let x=0;layout=items.map(c=>{const w=Math.max(10,c.dur*pps);const r={x,w};x+=w+2;return r;});return x;}
 function tToX(t){let acc=0;for(let i=0;i<items.length;i++){const d=items[i].dur,L=layout[i];if(t<=acc+d||i===items.length-1)return L.x+Math.min(1,Math.max(0,(t-acc)/d))*L.w;acc+=d;}return 0;}
 function xToT(x){let acc=0;for(let i=0;i<items.length;i++){const L=layout[i],d=items[i].dur;if(x<L.x+L.w+2||i===items.length-1)return acc+Math.min(1,Math.max(0,(x-L.x)/L.w))*d;acc+=d;}return 0;}
 function fitZoom(){const W=$('track').clientWidth-24,tot=totalDur();if(!tot||W<50)return;
-  pps=Math.max(PPS_MIN,Math.min(PPS_MAX,(W-items.length*4)/tot));}
+  pps=Math.max(PPS_MIN,Math.min(PPS_MAX,(W-items.length*2)/tot));computeLayout();
+  for(let k=0;k<20&&layout.length&&layout[layout.length-1].x+layout[layout.length-1].w>W&&pps>PPS_MIN;k++){pps=Math.max(PPS_MIN,pps*0.93);computeLayout();}}   // le clip corte occupano comunque un minimo: si stringe ancora
 function zoomLabel(){const sec=TILE_W/pps,f=Math.round(sec*FPS);
   $('zLbl').textContent=f<=1?'1 fotogramma':sec<1?f+' fotogrammi':sec<60?sec.toFixed(sec<10?1:0)+' s':(sec/60).toFixed(1)+' min';
   $('zLbl').title='Durata di ogni riquadro della timeline';
@@ -1082,7 +1100,7 @@ function renderTrack(){
   const mEnd=music.reduce((a,mc)=>Math.max(a,mc.start+mc.dur),0);
   $('trackIn').style.width=Math.max(Math.max(total,tToXe(mEnd))+40,$('track').clientWidth)+'px';
   items.forEach((c,i)=>{const L=layout[i],d=document.createElement('div');
-    d.className='tclip '+c.type+(c.id===selId?' sel':'');d.dataset.id=c.id;d.style.width=L.w+'px';
+    d.className='tclip '+c.type+(c.id===selId?' sel':'')+(L.w<70?' narrow':'')+(L.w<30?' tiny':'');d.dataset.id=c.id;d.style.width=L.w+'px';
     d.innerHTML='<div class="tiles"></div><div class="tname"></div><div class="tdur">'+fmtT(c.dur)+'</div><div class="tgrip">⠿</div>'+
       (c.type==='vid'&&clipGain(c)<0.995?'<div class="tvol">'+(clipGain(c)===0?'🔇':'🔈 '+Math.round(clipGain(c)*100)+'%')+'</div>':'')+
       '<div class="trim l" data-side="l" title="Taglia l\'inizio"></div><div class="trim r" data-side="r" title="Taglia la fine"></div>';
@@ -1148,7 +1166,7 @@ function paintAudio(v0,v1){
     const pk=c.type==='vid'?peaksOf(c.media):null;
     const msg=c.type==='img'?'foto · nessun audio':c.media.noAudio?'senza audio':pk?'':c.media.peakFail?'audio presente · forma d\'onda non disponibile':'forma d\'onda in preparazione…';
     let inner='';
-    if(c.type==='vid'&&!c.media.noAudio){const ai=aIn(c),ao=aOut(c),xl=ai/c.dur*L.w,xr=L.w-ao/c.dur*L.w;
+    if(c.type==='vid'&&!c.media.noAudio&&L.w>=60){const ai=aIn(c),ao=aOut(c),xl=ai/c.dur*L.w,xr=L.w-ao/c.dur*L.w;
       if(ai>0)inner+='<div class="amute" style="left:0;width:'+xl+'px"></div>';
       if(ao>0)inner+='<div class="amute" style="left:'+xr+'px;right:0"></div>';
       inner+='<div class="atrim l'+(ai>0?' cut':'')+'" data-id="'+c.id+'" data-side="l" style="left:'+xl+'px"></div>'+
