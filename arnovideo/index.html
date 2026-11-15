@@ -136,7 +136,6 @@ button{font:inherit;color:var(--text);cursor:pointer}
 .volrow .vi{font-size:18px;cursor:pointer;min-width:24px;text-align:center}
 .volrow .vv{font:700 12px "SF Mono",Menlo,monospace;color:#ffb21e;min-width:38px}
 .tclip .tvol{position:absolute;left:44px;bottom:3px;font:700 10px "SF Mono",Menlo,monospace;color:#fff;background:rgba(0,0,0,.65);border-radius:4px;padding:0 4px;pointer-events:none}
-#contBtn.on{background:linear-gradient(180deg,#5cff8e,#1fbf55);color:#06210f;border-color:#8affb0;border-bottom-color:#0b5a25}
 .ramrow{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
 #ramLcd{font-size:14px}
 #cacheRes{margin-top:8px;background:#0a0403;border:1px solid #46ff7a;border-radius:8px;padding:8px 10px;font:600 13px/1.5 "SF Mono",Menlo,monospace;color:#cfe9d6}
@@ -495,7 +494,6 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
     <div class="tlbar">
       <button class="btn xs" id="undoBtn" disabled>↶ <span id="undoN"></span></button>
       <button class="btn xs" id="redoBtn" disabled>↷ <span id="redoN"></span></button>
-      <button class="btn xs" id="contBtn" title="Play continuo: dopo ogni spostamento della posizione la riproduzione riparte da sola" style="padding:0 10px">▶ Continuo</button>
       <span class="sp"></span>
       <button class="btn xs" id="clearBtn" disabled>Svuota</button>
     </div>
@@ -600,7 +598,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.24.5';
+const VERSION='1.25.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -818,7 +816,7 @@ async function grabAt(v,t,W,H){
 let thumbReq=0;
 function nativeThumbsRaw(m,times,exact){const nr=nativeRender();if(!nr)return Promise.resolve(null);
   const id='t'+(++thumbReq);
-  return new Promise(r=>{const to=setTimeout(()=>{delete arnoNative._wait[id];r(null);},20000);
+  return new Promise(r=>{const to=setTimeout(()=>{delete arnoNative._wait[id];r(null);},90000);
     arnoNative._wait[id]=a=>{clearTimeout(to);r(Array.isArray(a)&&a.length===times.length?a:null);};
     nr.postMessage({cmd:'thumbs',id,key:m.name+'|'+((m.file&&m.file.size)||m.size||0),times,exact:!!exact});});}
 // il Mac deve conoscere il file: se è stato trascinato nella finestra o il progetto viene da un'altra cartella, glielo si manda
@@ -1196,10 +1194,11 @@ async function runFrames(){if(frameBusy)return;frameBusy=true;
     // solo quelli ancora visibili, prima quelli dello stesso file
     for(let i=frameQ.length-1;i>=0;i--)if(!frameWanted.has(frameQ[i].key))frameQ.splice(i,1);
     if(!frameQ.length)break;
-    const m=frameQ[0].m,batch=frameQ.filter(q=>q.m===m).slice(0,12);batch.forEach(q=>frameQ.splice(frameQ.indexOf(q),1));
+    const m=frameQ[0].m,batch=frameQ.filter(q=>q.m===m).slice(0,nativeRender()?4:12);batch.forEach(q=>frameQ.splice(frameQ.indexOf(q),1));
     const times=batch.map(q=>q.fi/FPS+0.001);
-    const nat=await nativeThumbs(m,times,true,true);
-    if(nat){batch.forEach((q,i)=>{if(nat[i])cachePut(q.key,nat[i]);});continue;}   // sul Mac non si usa il lettore della pagina (le immagini resterebbero vuote)
+    const nat=await nativeThumbs(m,times,false,true);   // con un decimo di secondo di tolleranza: molto più veloce sui video dell'iPhone
+    if(nat){batch.forEach((q,i)=>{if(nat[i])cachePut(q.key,nat[i]);});continue;}
+    if(nativeRender()){batch.forEach(q=>{if((q.tries=(q.tries||0)+1)<3)frameQ.push(q);});await sleep(1500);continue;}   // nell'app Mac il lettore della pagina darebbe immagini nere: si riprova più tardi   // sul Mac non si usa il lettore della pagina (le immagini resterebbero vuote)
     let v=frameVideos.get(m);
     if(!v){frameVideos.clear();
       v=poolLoad(poolVideo(1),m.url);frameVideos.set(m,v);
@@ -1713,13 +1712,9 @@ async function startPlay(){
 async function stopPlay(){if(!playing)return;stopReq=true;await runP;while(playing)await sleep(10);}
 $('playBtn').onclick=()=>{unlockPv();if(playing)stopPlay();else startPlay();};
 
-// play continuo: dopo ogni riposizionamento la riproduzione riparte da sola
-let contPlay=false;try{contPlay=localStorage.getItem('arnovideo-continuo')==='1';}catch(e){}
-function setCont(v){contPlay=v;$('contBtn').classList.toggle('on',v);$('contBtn').textContent=v?'▶ Continuo ✓':'▶ Continuo';
-  try{localStorage.setItem('arnovideo-continuo',v?'1':'0');}catch(e){}}
-$('contBtn').onclick=()=>{setCont(!contPlay);if(!contPlay&&playing)stopPlay();};   // spento: si ferma anche la riproduzione   // solo acceso/spento: la riproduzione la avvia ▶ (o lo spostamento del cursore, se acceso)setCont(contPlay);
+try{localStorage.removeItem('arnovideo-continuo');}catch(e){}
 async function waitStopped(){let n=0;while(playing&&n++<300)await sleep(10);}   // aspetta che la fermata in corso sia finita
-const resumeAfter=was=>(was||contPlay)&&playT<totalDur()-0.05&&items.length&&!exporting;
+const resumeAfter=was=>was&&playT<totalDur()-0.05&&items.length&&!exporting;
 async function jumpTo(t){const was=playing;await stopPlay();showFrame(t);revealHead();if(resumeAfter(was)){seekWant=null;await waitStopped();startPlay();}}
 $('prevItem').onclick=()=>{unlockPv();if(!items.length)return;const L=locate(playT);
   const s=startOf(L.i);jumpTo(playT-s>1||L.i===0?s:startOf(L.i-1));};
