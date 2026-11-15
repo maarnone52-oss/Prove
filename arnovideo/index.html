@@ -600,7 +600,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.22.2';
+const VERSION='1.23.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -653,6 +653,90 @@ async function addFiles(files){if(!files.length||busy)return;
   setStatus('File caricati: trascinali nella timeline.');
   runCopies();
 }
+/* ---------- conversione di un file audio (MP3, WAV…) in AAC (.m4a) ----------
+   Mac (app): la fa il Mac. Altrove: codificatore AAC del sistema (WebCodecs); se manca, registrazione in tempo reale. */
+function m4aFile(sr,ch,asc,frames){   // impacchetta i pacchetti AAC in un file .m4a
+  const n=frames.length,dur=n*1024,B=[];
+  const u32=v=>[v>>>24&255,v>>>16&255,v>>>8&255,v&255],u16=v=>[v>>8&255,v&255],str=t=>[...t].map(c=>c.charCodeAt(0));
+  const box=(t,...parts)=>{const body=[].concat(...parts);return u32(body.length+8).concat(str(t),body);};
+  const full=(t,vf,...parts)=>box(t,u32(vf),...parts);
+  const desc=(tag,body)=>[tag,0x80,0x80,0x80,body.length].concat(body);
+  const esds=full('esds',0,desc(3,[0,0,0].concat(desc(4,[0x40,0x15,0,0,0].concat(u32(256000),u32(256000),desc(5,[...asc]))),desc(6,[2]))));
+  const mp4a=box('mp4a',[0,0,0,0,0,0],u16(1),[0,0,0,0,0,0,0,0],u16(ch),u16(16),[0,0,0,0],u32(sr*65536>>>0),esds);
+  const sizes=[];frames.forEach(f=>sizes.push(...u32(f.length)));
+  const mtx=[].concat(u32(0x10000),u32(0),u32(0),u32(0),u32(0x10000),u32(0),u32(0),u32(0),u32(0x40000000));
+  const ftyp=box('ftyp',str('M4A '),u32(0),str('M4A mp42isom'));
+  const mk=co=>box('moov',
+    full('mvhd',0,u32(0),u32(0),u32(sr),u32(dur),u32(0x10000),u16(0x100),[0,0,0,0,0,0,0,0,0,0],mtx,new Array(24).fill(0),u32(2)),
+    box('trak',full('tkhd',7,u32(0),u32(0),u32(1),u32(0),u32(dur),[0,0,0,0,0,0,0,0],u16(0),u16(0),u16(0x100),u16(0),mtx,u32(0),u32(0)),
+      box('mdia',full('mdhd',0,u32(0),u32(0),u32(sr),u32(dur),u16(0x55c4),u16(0)),
+        full('hdlr',0,u32(0),str('soun'),u32(0),u32(0),u32(0),str('SoundHandler'),[0]),
+        box('minf',full('smhd',0,u32(0)),box('dinf',full('dref',0,u32(1),full('url ',1))),
+          box('stbl',full('stsd',0,u32(1),mp4a),full('stts',0,u32(1),u32(n),u32(1024)),full('stsc',0,u32(1),u32(1),u32(n),u32(1)),
+            full('stsz',0,u32(0),u32(n),sizes),full('stco',0,u32(1),u32(co)))))));
+  let moov=mk(0);const off=ftyp.length+moov.length+8;moov=mk(off);
+  let tot=0;frames.forEach(f=>tot+=f.length);
+  return new Blob([new Uint8Array(ftyp),new Uint8Array(moov),new Uint8Array(u32(tot+8).concat(str('mdat'))),...frames],{type:'audio/mp4'});}
+async function aacWebCodecs(ab,prog){
+  if(typeof AudioEncoder==='undefined'||typeof AudioData==='undefined')return null;
+  const sr=ab.sampleRate,ch=Math.min(2,ab.numberOfChannels),cfg={codec:'mp4a.40.2',sampleRate:sr,numberOfChannels:ch,bitrate:256000,aac:{format:'aac'}};
+  try{const sp=await AudioEncoder.isConfigSupported(cfg);if(!sp||!sp.supported)return null;}catch(e){return null;}
+  const frames=[];let asc=null,err=null;
+  const enc=new AudioEncoder({output:(c,meta)=>{let b=new Uint8Array(c.byteLength);c.copyTo(b);
+      if(b.length>7&&b[0]===0xFF&&(b[1]&0xF6)===0xF0)b=b.subarray((b[1]&1)?7:9);   // eventuale intestazione ADTS
+      frames.push(b);if(meta&&meta.decoderConfig&&meta.decoderConfig.description)asc=new Uint8Array(meta.decoderConfig.description.buffer||meta.decoderConfig.description);},
+    error:e=>{err=e;}});
+  enc.configure(cfg);
+  const L=ab.length,FR=sr,chans=[];for(let c=0;c<ch;c++)chans.push(ab.getChannelData(c));
+  for(let i=0;i<L&&!err;i+=FR){const n=Math.min(FR,L-i),data=new Float32Array(n*ch);
+    for(let c=0;c<ch;c++)data.set(chans[c].subarray(i,i+n),c*n);
+    const ad=new AudioData({format:'f32-planar',sampleRate:sr,numberOfFrames:n,numberOfChannels:ch,timestamp:Math.round(i/sr*1e6),data});
+    enc.encode(ad);ad.close();prog(i/L);
+    while(enc.encodeQueueSize>8)await sleep(5);if((i/FR)%10===0)await sleep(0);}
+  await enc.flush();try{enc.close();}catch(e){}
+  if(err)throw err;if(!frames.length)return null;
+  if(!asc){const R=[96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000,7350],fi=R.indexOf(sr);
+    asc=new Uint8Array([(2<<3)|(fi>>1),((fi&1)<<7)|(ch<<3)]);}
+  return m4aFile(sr,ch,asc,frames);}
+async function aacRealtime(ab,prog){   // ultima possibilità: si registra il brano mentre suona (in silenzio), dura quanto il brano
+  if(typeof MediaRecorder==='undefined'||!MediaRecorder.isTypeSupported||!MediaRecorder.isTypeSupported('audio/mp4'))return null;
+  audioInit();const d=actx.createMediaStreamDestination(),src=actx.createBufferSource();src.buffer=ab;src.connect(d);
+  const rec=new MediaRecorder(d.stream,{mimeType:'audio/mp4',audioBitsPerSecond:256000}),parts=[];
+  rec.ondataavailable=e=>{if(e.data&&e.data.size)parts.push(e.data);};
+  const fin=new Promise(r=>rec.onstop=r);rec.start(1000);const t0=actx.currentTime;src.start();
+  await new Promise(r=>{src.onended=r;const iv=setInterval(()=>{prog((actx.currentTime-t0)/ab.duration);if(!src.buffer)clearInterval(iv);},250);src.addEventListener('ended',()=>clearInterval(iv));});
+  rec.stop();await fin;try{src.disconnect();}catch(e){}
+  return new Blob(parts,{type:'audio/mp4'});}
+function nativeAAC(m){const nr=nativeRender();if(!nr)return Promise.resolve(null);const id='a'+(++thumbReq),key=m.name+'|'+((m.file&&m.file.size)||m.size||0);
+  const b64=part=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const s=String(r.result);res(s.slice(s.indexOf(',')+1));};r.onerror=()=>rej(r.error);r.readAsDataURL(part);});
+  return (async()=>{
+    const miss=await new Promise(r=>{const cid='c'+(++thumbReq);arnoNative._wait[cid]=r;nr.postMessage({cmd:'check',id:cid,keys:[key]});setTimeout(()=>{if(arnoNative._wait[cid]){delete arnoNative._wait[cid];r(null);}},10000);});
+    if(miss===null)return null;
+    if(miss.length){const f=m.file,CH=4*1048576,count=Math.max(1,Math.ceil(f.size/CH));
+      for(let i=0;i<count;i++){loadUI(i/count*40,'Converto in AAC · invio al Mac…');nr.postMessage({cmd:'upload',key,index:i,count,base64:await b64(f.slice(i*CH,(i+1)*CH))});}}
+    loadUI(50,'Converto in AAC · «'+m.name+'»…');
+    const res=await new Promise(r=>{arnoNative._wait[id]=r;nr.postMessage({cmd:'aac',id,key});setTimeout(()=>{if(arnoNative._wait[id]){delete arnoNative._wait[id];r(null);}},600000);});
+    if(!res)return null;const bin=atob(res),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+    return new Blob([u],{type:'audio/mp4'});})();}
+async function toAAC(m){if(busy||!m.file)return;
+  setBusy(true);loading=true;const prog=p=>loadUI(Math.round(10+p*85),'Converto in AAC · «'+m.name+'» · '+Math.round(p*100)+'%');
+  let blob=null,how='';
+  try{blob=await nativeAAC(m);how='Mac';
+    if(!blob){loadUI(3,'Converto in AAC · leggo «'+m.name+'»…');audioInit();
+      const ab=await new Promise((ok,ko)=>{m.file.arrayBuffer().then(buf=>{const p=actx.decodeAudioData(buf,ok,ko);if(p&&p.then)p.then(ok,ko);},ko);});
+      blob=await aacWebCodecs(ab,prog);how='codificatore';
+      if(!blob){setStatus('Conversione in tempo reale: dura quanto il brano ('+fmtT(ab.duration)+')…');blob=await aacRealtime(ab,prog);how='tempo reale';}}
+    if(!blob)throw new Error('questo dispositivo non ha un codificatore AAC');
+    const name=m.name.replace(/\.[^.]+$/,'')+'.m4a',f=new File([blob],name,{type:'audio/mp4'});
+    const it={mid:++uid,type:'aud',file:f,url:URL.createObjectURL(f),name,dur:0,w:0,h:0,thumb:'',size:f.size,fkey:'f'+Date.now()+'-'+Math.random().toString(36).slice(2,8)};
+    await loadAudio(it);if(m.peaks){it.peaks=m.peaks;}
+    pushUndo('conversione in AAC di «'+m.name+'»');
+    const k=media.indexOf(m);if(k>=0)media.splice(k,1,it);else media.push(it);
+    music.forEach(mc=>{if(mc.media===m){mc.media=it;mc.tin=Math.min(mc.tin,Math.max(0,it.dur-0.1));mc.dur=Math.min(mc.dur,it.dur-mc.tin);}});
+    copyQ.push(it);runCopies();
+    setStatus('«'+name+'» pronto ('+mb(f.size)+'): sostituisce «'+m.name+'» nell\'elenco e nella traccia musicale.');
+  }catch(e){setStatus('Conversione in AAC non riuscita: '+(e&&e.message||e),true);}
+  finally{loading=false;loadUI(null);setBusy(false);render();}}
 // copia dei file nell'archivio del progetto, uno alla volta, senza bloccare il lavoro
 const copyQ=[];let copying=false;
 async function runCopies(){if(copying)return;copying=true;loading=true;
@@ -800,7 +884,7 @@ function renderLib(){
     c.innerHTML='<div class="lgrip" title="Trascina nella timeline">⠿<small>'+(m.type==='img'?'FOTO':m.type==='aud'?'AUDIO':'VIDEO')+'</small></div>'+
       (m.type==='aud'?'<div class="lthumb aud">♪</div>':'<div class="lthumb'+(m.thumb?'':' wait')+'"'+(m.thumb?' style="background-image:url('+m.thumb+')"':'')+'></div>')+
       '<div class="cbody"><div class="cname"></div><div class="cdur">'+fmtT(m.dur)+'</div>'+((u||mu)?'<span class="used">nella timeline'+((u||mu)>1?' ×'+(u||mu):'')+'</span>':'')+
-      '<div class="cbtns"><button class="btn xs" data-a="add" style="padding:0 10px">＋ Timeline</button><button class="btn xs" data-a="del" aria-label="Togli dall\'elenco">✕</button></div></div><i class="hold"></i>';
+      '<div class="cbtns">'+(m.type==='aud'&&!/\.(m4a|aac|mp4)$/i.test(m.name)?'<button class="btn xs" data-a="aac" title="Converti in AAC (.m4a)" style="padding:0 8px">→ AAC</button>':'')+'<button class="btn xs" data-a="add" style="padding:0 10px">＋ Timeline</button><button class="btn xs" data-a="del" aria-label="Togli dall\'elenco">✕</button></div></div><i class="hold"></i>';
     c.querySelector('.cname').textContent=m.name;
     box.appendChild(c);});
   box.scrollTop=st;$('allBtn').disabled=!media.length||busy;
@@ -812,6 +896,7 @@ $('lib').addEventListener('click',e=>{const row=e.target.closest('.clip');if(!ro
   if(busy)return;
   if(b.dataset.a==='add'){pushUndo('aggiunta di «'+m.name+'»');
     if(m.type==='aud'){const mc=mkMusic(m,playT);music.push(mc);selMusic=mc.id;selId=null;}else{items.push(mkClip(m));selId=items[items.length-1].id;selMusic=null;}render();}
+  else if(b.dataset.a==='aac'){toAAC(m);}
   else if(b.dataset.a==='del'){pushUndo('rimozione di «'+m.name+'» dall\'elenco');media.splice(media.indexOf(m),1);
     for(let i=music.length-1;i>=0;i--)if(music[i].media===m)music.splice(i,1);
     for(let i=items.length-1;i>=0;i--)if(items[i].media===m)items.splice(i,1);render();}
