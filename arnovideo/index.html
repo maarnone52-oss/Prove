@@ -635,7 +635,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.32.0';
+const VERSION='1.32.1';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1535,8 +1535,15 @@ function zoomTo(np,anchorX){const tr=$('track');np=Math.max(PPS_MIN,Math.min(PPS
   z.addEventListener('pointerdown',e=>{e.preventDefault();on=true;z.classList.add('drag');try{z.setPointerCapture(e.pointerId);}catch(_){}set(e);});
   z.addEventListener('pointermove',e=>{if(on)set(e);});
   ['pointerup','pointercancel'].forEach(t=>z.addEventListener(t,()=>{on=false;z.classList.remove('drag');}));})();
-$('track').addEventListener('wheel',e=>{if(!(e.ctrlKey||e.metaKey))return;e.preventDefault();   // pizzico sul trackpad o ⌘/Ctrl + rotellina
-  const r=$('track').getBoundingClientRect();zoomTo(pps*Math.exp(-e.deltaY*0.01),e.clientX-r.left);},{passive:false});
+// rotellina del mouse sopra la timeline: zoom (il punto sotto il mouse resta fermo); fuori dalla timeline la pagina scorre come sempre.
+// Scorrimento orizzontale (trackpad a due dita di lato, o ⇧ + rotellina): sposta la timeline.
+$('track').addEventListener('wheel',e=>{
+  const pinch=e.ctrlKey||e.metaKey;
+  if(!pinch&&(e.shiftKey||Math.abs(e.deltaX)>Math.abs(e.deltaY)))return;
+  if(!items.length)return;
+  e.preventDefault();
+  const dy=e.deltaY*(e.deltaMode===1?33:e.deltaMode===2?400:1);
+  const r=$('track').getBoundingClientRect();zoomTo(pps*Math.exp(-dy*(pinch?0.01:0.0025)),e.clientX-r.left);zoomLabel();},{passive:false});
 $('zFit').onclick=()=>{autoFit=true;renderTrack();$('track').scrollLeft=0;};
 window.addEventListener('resize',()=>{if(autoFit)renderTrack();});
 $('clearBtn').onclick=()=>{if(busy||(!items.length&&!music.length))return;pushUndo('svuota timeline');items.length=0;selId=null;music.length=0;selMusic=null;render();};
