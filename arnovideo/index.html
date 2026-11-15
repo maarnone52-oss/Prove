@@ -329,9 +329,9 @@ body.showhelp .help:not([hidden]){display:block!important}
 #zslider.drag #zthumb::after{transform:scale(1.15)}
 #zLbl{min-width:70px}
 
-/* anteprima rapida: tenendo premuto 1,5 s un file dell'elenco (si chiude alzando il dito) */
+/* anteprima rapida: tenendo premuto 1 s un file dell'elenco (si chiude alzando il dito) */
 #lib .clip .hold{position:absolute;left:0;bottom:0;height:3px;width:0;background:#46ff7a;pointer-events:none}
-#lib .clip.holding .hold{width:100%;transition:width 1.1s linear}
+#lib .clip.holding .hold{width:100%;transition:width .75s linear}
 #peek{position:fixed;z-index:96;pointer-events:none;width:240px;background:#0a0403;border:2px solid #46ff7a;border-radius:10px;padding:6px;box-shadow:0 12px 34px rgba(0,0,0,.75);box-sizing:border-box}
 #peek[hidden]{display:none}
 #peek .ph{display:flex;align-items:center;gap:6px;margin-bottom:5px;font:600 12px Helvetica,Arial;color:#cfd3da}
@@ -600,7 +600,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.21.4';
+const VERSION='1.21.5';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1104,8 +1104,8 @@ function revealHead(){if(!items.length||layout.length!==items.length)return;cons
 /* etichetta del taglio: sempre sopra la timeline (il dito non la copre), allineata al dito ma dentro lo schermo */
 function placeTip(tip,cx){const r=$('track').getBoundingClientRect(),w=tip.offsetWidth||200,h=tip.offsetHeight||30,vw=window.innerWidth;
   tip.style.left=Math.max(6,Math.min(vw-w-6,cx-w/2))+'px';tip.style.top=Math.max(6,r.top-h-10)+'px';}
-/* ---------- anteprima rapida: tieni premuto 1,5 secondi un file dell'elenco ---------- */
-const HOLD_MS=1500;
+/* ---------- anteprima rapida: tieni premuto 1 secondo un file dell'elenco ---------- */
+const HOLD_MS=1000;
 function peekClose(){const pk=$('peek');if(pk.hidden)return;const el=pk.querySelector('video,audio');if(el){try{el.pause();el.removeAttribute('src');el.load();}catch(e){}}
   pk.querySelector('.pb').innerHTML='';pk.hidden=true;}
 function peekOpen(m,row){peekClose();const pk=$('peek'),pb=pk.querySelector('.pb');pk.querySelector('.ph span').textContent=m.name;let el;
@@ -1124,7 +1124,7 @@ document.addEventListener('pointerdown',e=>{if(!$('peek').hidden&&!e.target.clos
   $('lib').addEventListener('pointerdown',e=>{cancel();const row=e.target.closest('.clip');if(!row||e.target.closest('button')||exporting)return;
     const m=media.find(x=>x.mid===+row.dataset.mid);if(!m)return;
     h={m,row,pid:e.pointerId,sx:e.clientX,sy:e.clientY,fired:null};
-    h.t0=setTimeout(()=>{if(h)row.classList.add('holding');},400);   // barretta verde: mostra che sta per aprirsi
+    h.t0=setTimeout(()=>{if(h)row.classList.add('holding');},250);   // barretta verde: mostra che sta per aprirsi
     h.t=setTimeout(()=>{if(!h)return;row.classList.remove('holding');h.fired=peekOpen(m,row);try{navigator.vibrate&&navigator.vibrate(15);}catch(e){}},HOLD_MS);});
   window.addEventListener('pointermove',e=>{if(h&&!h.fired&&e.pointerId===h.pid&&Math.hypot(e.clientX-h.sx,e.clientY-h.sy)>8)cancel();});
   const up=e=>{if(!h||e.pointerId!==h.pid)return;const f=h.fired;cancel();if(f)peekClose();};   // si vede solo finché tieni premuto
