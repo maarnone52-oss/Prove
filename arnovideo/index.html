@@ -599,7 +599,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.27.3';
+const VERSION='1.27.4';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1660,7 +1660,7 @@ async function runSequence(rec,startT=0){
         const lt=v.currentTime-(it.tin||0);tick(done+Math.max(0,lt));gateAudio(lt);
         // cambio clip senza buco: la clip dopo parte in anticipo (muta) del tempo che il telefono impiega ad avviarla,
         // e si passa a lei appena le sue immagini si muovono
-        if(nx&&!np&&!rec&&lt>=it.dur-preLat-0.01){const e=plan.get(i+1);
+        if(nx&&!np&&lt>=it.dur-preLat-0.01){const e=plan.get(i+1);
           if(e&&e.ready&&e.p.v.paused){np=e.p;if(np.g)np.g.gain.value=0;else try{np.v.volume=0;}catch(_){}np.pre=performance.now();np.t0=np.v.currentTime;const pr=np.v.play();if(pr&&pr.catch)pr.catch(()=>{np.pre=0;});}}
         if(np&&np.pre&&np.v.currentTime>np.t0+0.004){const lat=(performance.now()-np.pre)/1000;
           preLat=Math.max(0.03,Math.min(0.5,preLat*0.6+lat*0.4));try{localStorage.setItem('arnovideo-avvio',preLat.toFixed(3));}catch(e){}
