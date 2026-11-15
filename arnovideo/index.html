@@ -1111,6 +1111,7 @@ function peekClose(){const pk=$('peek');if(pk.hidden)return;const el=pk.querySel
 function peekOpen(m,row){peekClose();const pk=$('peek'),pb=pk.querySelector('.pb');pk.querySelector('.ph span').textContent=m.name;let el;
   if(m.type==='img'){el=document.createElement('img');el.src=m.url;}
   else{el=document.createElement(m.type==='aud'?'audio':'video');el.controls=false;el.disablePictureInPicture=true;el.disableRemotePlayback=true;el.playsInline=true;el.setAttribute('playsinline','');el.preload='auto';
+    if(m.thumb&&m.type==='vid')el.poster=m.thumb;   // subito la miniatura, niente schermo nero mentre carica
     el.src=m.url;try{el.volume=Math.max(0.05,monVol);}catch(e){}
     el.play().catch(()=>{el.muted=true;el.play().catch(()=>{});});}   // se il telefono non lascia partire l'audio, parte almeno l'immagine
   if(m.type==='aud')pb.innerHTML='<div class="pa">♪</div>';pb.appendChild(el);pk.hidden=false;
