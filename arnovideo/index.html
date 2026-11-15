@@ -598,7 +598,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.25.1';
+const VERSION='1.25.2';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -817,9 +817,9 @@ async function grabAt(v,t,W,H){
     thDiag.page++;return c.toDataURL('image/jpeg',.7);
   }catch(e){thDiag.pageErr=e.name||String(e);return '';}}
 // diagnosi delle miniature (sull'app Mac si mostra nella barra di stato)
-const thDiag={nat:0,natEmpty:0,natNull:0,page:0,pageBlack:0,pageErr:'',shown:0};
-function thDiagShow(){if(!nativeRender()||thDiag.shown>=6)return;thDiag.shown++;
-  setStatus('Miniature · dal Mac: '+thDiag.nat+' riuscite, '+thDiag.natEmpty+' vuote, '+thDiag.natNull+' senza risposta · dalla pagina: '+thDiag.page+' riuscite, '+thDiag.pageBlack+' nere'+(thDiag.pageErr?' (errore '+thDiag.pageErr+')':''));}
+const thDiag={nat:0,natBlack:0,natEmpty:0,natNull:0,page:0,pageBlack:0,pageErr:'',shown:0};
+function thDiagShow(){if(!nativeRender()||thDiag.shown>=30)return;thDiag.shown++;
+  setStatus('Miniature · dal Mac: '+thDiag.nat+' riuscite, '+thDiag.natBlack+' nere, '+thDiag.natEmpty+' vuote, '+thDiag.natNull+' senza risposta · dalla pagina: '+thDiag.page+' riuscite, '+thDiag.pageBlack+' nere'+(thDiag.pageErr?' (errore '+thDiag.pageErr+')':''));}
 // sul Mac le miniature le prepara il Mac stesso (più affidabile)
 let thumbReq=0;
 function nativeThumbsRaw(m,times,exact){const nr=nativeRender();if(!nr)return Promise.resolve(null);
@@ -845,7 +845,9 @@ async function nativeThumbs(m,times,exact,partial){if(!nativeRender())return nul
   if(!a){thDiag.natNull+=times.length;return null;}
   const miss=[];a.forEach((u,i)=>{if(!u)miss.push(i);});
   if(miss.length&&exact){const b=await nativeThumbsRaw(m,miss.map(i=>times[i]),false);if(b)miss.forEach((i,k)=>{if(b[k])a[i]=b[k];});}
-  a.forEach(u=>{if(u)thDiag.nat++;else thDiag.natEmpty++;});
+  const bl=await Promise.all(a.map(u=>u?isBlack(u):false));   // anche il Mac può dare immagini nere: si scartano
+  a=a.map((u,i)=>bl[i]?'':u);bl.forEach(b=>{if(b)thDiag.natBlack++;});
+  a.forEach((u,i)=>{if(u)thDiag.nat++;else if(!bl[i])thDiag.natEmpty++;});
   return a.every(Boolean)||partial?a:null;}
 async function runStrips(){if(stripRunning)return;stripRunning=true;let nDone=0;
   while(stripQ.length){
