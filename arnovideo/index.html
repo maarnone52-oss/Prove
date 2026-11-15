@@ -599,7 +599,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.27.2';
+const VERSION='1.27.3';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -819,7 +819,7 @@ async function grabAt(v,t,W,H){
   }catch(e){thDiag.pageErr=e.name||String(e);return '';}}
 // diagnosi delle miniature (sull'app Mac si mostra nella barra di stato)
 const thDiag={nat:0,natBlack:0,natEmpty:0,natNull:0,page:0,pageBlack:0,pageErr:'',shown:0};
-function thDiagShow(){if(!nativeRender()||thDiag.shown>=30)return;thDiag.shown++;
+function thDiagShow(){let on=false;try{on=localStorage.getItem('arnovideo-diag')==='1';}catch(e){}if(!on||!nativeRender()||thDiag.shown>=30)return;thDiag.shown++;
   setStatus('Miniature · dal Mac: '+thDiag.nat+' riuscite, '+thDiag.natBlack+' nere, '+thDiag.natEmpty+' vuote, '+thDiag.natNull+' senza risposta · dalla pagina: '+thDiag.page+' riuscite, '+thDiag.pageBlack+' nere'+(thDiag.pageErr?' (errore '+thDiag.pageErr+')':''));}
 // sul Mac le miniature le prepara il Mac stesso (più affidabile)
 let thumbReq=0;
@@ -1565,11 +1565,11 @@ function syncMusic(T){if(!music.length){musicStop();return;}musicInit();
   if(!mc){if(!musicEl.paused)musicEl.pause();musicCur=null;return;}
   if(musicCur!==mc){musicCur=mc;if(musicEl.dataset.url!==mc.media.url){musicEl.src=mc.media.url;musicEl.dataset.url=mc.media.url;}applyMusicVol();}
   const want=mc.tin+(T-mc.start);
-  // la musica non si sposta a ogni piccola differenza (ogni spostamento si sente come uno scatto, soprattutto con gli MP3):
-  // si sposta solo alla partenza o se è lontana più di 1 s; le piccole differenze si recuperano accelerando o rallentando appena
+  // la musica scorre libera: ogni spostamento o cambio di velocità sul Safari si sente come un salto.
+  // Si posiziona solo alla partenza, oppure se si è allontanata più di 3/4 di secondo (dopo uno spostamento del cursore).
   if(musicEl.readyState>=1){const d=musicEl.currentTime-want;
-    if(musicEl.paused?Math.abs(d)>0.05:Math.abs(d)>1){musicEl.currentTime=want;musicRate(1);}
-    else{const k=Math.abs(d);musicRate(k<0.05?1:(d>0?(k>0.3?0.92:0.96):(k>0.3?1.08:1.04)));}}
+    if(musicEl.paused?Math.abs(d)>0.05:Math.abs(d)>0.75){musicEl.currentTime=want;}
+    musicRate(1);}
   if(musicEl.paused&&musicEl.readyState>=1){const p=musicEl.play();if(p&&p.catch)p.catch(()=>{});}}
 function musicRate(r){if(musicEl&&musicEl.playbackRate!==r){try{musicEl.preservesPitch=musicEl.webkitPreservesPitch=true;musicEl.playbackRate=r;}catch(e){}}}
 function musicStop(){if(musicEl&&!musicEl.paused)musicEl.pause();musicRate(1);musicCur=null;}
