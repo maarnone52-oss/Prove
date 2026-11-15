@@ -600,7 +600,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.22.0';
+const VERSION='1.21.5';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -982,15 +982,7 @@ function paintAudio(v0,v1){
 }
 /* lettura diretta dell'audio AAC da file .mov/.mp4 (iPhone): si estraggono solo i pacchetti audio, a blocchi,
    e si decodificano un pezzo alla volta. Così funziona anche dove Safari non sa aprire il file intero, e usa poca memoria. */
-/* indice dell'audio AAC dentro .mov/.mp4: posizione di ogni pacchetto nel file (letto una volta e tenuto in memoria) */
-function aacIndex(m){if(!m._aacP)m._aacP=aacIndexRead(m).catch(()=>null).then(r=>{m._aac=r;return r;});return m._aacP;}
-function aacADTS(idx,raw,part,a){let len=0;part.forEach(p=>len+=p[1]+7);const adts=new Uint8Array(len);let q=0;
-  for(const [o,n] of part){const L=n+7;
-    adts[q]=0xFF;adts[q+1]=0xF1;adts[q+2]=((idx.objType-1)<<6)|(idx.freqIdx<<2)|(idx.chCfg>>2);adts[q+3]=((idx.chCfg&3)<<6)|(L>>11);
-    adts[q+4]=(L>>3)&0xFF;adts[q+5]=((L&7)<<5)|0x1F;adts[q+6]=0xFC;adts.set(raw.subarray(o-a,o-a+n),q+7);q+=L;}
-  return adts;}
-async function aacIndexRead(m){
-  if(!m.file)return null;
+async function peaksFromAAC(m){
   const f=m.file,rd=async(o,n)=>new DataView(await f.slice(o,o+n).arrayBuffer());
   const fourcc=(dv,o)=>String.fromCharCode(dv.getUint8(o),dv.getUint8(o+1),dv.getUint8(o+2),dv.getUint8(o+3));
   // 1. trova il blocco «moov»
@@ -998,7 +990,7 @@ async function aacIndexRead(m){
   while(off+8<=f.size){const h=await rd(off,16);let sz=h.getUint32(0),t=fourcc(h,4),hl=8;
     if(sz===1){sz=Number(h.getBigUint64(8));hl=16;}else if(sz===0)sz=f.size-off;
     if(sz<8)break;if(t==='moov'){moov=new DataView(await f.slice(off,off+sz).arrayBuffer());break;}off+=sz;}
-  if(!moov)return null;
+  if(!moov)return undefined;
   const kids=(dv,a,b)=>{const out=[];let o=a;while(o+8<=b){let sz=dv.getUint32(o),hl=8;const t=fourcc(dv,o+4);
     if(sz===1){sz=Number(dv.getBigUint64(o+8));hl=16;}else if(sz===0)sz=b-o;if(sz<8||o+sz>b)break;out.push({t,o,s:o+hl,e:o+sz});o+=sz;}return out;};
   const find=(dv,box,path)=>{let cur=box;for(const p of path){const k=kids(dv,cur.s,cur.e).find(x=>x.t===p);if(!k)return null;cur=k;}return cur;};
@@ -1008,20 +1000,16 @@ async function aacIndexRead(m){
   // se ci sono più tracce audio (es. audio spaziale) si usa la prima in formato AAC
   const hasEsds=t=>{const st=find(moov,t,['mdia','minf','stbl','stsd']);if(!st)return false;for(let o=st.s;o<st.e-4;o++)if(fourcc(moov,o)==='esds')return true;return false;};
   const trak=sounds.find(hasEsds)||sounds[0];
-  const stbl=find(moov,trak,['mdia','minf','stbl']);if(!stbl)return null;
+  const stbl=find(moov,trak,['mdia','minf','stbl']);if(!stbl)return undefined;
   const box=n=>kids(moov,stbl.s,stbl.e).find(x=>x.t===n);
-  const stsd=box('stsd'),stsz=box('stsz'),stsc=box('stsc'),stco=box('stco')||box('co64');if(!stsd||!stsz||!stsc||!stco)return null;
+  const stsd=box('stsd'),stsz=box('stsz'),stsc=box('stsc'),stco=box('stco')||box('co64');if(!stsd||!stsz||!stsc||!stco)return undefined;
   // configurazione AAC (dentro «esds»)
   let asc=null;for(let o=stsd.s;o<stsd.e-4;o++)if(fourcc(moov,o)==='esds'){let p=o+8,e=Math.min(stsd.e,o-4+moov.getUint32(o-4));
       while(p<e-2){const tag=moov.getUint8(p++);let len=0,b;do{b=moov.getUint8(p++);len=(len<<7)|(b&0x7f);}while(b&0x80&&p<e);
         if(tag===3){p+=3;continue;}if(tag===4){p+=13;continue;}if(tag===5){asc=[moov.getUint8(p),moov.getUint8(p+1)];break;}p+=len;}break;}
-  if(!asc)return null;                                   // audio non AAC
+  if(!asc)return undefined;                              // audio non AAC
   const objType=asc[0]>>3,freqIdx=((asc[0]&7)<<1)|(asc[1]>>7),chCfg=(asc[1]>>3)&15;
-  const RATES=[96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000,7350];const sr=RATES[freqIdx];if(!sr)return null;
-  // ritardo iniziale dell'audio (lista di modifica «elst»): serve per tenerlo a tempo con il video
-  let delay=0;try{const md=find(moov,trak,['mdia','mdhd']),el=find(moov,trak,['edts','elst']);
-    if(md&&el){const mv=moov.getUint8(md.s),ts=moov.getUint32(md.s+(mv===1?20:12)),ev=moov.getUint8(el.s),n=moov.getUint32(el.s+4);
-      for(let i=0,o=el.s+8;i<n;i++){const mt=ev===1?Number(moov.getBigInt64(o+8)):moov.getInt32(o+4);o+=ev===1?20:12;if(mt>=0){delay=ts>0?mt/ts:0;break;}}}}catch(e){delay=0;}
+  const RATES=[96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000,7350];const sr=RATES[freqIdx];if(!sr)return undefined;
   // tabelle dei pacchetti
   const fixed=moov.getUint32(stsz.s+4),nS=moov.getUint32(stsz.s+8),sizes=new Array(nS);
   for(let i=0;i<nS;i++)sizes[i]=fixed||moov.getUint32(stsz.s+12+i*4);
@@ -1031,18 +1019,16 @@ async function aacIndexRead(m){
   const where=[];let si=0;   // [posizione nel file, dimensione] di ogni pacchetto
   for(let c=0;c<nC&&si<nS;c++){let per=sc[0][1];for(const [fc,spc] of sc)if(fc<=c+1)per=spc;
     let o=chunks[c];for(let k=0;k<per&&si<nS;k++){where.push([o,sizes[si]]);o+=sizes[si];si++;}}
-  return {objType,freqIdx,chCfg,sr,where,delay:Math.max(0,Math.min(1,delay))};
-}
-async function peaksFromAAC(m){
-  const f=m.file,idx=await aacIndex(m);if(idx==='')return '';if(!idx)return undefined;
-  const {sr,where}=idx;
   // decodifica a blocchi di circa 20 secondi
   audioInit();const frameDur=1024/sr,BLOCK=Math.max(100,Math.round(20/frameDur));
   const total=Math.ceil(where.length*frameDur*PEAK_RATE),out=new Uint8Array(total);
   for(let b0=0;b0<where.length;b0+=BLOCK){
     const part=where.slice(b0,b0+BLOCK),a=part[0][0],z=part[part.length-1][0]+part[part.length-1][1];
     const raw=new Uint8Array(await f.slice(a,z).arrayBuffer());
-    const adts=aacADTS(idx,raw,part,a);
+    let len=0;part.forEach(p=>len+=p[1]+7);const adts=new Uint8Array(len);let q=0;
+    for(const [o,n] of part){const L=n+7;
+      adts[q]=0xFF;adts[q+1]=0xF1;adts[q+2]=((objType-1)<<6)|(freqIdx<<2)|(chCfg>>2);adts[q+3]=((chCfg&3)<<6)|(L>>11);
+      adts[q+4]=(L>>3)&0xFF;adts[q+5]=((L&7)<<5)|0x1F;adts[q+6]=0xFC;adts.set(raw.subarray(o-a,o-a+n),q+7);q+=L;}
     let ab;try{ab=await new Promise((ok,ko)=>{const p=actx.decodeAudioData(adts.buffer,ok,ko);if(p&&p.then)p.then(ok,ko);});}catch(e){if(b0===0)return undefined;continue;}
     const t0=b0*frameDur,per=ab.sampleRate/PEAK_RATE,ch=[];for(let c=0;c<ab.numberOfChannels;c++)ch.push(ab.getChannelData(c));
     const n=Math.ceil(ab.duration*PEAK_RATE),base=Math.round(t0*PEAK_RATE);
@@ -1427,9 +1413,8 @@ document.addEventListener('pointerdown',e=>{document.querySelectorAll('.volrow.c
 let curClip=null,curPlayer=null;
 function clipGain(c){return Math.max(0,Math.min(1,c&&c.vol!=null?c.vol:1));}
 let curAOn=true;
-function applyClipVol(){if(curClip){const g=CA.gains.get(curClip.id);if(g)g.gain.value=clipGain(curClip);}
-  if(curPlayer&&curClip){const k=curAOn&&!curPlayer.wa?clipGain(curClip):0;if(curPlayer.g)curPlayer.g.gain.value=k;else try{curPlayer.v.volume=k*mixLevel('c');}catch(e){}}}
-function gateAudio(lt){if(!curClip||(curPlayer&&curPlayer.wa))return;const on=audioOn(curClip,lt);if(on===curAOn)return;curAOn=on;   // taglio audio: muto prima/dopo le maniglie
+function applyClipVol(){if(curPlayer&&curClip){const k=curAOn?clipGain(curClip):0;if(curPlayer.g)curPlayer.g.gain.value=k;else try{curPlayer.v.volume=k*mixLevel('c');}catch(e){}}}
+function gateAudio(lt){if(!curClip)return;const on=audioOn(curClip,lt);if(on===curAOn)return;curAOn=on;   // taglio audio: muto prima/dopo le maniglie
   if(curPlayer&&curPlayer.g&&actx){const g=curPlayer.g.gain;try{g.cancelScheduledValues(actx.currentTime);g.setTargetAtTime(on?clipGain(curClip):0,actx.currentTime,0.006);}catch(e){applyClipVol();}}else applyClipVol();}
 /* ---------- mixer: volume generale dell'audio delle clip e della musica (vale anche per il video esportato) ---------- */
 const mix={c:1,m:1,cm:false,mm:false};
@@ -1461,60 +1446,6 @@ function audioInit(){
   [[busC,meterC],[busM,meterM]].forEach(([b,m])=>{if(dest)b.connect(dest);b.connect(mon);b.connect(m);});
   applyMix();
 }
-/* ---------- audio delle clip suonato dal motore audio: continuo, senza buchi al cambio clip ----------
-   L'audio di ogni clip video si legge dal file a pezzi (circa 12 s), si decodifica e si mette in coda con precisione;
-   il video segue l'orologio dell'audio. I file con audio non AAC usano il lettore video come prima. */
-let caLat=0.12;   // ritardo di avvio dei video (si misura e si corregge da solo)
-const CA={on:false,gen:0,A0:0,T0:0,until:0,nseg:0,srcs:[],gains:new Map()};
-function caNow(){return CA.T0+(actx.currentTime-CA.A0);}
-function caWA(it){return CA.on&&it.type==='vid'&&!!(it.media._aac&&it.media._aac.where);}
-function caGain(it){let g=CA.gains.get(it.id);if(!g){g=actx.createGain();g.gain.value=clipGain(it);g.connect(busC);CA.gains.set(it.id,g);}return g;}
-function caStop(){CA.on=false;CA.gen++;CA.srcs.forEach(x=>{try{x.stop();}catch(e){}try{x.disconnect();}catch(e){}});CA.srcs=[];
-  CA.gains.forEach(g=>{try{g.disconnect();}catch(e){}});CA.gains.clear();}
-async function caDecode(m,idx,s0,s1){   // s0,s1: secondi nel file
-  const fd=1024/idx.sr,d=idx.delay||0,k0=Math.max(0,Math.floor((s0+d)/fd)-2),k1=Math.min(idx.where.length,Math.ceil((s1+d)/fd)+2);
-  if(k1<=k0)return null;const part=idx.where.slice(k0,k1),a=part[0][0],z=part[part.length-1][0]+part[part.length-1][1];
-  const raw=new Uint8Array(await m.file.slice(a,z).arrayBuffer()),adts=aacADTS(idx,raw,part,a);
-  const ab=await new Promise((ok,ko)=>{const p=actx.decodeAudioData(adts.buffer,ok,ko);if(p&&p.then)p.then(ok,ko);});
-  const miss=Math.max(0,(k1-k0)*fd-ab.duration);   // campioni iniziali eventualmente scartati dal decodificatore
-  return {ab,off:Math.max(0,(s0+d)-k0*fd-miss)};}
-function caNext(t){let st=0;
-  for(let i=0;i<items.length;i++){const it=items[i],en=st+it.dur;
-    if(t<en-0.005){if(t<st)t=st;
-      if(it.type==='vid'&&it.media._aac&&it.media._aac.where){const a=aIn(it),b=it.dur-aOut(it);let l=Math.max(t-st,a);
-        if(l<b-0.01)return {it,st,l0:l,b};}
-      t=en;}
-    st=en;}
-  return null;}
-function caSched(sg,l1,r){let w=CA.A0+(sg.st+sg.l0-CA.T0),off=r.off,dur=l1-sg.l0;const now=actx.currentTime+0.01;
-  if(w<now){const late=now-w;w=now;off+=late;dur-=late;}
-  if(dur>0.005&&off<r.ab.duration){const src=actx.createBufferSource();src.buffer=r.ab;src.connect(caGain(sg.it));src.start(w,off,Math.min(dur,r.ab.duration-off));
-    CA.srcs.push(src);src.onended=()=>{const k=CA.srcs.indexOf(src);if(k>=0)CA.srcs.splice(k,1);try{src.disconnect();}catch(e){}};}}
-async function caPump(gen){
-  while(CA.on&&gen===CA.gen){
-    while(CA.on&&gen===CA.gen&&CA.until<caNow()+(CA.nseg?10:2)){
-      const sg=caNext(CA.until);if(!sg){CA.until=Infinity;break;}
-      const l1=Math.min(sg.b,sg.l0+(CA.nseg++?12:2.5)),tin=sg.it.tin||0;
-      let r=null;try{r=await caDecode(sg.it.media,sg.it.media._aac,tin+sg.l0,tin+l1);}catch(e){r=null;}
-      if(!CA.on||gen!==CA.gen)return;
-      if(r)caSched(sg,l1,r);
-      CA.until=sg.st+l1;}
-    await sleep(150);}}
-async function caStart(T,ready){caStop();
-  const go=()=>{if(ready)ready();};
-  if(!actx){go();return;}
-  const ms=[...new Set(items.filter(it=>it.type==='vid'&&!it.media.noAudio).map(it=>it.media))];
-  await Promise.all(ms.map(m=>aacIndex(m)));
-  if(!ms.some(m=>m._aac&&m._aac.where)){go();return;}
-  CA.on=true;const gen=++CA.gen;CA.T0=T;CA.until=T;CA.nseg=1;
-  // il primo pezzo (2,5 s) si prepara prima di partire
-  const sg=caNext(T);let l1=0,r=null;
-  if(sg){l1=Math.min(sg.b,sg.l0+2.5);try{r=await caDecode(sg.it.media,sg.it.media._aac,(sg.it.tin||0)+sg.l0,(sg.it.tin||0)+l1);}catch(e){r=null;}}
-  if(!CA.on||gen!==CA.gen){go();return;}
-  go();CA.A0=actx.currentTime+(ready?0.15:0.06);   // in esportazione un po' di margine per l'avvio della registrazione
-  if(sg){if(r)caSched(sg,l1,r);CA.until=sg.st+l1;}else CA.until=Infinity;
-  caPump(gen).catch(()=>{});
-  while(CA.on&&gen===CA.gen&&actx.currentTime<CA.A0-0.02)await sleep(3);}   // si parte insieme all'audio
 const players=[];             // due lettori che si alternano: il successivo si prepara mentre suona l'attuale
 function player(i){
   if(!players[i]){const v=makeVideo();const p={v,src:null};
@@ -1561,12 +1492,12 @@ async function runSequence(rec,startT=0){
       let k=0;while(k<3&&used.has(player(k)))k++;if(k>=3)break;
       const pl=player(k);plan.set(j,{p:pl,prom:prepare(pl,items[j])});}};
   ensurePlan(first,null);
-  await caStart(done+off,rec?()=>rec.start(1000):null);   // audio delle clip dal motore audio (continuo)
+  if(rec)rec.start(1000);
   for(let i=first;i<items.length&&!stopReq;i++){
     const it=items[i],o=i===first?off:0;mark(i);setStatus((rec?'Esporto':'Riproduzione')+' · '+(i+1)+'/'+items.length+' · '+it.name);
     if(it.type==='img'){
       const t0=performance.now()-o*1000;
-      while(!stopReq){const el=CA.on?caNow()-done:(performance.now()-t0)/1000;if(el>=it.dur)break;
+      while(!stopReq){const el=(performance.now()-t0)/1000;if(el>=it.dur)break;
         clear();drawFit(x,it.el,it.w,it.h,w,h,mode);tick(done+el);await new Promise(r=>requestAnimationFrame(r));}
       done+=it.dur;continue;
     }
@@ -1577,23 +1508,14 @@ async function runSequence(rec,startT=0){
     const v=p.v;
     const want=(it.tin||0)+o;   // controlla di partire davvero dal punto giusto (taglio in testa)
     if(Math.abs(v.currentTime-want)>0.04){v.currentTime=want;try{await once(v,'seeked',4000);}catch(e){}}
-    p.wa=caWA(it);   // l'audio lo suona il motore audio: il lettore resta muto
-    if(CA.on){while(!stopReq&&caNow()<done+o-caLat)await sleep(3);}   // parte poco prima: il video impiega un attimo ad avviarsi
     curClip=it;curPlayer=p;curAOn=audioOn(it,o);applyClipVol();   // volume della clip (entra anche nel video esportato)
     try{await v.play();}catch(e){setStatus('Il video «'+it.name+'» non parte: '+e.message,true);done+=it.dur;continue;}
-    let lastFix=performance.now(),measured=false;const lat2=(items[i+1]&&items[i+1].type==='vid')?1:0;
     await new Promise(res=>{let fin=false;
       const stop=()=>{if(fin)return;fin=true;res();};
       v.addEventListener('ended',stop,{once:true});
       const loop=()=>{if(fin)return;if(stopReq){v.pause();return stop();}
         if(v.readyState>=2){clear();drawFit(x,v,v.videoWidth,v.videoHeight,w,h,mode);}
-        const lt=v.currentTime-(it.tin||0);gateAudio(lt);
-        if(CA.on){const ex=caNow()-done;tick(done+Math.max(0,Math.min(it.dur,ex)));
-          if(!measured&&!v.paused&&lt>o+0.02){measured=true;caLat=Math.max(0.02,Math.min(0.4,caLat+(ex-lt)*0.6));}   // impara il ritardo
-          if(ex>=it.dur-caLat*lat2-0.012){return stop();}}   // cambio clip a tempo con l'audio
-        else tick(done+Math.max(0,lt));
-        if(CA.on&&!v.seeking&&performance.now()-lastFix>1200){const ex=caNow()-done,df=ex-lt;   // il video segue l'orologio dell'audio
-          if(Math.abs(df)>0.12&&ex>0&&ex<it.dur-0.25){v.currentTime=(it.tin||0)+ex;lastFix=performance.now();}}
+        const lt=v.currentTime-(it.tin||0);tick(done+Math.max(0,lt));gateAudio(lt);
         if(lt>=it.dur-0.035){v.pause();return stop();}     // fine del pezzo (un fotogramma prima: la clip dopo parte senza pausa)
         if(v.currentTime>=it.dur-0.02&&v.paused&&!(it.tin>0))return stop();
         requestAnimationFrame(loop);};
@@ -1602,7 +1524,7 @@ async function runSequence(rec,startT=0){
     v.pause();p.warm=null;done+=it.dur;
   }
   if(rec&&rec.state!=='inactive'){await sleep(150);rec.stop();}
-  caStop();curClip=null;curPlayer=null;musicStop();
+  curClip=null;curPlayer=null;musicStop();
   if(mon)mon.gain.value=Math.max(0.0001,monVol*monVol);
 }
 
@@ -1650,7 +1572,7 @@ async function startPlay(){
   stopReq=false;playing=true;setBusy(true);$('playBtn').textContent='❚❚';
   runP=runSequence(null,playT).catch(e=>setStatus('Errore: '+e.message,true));
   await runP;
-  caStop();const stopped=stopReq;playing=false;runP=null;$('playBtn').textContent='▶';setBusy(false);
+  const stopped=stopReq;playing=false;runP=null;$('playBtn').textContent='▶';setBusy(false);
   setStatus(stopped?'In pausa.':'Fine.');
 }
 async function stopPlay(){if(!playing)return;stopReq=true;await runP;while(playing)await sleep(10);}
