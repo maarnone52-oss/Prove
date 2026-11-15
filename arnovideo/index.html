@@ -525,7 +525,7 @@ body.showhelp .help:not([hidden]){display:block!important}
 
 <script>
 'use strict';
-const VERSION='1.16.0';
+const VERSION='1.16.1';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -845,7 +845,7 @@ function paintAudio(v0,v1){
   let html='';
   items.forEach((c,i)=>{const L=layout[i];if(!L)return;
     const pk=c.type==='vid'?peaksOf(c.media):null;
-    const msg=c.type==='img'?'foto · nessun audio':c.media.noAudio?'senza audio':pk?'':'forma d\'onda in preparazione…';
+    const msg=c.type==='img'?'foto · nessun audio':c.media.noAudio?'senza audio':pk?'':c.media.peakFail?'audio presente · forma d\'onda non disponibile':'forma d\'onda in preparazione…';
     html+='<div class="aclip'+(msg?' none':'')+'" data-msg="'+msg+'" style="left:'+L.x+'px;width:'+L.w+'px"></div>';
     if(!pk||L.x+L.w<tr.scrollLeft||L.x>tr.scrollLeft+W)return;
     const vol=clipGain(c),mid=H/2,amp=(H/2-3);
@@ -860,6 +860,64 @@ function paintAudio(v0,v1){
   });
   if(al.dataset.h!==html){al.innerHTML=html;al.dataset.h=html;}
 }
+/* lettura diretta dell'audio AAC da file .mov/.mp4 (iPhone): si estraggono solo i pacchetti audio, a blocchi,
+   e si decodificano un pezzo alla volta. Così funziona anche dove Safari non sa aprire il file intero, e usa poca memoria. */
+async function peaksFromAAC(m){
+  const f=m.file,rd=async(o,n)=>new DataView(await f.slice(o,o+n).arrayBuffer());
+  const fourcc=(dv,o)=>String.fromCharCode(dv.getUint8(o),dv.getUint8(o+1),dv.getUint8(o+2),dv.getUint8(o+3));
+  // 1. trova il blocco «moov»
+  let off=0,moov=null;
+  while(off+8<=f.size){const h=await rd(off,16);let sz=h.getUint32(0),t=fourcc(h,4),hl=8;
+    if(sz===1){sz=Number(h.getBigUint64(8));hl=16;}else if(sz===0)sz=f.size-off;
+    if(sz<8)break;if(t==='moov'){moov=new DataView(await f.slice(off,off+sz).arrayBuffer());break;}off+=sz;}
+  if(!moov)return undefined;
+  const kids=(dv,a,b)=>{const out=[];let o=a;while(o+8<=b){let sz=dv.getUint32(o),hl=8;const t=fourcc(dv,o+4);
+    if(sz===1){sz=Number(dv.getBigUint64(o+8));hl=16;}else if(sz===0)sz=b-o;if(sz<8||o+sz>b)break;out.push({t,o,s:o+hl,e:o+sz});o+=sz;}return out;};
+  const find=(dv,box,path)=>{let cur=box;for(const p of path){const k=kids(dv,cur.s,cur.e).find(x=>x.t===p);if(!k)return null;cur=k;}return cur;};
+  const root={s:8,e:moov.byteLength};
+  const sounds=kids(moov,root.s,root.e).filter(x=>x.t==='trak').filter(t=>{const h=find(moov,t,['mdia','hdlr']);return h&&fourcc(moov,h.s+8)==='soun';});
+  if(!sounds.length)return '';                          // davvero nessuna traccia audio
+  // se ci sono più tracce audio (es. audio spaziale) si usa la prima in formato AAC
+  const hasEsds=t=>{const st=find(moov,t,['mdia','minf','stbl','stsd']);if(!st)return false;for(let o=st.s;o<st.e-4;o++)if(fourcc(moov,o)==='esds')return true;return false;};
+  const trak=sounds.find(hasEsds)||sounds[0];
+  const stbl=find(moov,trak,['mdia','minf','stbl']);if(!stbl)return undefined;
+  const box=n=>kids(moov,stbl.s,stbl.e).find(x=>x.t===n);
+  const stsd=box('stsd'),stsz=box('stsz'),stsc=box('stsc'),stco=box('stco')||box('co64');if(!stsd||!stsz||!stsc||!stco)return undefined;
+  // configurazione AAC (dentro «esds»)
+  let asc=null;for(let o=stsd.s;o<stsd.e-4;o++)if(fourcc(moov,o)==='esds'){let p=o+8,e=Math.min(stsd.e,o-4+moov.getUint32(o-4));
+      while(p<e-2){const tag=moov.getUint8(p++);let len=0,b;do{b=moov.getUint8(p++);len=(len<<7)|(b&0x7f);}while(b&0x80&&p<e);
+        if(tag===3){p+=3;continue;}if(tag===4){p+=13;continue;}if(tag===5){asc=[moov.getUint8(p),moov.getUint8(p+1)];break;}p+=len;}break;}
+  if(!asc)return undefined;                              // audio non AAC
+  const objType=asc[0]>>3,freqIdx=((asc[0]&7)<<1)|(asc[1]>>7),chCfg=(asc[1]>>3)&15;
+  const RATES=[96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000,7350];const sr=RATES[freqIdx];if(!sr)return undefined;
+  // tabelle dei pacchetti
+  const fixed=moov.getUint32(stsz.s+4),nS=moov.getUint32(stsz.s+8),sizes=new Array(nS);
+  for(let i=0;i<nS;i++)sizes[i]=fixed||moov.getUint32(stsz.s+12+i*4);
+  const nC=moov.getUint32(stco.s+4),co64=stco.t==='co64',chunks=new Array(nC);
+  for(let i=0;i<nC;i++)chunks[i]=co64?Number(moov.getBigUint64(stco.s+8+i*8)):moov.getUint32(stco.s+8+i*4);
+  const nE=moov.getUint32(stsc.s+4),sc=[];for(let i=0;i<nE;i++)sc.push([moov.getUint32(stsc.s+8+i*12),moov.getUint32(stsc.s+12+i*12)]);
+  const where=[];let si=0;   // [posizione nel file, dimensione] di ogni pacchetto
+  for(let c=0;c<nC&&si<nS;c++){let per=sc[0][1];for(const [fc,spc] of sc)if(fc<=c+1)per=spc;
+    let o=chunks[c];for(let k=0;k<per&&si<nS;k++){where.push([o,sizes[si]]);o+=sizes[si];si++;}}
+  // decodifica a blocchi di circa 20 secondi
+  audioInit();const frameDur=1024/sr,BLOCK=Math.max(100,Math.round(20/frameDur));
+  const total=Math.ceil(where.length*frameDur*PEAK_RATE),out=new Uint8Array(total);
+  for(let b0=0;b0<where.length;b0+=BLOCK){
+    const part=where.slice(b0,b0+BLOCK),a=part[0][0],z=part[part.length-1][0]+part[part.length-1][1];
+    const raw=new Uint8Array(await f.slice(a,z).arrayBuffer());
+    let len=0;part.forEach(p=>len+=p[1]+7);const adts=new Uint8Array(len);let q=0;
+    for(const [o,n] of part){const L=n+7;
+      adts[q]=0xFF;adts[q+1]=0xF1;adts[q+2]=((objType-1)<<6)|(freqIdx<<2)|(chCfg>>2);adts[q+3]=((chCfg&3)<<6)|(L>>11);
+      adts[q+4]=(L>>3)&0xFF;adts[q+5]=((L&7)<<5)|0x1F;adts[q+6]=0xFC;adts.set(raw.subarray(o-a,o-a+n),q+7);q+=L;}
+    let ab;try{ab=await new Promise((ok,ko)=>{const p=actx.decodeAudioData(adts.buffer,ok,ko);if(p&&p.then)p.then(ok,ko);});}catch(e){if(b0===0)return undefined;continue;}
+    const t0=b0*frameDur,per=ab.sampleRate/PEAK_RATE,ch=[];for(let c=0;c<ab.numberOfChannels;c++)ch.push(ab.getChannelData(c));
+    const n=Math.ceil(ab.duration*PEAK_RATE),base=Math.round(t0*PEAK_RATE);
+    for(let i=0;i<n&&base+i<total;i++){let mx=0;const x0=Math.floor(i*per),x1=Math.min(ab.length,Math.floor((i+1)*per));
+      for(const d of ch)for(let k=x0;k<x1;k+=2){const v=d[k]<0?-d[k]:d[k];if(v>mx)mx=v;}
+      out[base+i]=Math.max(out[base+i],Math.min(255,Math.round(mx*255)));}
+    await sleep(0);}
+  let s='';for(let i=0;i<out.length;i+=8192)s+=String.fromCharCode.apply(null,out.subarray(i,i+8192));return btoa(s);
+}
 // calcolo dei picchi: sul Mac li calcola il Mac; altrove si decodifica l'audio del file (con un limite di durata sul telefono)
 const peakQ=[];let peakBusy=false;
 function queuePeaks(){media.forEach(m=>{if(m.type==='vid'&&!m.peaks&&!m.noAudio&&!m.peakFail&&!peakQ.includes(m))peakQ.push(m);});runPeaks();}
@@ -871,6 +929,7 @@ async function runPeaks(){if(peakBusy)return;peakBusy=true;
   try{while(peakQ.length){while(exporting||playing||copying)await sleep(500);
     const m=peakQ.shift();if(!media.includes(m))continue;
     let res=await nativePeaks(m);                       // stringa base64, '' se senza audio, undefined se non disponibile
+    if(res===undefined){try{res=await peaksFromAAC(m);}catch(e){res=undefined;}}   // .mov e .mp4: si legge solo l'audio dal file
     if(res===undefined){
       const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
       if(m.dur>(mobile?600:3600)||(m.size||0)>(mobile?700:3000)*1048576){m.peakFail=true;continue;}   // troppo grande per la memoria
@@ -882,9 +941,9 @@ async function runPeaks(){if(peakBusy)return;peakBusy=true;
           for(const d of ch)for(let k=a;k<b;k+=2){const v=d[k]<0?-d[k]:d[k];if(v>mx)mx=v;}
           out[i]=Math.min(255,Math.round(mx*255));if(i%2000===0)await sleep(0);}
         let s='';for(let i=0;i<out.length;i+=8192)s+=String.fromCharCode.apply(null,out.subarray(i,i+8192));res=btoa(s);
-      }catch(e){res='';}   // nessuna traccia audio leggibile
+      }catch(e){res=null;}   // audio non leggibile (diverso da «senza audio»)
     }
-    if(res){m.peaks=res;m._pk=null;}else m.noAudio=true;
+    if(res){m.peaks=res;m._pk=null;}else if(res===''){m.noAudio=true;}else m.peakFail=true;
     paintTrack();scheduleSave();}
   }finally{peakBusy=false;}}
 function setTile(e,c,key){const src=c.type==='img'?c.thumb:(frameCache.get(key)||c.thumb);
@@ -1494,7 +1553,7 @@ async function saveNow(){clearTimeout(saveTimer);saveTimer=null;if(!db||restorin
   if(!curProj){if(!items.length&&!media.length)return;curProj={id:'p'+Date.now(),name:defaultName(),created:Date.now()};showProj();}
   const rec={id:curProj.id,name:curProj.name,created:curProj.created,updated:Date.now(),playT,
     settings:{fmt:$('fmt').value,fit:$('fit').value,defDur:$('defDur').value,quality:$('quality').value},
-    media:media.map(m=>({mid:m.mid,type:m.type,name:m.name,dur:m.dur,w:m.w,h:m.h,thumb:m.thumb,thumbV:m.thumbV||0,strip:m.strip||null,size:m.size||0,fkey:m.fkey,peaks:m.peaks||null,noAudio:!!m.noAudio})),
+    media:media.map(m=>({pv:2,mid:m.mid,type:m.type,name:m.name,dur:m.dur,w:m.w,h:m.h,thumb:m.thumb,thumbV:m.thumbV||0,strip:m.strip||null,size:m.size||0,fkey:m.fkey,peaks:m.peaks||null,noAudio:!!m.noAudio})),
     clips:items.map(c=>({mid:c.media.mid,dur:c.dur,tin:c.tin||0,vol:c.vol!=null?c.vol:1}))};
   try{await dbPut('projects',rec);const d=new Date();$('saved').textContent='salvato alle '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
     localStorage.setItem('arnovideo-last',curProj.id);}catch(e){$('saved').textContent='non salvato';}
@@ -1523,6 +1582,7 @@ async function openProject(id){
   for(const s of srcMedia){const f=s.fkey?await dbGet('files',s.fkey):null;if(!f){missing++;continue;}
     const m=Object.assign({},s,{mid:++uid,file:f.blob,url:URL.createObjectURL(f.blob)});delete m.id;
     if(m.type==='img'){try{const img=new Image();img.src=m.url;await once(img,'load',20000);m.el=img;}catch(e){missing++;continue;}}
+    if(m.noAudio&&s.pv!==2)m.noAudio=false;   // controllo di nuovo i file segnati «senza audio» dalla versione precedente
     media.push(m);byOld[s.mid]=m;}
   for(const c of srcClips){const m=byOld[c.mid];if(m)items.push(mkClip(m,c.dur,c.tin,c.vol));}
   const st=rec.settings||{};['fmt','fit','defDur','quality'].forEach(k=>{if(st[k]!=null)$(k).value=st[k];});
