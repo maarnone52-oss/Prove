@@ -338,6 +338,12 @@ body.showhelp .help:not([hidden]){display:block!important}
 #peek .ph button{min-height:26px;height:26px;width:30px;padding:0;font-size:14px}
 #peek video,#peek img{display:block;width:100%;max-height:50vh;border-radius:6px;background:#000;object-fit:contain}
 #peek audio{display:block;width:100%}
+#mp4Dlg{position:fixed;top:0;right:0;bottom:0;left:0;z-index:97;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center}
+#mp4Dlg[hidden]{display:none}
+#mp4Dlg .dbox{width:min(420px,92vw);background:#1b1d22;border:2px solid #ffb21e;border-radius:12px;padding:14px;box-shadow:0 14px 40px rgba(0,0,0,.7);color:#e6e8ec;font:500 13px Helvetica,Arial}
+#mp4Dlg .dt{font-weight:700;font-size:15px;color:#ffb21e;margin-bottom:4px}#mp4Dlg .dn{color:#9aa0aa;margin-bottom:10px;word-break:break-all}
+#mp4Dlg label{display:block;margin:8px 0}#mp4Dlg select{width:100%;margin-top:4px}#mp4Dlg .chk input{margin-right:6px}
+#mp4Dlg .dhint{font-size:11px;color:#9aa0aa;line-height:1.4}
 #peek .pi{margin-top:6px;font:500 11px/1.45 Helvetica,Arial;color:#cfd3da}#peek .pi b{color:#46ff7a}#peek .pi:empty{display:none}
 #peek .pa{font-size:34px;text-align:center;color:#b47cff;padding:6px 0}
 /* interfaccia al 75%: i comandi dell'anteprima vanno a capo invece di uscire dal riquadro */
@@ -596,11 +602,26 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 </main>
 <div id="hidden"></div>
 <div id="trimTip" hidden></div>
+<div id="mp4Dlg" hidden><div class="dbox">
+  <div class="dt">Converti in MP4</div>
+  <div class="dn" id="mp4Name"></div>
+  <label><span class="lbl">Risoluzione</span>
+    <select id="mp4Res">
+      <option value="3840x2160">4K · 3840×2160</option>
+      <option value="1920x1080" selected>Full HD · 1920×1080</option>
+      <option value="1280x720">HD · 1280×720</option>
+      <option value="960x540">960×540</option>
+      <option value="640x480">640×480</option>
+    </select></label>
+  <label class="chk"><input type="checkbox" id="mp4All"> Converti tutti i video dell'elenco (stessa risoluzione per tutti)</label>
+  <div class="dhint">Il video viene rimpicciolito (mai ingrandito) per stare nella risoluzione scelta, senza deformarlo. Usare la stessa risoluzione per tutti i video evita problemi nell'esportazione.</div>
+  <div class="row" style="justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn sm" id="mp4No" type="button">Annulla</button><button class="btn sm play" id="mp4Go" type="button">Converti</button></div>
+</div></div>
 <div id="peek" hidden><div class="ph"><span></span></div><div class="pb"></div><div class="pi"></div></div>
 
 <script>
 'use strict';
-const VERSION='1.29.0';
+const VERSION='1.30.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -739,26 +760,35 @@ async function toAAC(m){if(busy||!m.file)return;
   finally{loading=false;loadUI(null);setBusy(false);render();}}
 /* ---------- conversione di un video in MP4 (H.264 + AAC) fatta dal Mac ----------
    Serve quando un video ha un formato che il Mac non riesce a esportare insieme agli altri. */
-async function toMP4(m){const nr=nativeRender();if(busy||!nr||!m.file)return;
-  setBusy(true);loading=true;loadUI(2,'Converto in MP4 · «'+m.name+'»…');
+function askMP4(m){if(busy)return;$('mp4Name').textContent='«'+m.name+'»';
+  try{const r=localStorage.getItem('arnovideo-mp4res');if(r)$('mp4Res').value=r;}catch(e){}
+  $('mp4All').checked=false;$('mp4Dlg').hidden=false;
+  $('mp4No').onclick=()=>{$('mp4Dlg').hidden=true;};
+  $('mp4Go').onclick=async()=>{const size=$('mp4Res').value,all=$('mp4All').checked;$('mp4Dlg').hidden=true;
+    try{localStorage.setItem('arnovideo-mp4res',size);}catch(e){}
+    const list=all?media.filter(x=>x.type==='vid'):[m];
+    for(let i=0;i<list.length;i++){if(!media.includes(list[i]))continue;const ok=await toMP4(list[i],size,list.length>1?(i+1)+' di '+list.length+' · ':'');if(!ok)break;}};}
+async function toMP4(m,size,pre){size=size||'1920x1080';pre=pre||'';const nr=nativeRender();if(busy||!nr||!m.file)return false;let ok=false;
+  setBusy(true);loading=true;loadUI(2,'Converto in MP4 '+size.replace('x','×')+' · '+pre+'«'+m.name+'»…');
   try{if(!(await nativeKnow(m)))throw new Error('il Mac non trova il file');
     const id='v'+(++thumbReq);
-    arnoNative._wait['p'+id]=p=>loadUI(Math.round(5+p*85),'Converto in MP4 · «'+m.name+'» · '+Math.round(p*100)+'%');
-    const res=await new Promise(r=>{arnoNative._wait[id]=r;nr.postMessage({cmd:'vconv',id,key:m.name+'|'+((m.file&&m.file.size)||m.size||0),name:m.name.replace(/\.[^.]+$/,'')});});
+    arnoNative._wait['p'+id]=p=>loadUI(Math.round(5+p*85),'Converto in MP4 '+size.replace('x','×')+' · '+pre+'«'+m.name+'» · '+Math.round(p*100)+'%');
+    const res=await new Promise(r=>{arnoNative._wait[id]=r;nr.postMessage({cmd:'vconv',id,size,key:m.name+'|'+((m.file&&m.file.size)||m.size||0),name:m.name.replace(/\.[^.]+$/,'')});});
     delete arnoNative._wait['p'+id];
     if(!res||res.error)throw new Error(res&&res.error||'nessuna risposta');
     loadUI(92,'Converto in MP4 · carico il file convertito…');
     const blob=await (await fetch(res.url)).blob();
-    const name=m.name.replace(/\.[^.]+$/,'')+'.mp4',f=new File([blob],name,{type:'video/mp4'});
+    const name=m.name.replace(/\.[^.]+$/,'').replace(/-\d+x\d+$/,'')+'-'+size.split('x')[1]+'p.mp4',f=new File([blob],name,{type:'video/mp4'});
     const it={mid:++uid,type:'vid',file:f,url:URL.createObjectURL(f),name,dur:0,w:0,h:0,thumb:'',size:f.size,fkey:'f'+Date.now()+'-'+Math.random().toString(36).slice(2,8)};
     await loadVideo(it);if(m.peaks)it.peaks=m.peaks;
     pushUndo('conversione in MP4 di «'+m.name+'»');
     const k=media.indexOf(m);if(k>=0)media.splice(k,1,it);else media.push(it);
     for(let i=0;i<items.length;i++){const c=items[i];if(c.media===m){const n=mkClip(it,Math.min(c.dur,Math.max(0.1,it.dur-(c.tin||0))),Math.min(c.tin||0,Math.max(0,it.dur-0.1)),c.vol,c.ain,c.aout);if(selId===c.id)selId=n.id;items[i]=n;}}
     copyQ.push(it);runCopies();queueStrips();
-    setStatus('«'+name+'» pronto ('+mb(f.size)+'): sostituisce «'+m.name+'» nell\'elenco e nella timeline.');
+    setStatus('«'+name+'» pronto ('+mb(f.size)+'): sostituisce «'+m.name+'» nell\'elenco e nella timeline.');ok=true;
   }catch(e){setStatus('Conversione in MP4 non riuscita: '+(e&&e.message||e),true);}
-  finally{loading=false;loadUI(null);setBusy(false);render();}}
+  finally{loading=false;loadUI(null);setBusy(false);render();}
+  return ok;}
 // copia dei file nell'archivio del progetto, uno alla volta, senza bloccare il lavoro
 const copyQ=[];let copying=false;
 async function runCopies(){if(copying)return;copying=true;loading=true;
@@ -952,7 +982,7 @@ $('lib').addEventListener('click',e=>{const row=e.target.closest('.clip');if(!ro
   if(b.dataset.a==='add'){pushUndo('aggiunta di «'+m.name+'»');
     if(m.type==='aud'){const mc=mkMusic(m,playT);music.push(mc);selMusic=mc.id;selId=null;}else{items.push(mkClip(m));selId=items[items.length-1].id;selMusic=null;}render();}
   else if(b.dataset.a==='aac'){toAAC(m);}
-  else if(b.dataset.a==='mp4'){toMP4(m);}
+  else if(b.dataset.a==='mp4'){askMP4(m);}
   else if(b.dataset.a==='del'){pushUndo('rimozione di «'+m.name+'» dall\'elenco');media.splice(media.indexOf(m),1);
     for(let i=music.length-1;i>=0;i--)if(music[i].media===m)music.splice(i,1);
     for(let i=items.length-1;i>=0;i--)if(items[i].media===m)items.splice(i,1);render();}
