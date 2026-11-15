@@ -598,7 +598,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.25.0';
+const VERSION='1.25.1';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -810,8 +810,16 @@ async function grabAt(v,t,W,H){
     else await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
     if(v.readyState<2||!v.videoWidth)return '';
     const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.fillStyle='#000';x.fillRect(0,0,W,H);
-    drawFit(x,v,v.videoWidth,v.videoHeight,W,H,'contain');return c.toDataURL('image/jpeg',.7);
-  }catch(e){return '';}}
+    drawFit(x,v,v.videoWidth,v.videoHeight,W,H,'contain');
+    // Safari a volte disegna il video tutto nero: un'immagine nera non è una miniatura
+    try{const d=x.getImageData(0,0,W,H).data;let mx=0;for(let i=0;i<d.length;i+=64){const l=d[i]+d[i+1]+d[i+2];if(l>mx)mx=l;}if(mx<12){thDiag.pageBlack++;return '';}}
+    catch(e){thDiag.pageErr=e.name||String(e);return '';}
+    thDiag.page++;return c.toDataURL('image/jpeg',.7);
+  }catch(e){thDiag.pageErr=e.name||String(e);return '';}}
+// diagnosi delle miniature (sull'app Mac si mostra nella barra di stato)
+const thDiag={nat:0,natEmpty:0,natNull:0,page:0,pageBlack:0,pageErr:'',shown:0};
+function thDiagShow(){if(!nativeRender()||thDiag.shown>=6)return;thDiag.shown++;
+  setStatus('Miniature · dal Mac: '+thDiag.nat+' riuscite, '+thDiag.natEmpty+' vuote, '+thDiag.natNull+' senza risposta · dalla pagina: '+thDiag.page+' riuscite, '+thDiag.pageBlack+' nere'+(thDiag.pageErr?' (errore '+thDiag.pageErr+')':''));}
 // sul Mac le miniature le prepara il Mac stesso (più affidabile)
 let thumbReq=0;
 function nativeThumbsRaw(m,times,exact){const nr=nativeRender();if(!nr)return Promise.resolve(null);
@@ -834,9 +842,10 @@ async function nativeKnow(m){const nr=nativeRender();if(!nr||!m.file)return fals
 async function nativeThumbs(m,times,exact,partial){if(!nativeRender())return null;
   let a=await nativeThumbsRaw(m,times,exact);
   if(!a&&await nativeKnow(m))a=await nativeThumbsRaw(m,times,exact);
-  if(!a)return null;
+  if(!a){thDiag.natNull+=times.length;return null;}
   const miss=[];a.forEach((u,i)=>{if(!u)miss.push(i);});
   if(miss.length&&exact){const b=await nativeThumbsRaw(m,miss.map(i=>times[i]),false);if(b)miss.forEach((i,k)=>{if(b[k])a[i]=b[k];});}
+  a.forEach(u=>{if(u)thDiag.nat++;else thDiag.natEmpty++;});
   return a.every(Boolean)||partial?a:null;}
 async function runStrips(){if(stripRunning)return;stripRunning=true;let nDone=0;
   while(stripQ.length){
@@ -857,7 +866,11 @@ async function runStrips(){if(stripRunning)return;stripRunning=true;let nDone=0;
   }
   stripRunning=false;poolFree(poolVideo(0));queuePeaks();
   if(!loading){loadUI(100,'Miniature pronte.');setTimeout(()=>{if(!loading&&!stripRunning)loadUI(null);},1000);}}
-function queueStrips(){media.forEach(it=>{if(it.type==='vid'&&!it.thumb&&!stripQ.includes(it))stripQ.push(it);});runStrips();}
+function queueStrips(){media.forEach(it=>{if(it.type==='vid'&&!it.thumb&&!stripQ.includes(it))stripQ.push(it);});runStrips();
+  media.forEach(it=>{if(it.type==='vid'&&it.thumb&&!it._bk){it._bk=1;isBlack(it.thumb).then(b=>{if(b&&media.includes(it)){it.thumb='';it.stripTries=0;stripQ.push(it);runStrips();renderLib();}});}});}
+// miniatura salvata tutta nera (fatta male in passato): si rifà
+function isBlack(url){return new Promise(r=>{const im=new Image();im.onload=()=>{try{const c=document.createElement('canvas');c.width=32;c.height=18;const x=c.getContext('2d');x.drawImage(im,0,0,32,18);
+  const d=x.getImageData(0,0,32,18).data;let mx=0;for(let i=0;i<d.length;i+=4){const l=d[i]+d[i+1]+d[i+2];if(l>mx)mx=l;}r(mx<12);}catch(e){r(false);}};im.onerror=()=>r(false);im.src=url;});}
 
 /* ---------- finestra di anteprima sganciabile e ridimensionabile ---------- */
 const pvs={float:false,x:0,y:0,w:0,h:0};
@@ -1197,13 +1210,14 @@ async function runFrames(){if(frameBusy)return;frameBusy=true;
     const m=frameQ[0].m,batch=frameQ.filter(q=>q.m===m).slice(0,nativeRender()?4:12);batch.forEach(q=>frameQ.splice(frameQ.indexOf(q),1));
     const times=batch.map(q=>q.fi/FPS+0.001);
     const nat=await nativeThumbs(m,times,false,true);   // con un decimo di secondo di tolleranza: molto più veloce sui video dell'iPhone
-    if(nat){batch.forEach((q,i)=>{if(nat[i])cachePut(q.key,nat[i]);});continue;}
-    if(nativeRender()){batch.forEach(q=>{if((q.tries=(q.tries||0)+1)<3)frameQ.push(q);});await sleep(1500);continue;}   // nell'app Mac il lettore della pagina darebbe immagini nere: si riprova più tardi   // sul Mac non si usa il lettore della pagina (le immagini resterebbero vuote)
+    let left=batch;
+    if(nat){batch.forEach((q,i)=>{if(nat[i])cachePut(q.key,nat[i]);});left=batch.filter((q,i)=>!nat[i]);if(!left.length){thDiagShow();continue;}}   // nell'app Mac il lettore della pagina darebbe immagini nere: si riprova più tardi   // sul Mac non si usa il lettore della pagina (le immagini resterebbero vuote)
     let v=frameVideos.get(m);
     if(!v){frameVideos.clear();
       v=poolLoad(poolVideo(1),m.url);frameVideos.set(m,v);
       if(v.readyState<1){try{await once(v,'loadedmetadata',20000);}catch(e){}}await primeVideo(v);}
-    for(const q of batch){if(!frameWanted.has(q.key))continue;const u=await grabAt(v,q.fi/FPS+0.001,192,108);if(u)cachePut(q.key,u);}
+    for(const q of left){if(!frameWanted.has(q.key))continue;const u=await grabAt(v,q.fi/FPS+0.001,192,108);if(u)cachePut(q.key,u);}
+    thDiagShow();
   }}finally{frameBusy=false;if(!frameQ.length){frameVideos.clear();poolFree(poolVideo(1));}}}
 
 function revealHead(){if(!items.length||layout.length!==items.length)return;const tr=$('track'),x=tToX(playT);   // porta in vista il segno rosso
