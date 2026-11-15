@@ -635,7 +635,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.32.1';
+const VERSION='1.32.2';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1535,7 +1535,7 @@ function zoomTo(np,anchorX){const tr=$('track');np=Math.max(PPS_MIN,Math.min(PPS
   z.addEventListener('pointerdown',e=>{e.preventDefault();on=true;z.classList.add('drag');try{z.setPointerCapture(e.pointerId);}catch(_){}set(e);});
   z.addEventListener('pointermove',e=>{if(on)set(e);});
   ['pointerup','pointercancel'].forEach(t=>z.addEventListener(t,()=>{on=false;z.classList.remove('drag');}));})();
-// rotellina del mouse sopra la timeline: zoom (il punto sotto il mouse resta fermo); fuori dalla timeline la pagina scorre come sempre.
+// rotellina del mouse sopra la timeline: zoom centrato sul segno rosso; fuori dalla timeline la pagina scorre come sempre.
 // Scorrimento orizzontale (trackpad a due dita di lato, o ⇧ + rotellina): sposta la timeline.
 $('track').addEventListener('wheel',e=>{
   const pinch=e.ctrlKey||e.metaKey;
@@ -1543,7 +1543,11 @@ $('track').addEventListener('wheel',e=>{
   if(!items.length)return;
   e.preventDefault();
   const dy=e.deltaY*(e.deltaMode===1?33:e.deltaMode===2?400:1);
-  const r=$('track').getBoundingClientRect();zoomTo(pps*Math.exp(-dy*(pinch?0.01:0.0025)),e.clientX-r.left);zoomLabel();},{passive:false});
+  // centro dello zoom: il segno rosso (resta fermo); se è fuori vista, viene portato al centro
+  const tr=$('track'),hx=tToX(playT)-tr.scrollLeft,vis=hx>=0&&hx<=tr.clientWidth;
+  zoomTo(pps*Math.exp(-dy*(pinch?0.01:0.0025)),vis?hx:tr.clientWidth/2);
+  if(!vis){tr.scrollLeft=Math.max(0,tToX(playT)-tr.clientWidth/2);paintTrack();}
+  zoomLabel();},{passive:false});
 $('zFit').onclick=()=>{autoFit=true;renderTrack();$('track').scrollLeft=0;};
 window.addEventListener('resize',()=>{if(autoFit)renderTrack();});
 $('clearBtn').onclick=()=>{if(busy||(!items.length&&!music.length))return;pushUndo('svuota timeline');items.length=0;selId=null;music.length=0;selMusic=null;render();};
