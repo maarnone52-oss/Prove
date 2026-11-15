@@ -600,7 +600,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.23.0';
+const VERSION='1.23.1';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1580,7 +1580,7 @@ async function runSequence(rec,startT=0){
     for(let n=0;n<2;n++){j=nextVid(j+1);if(j<0)break;if(plan.has(j))continue;
       const used=new Set([busyP,...[...plan.values()].map(e=>e.p)]);
       let k=0;while(k<3&&used.has(player(k)))k++;if(k>=3)break;
-      const pl=player(k);plan.set(j,{p:pl,prom:prepare(pl,items[j])});}};
+      const pl=player(k),e={p:pl,ready:false};e.prom=prepare(pl,items[j]).then(()=>{e.ready=true;});plan.set(j,e);}};
   ensurePlan(first,null);
   if(rec)rec.start(1000);
   for(let i=first;i<items.length&&!stopReq;i++){
@@ -1596,17 +1596,27 @@ async function runSequence(rec,startT=0){
     for(const [j,e] of plan)if(j<i)plan.delete(j);
     ensurePlan(i+1,p);                 // mentre suona questa, si preparano le due successive
     const v=p.v;
+    const pre=p.pre&&!v.paused;p.pre=0;   // già partito in anticipo (muto) alla fine della clip prima
     const want=(it.tin||0)+o;   // controlla di partire davvero dal punto giusto (taglio in testa)
-    if(Math.abs(v.currentTime-want)>0.04){v.currentTime=want;try{await once(v,'seeked',4000);}catch(e){}}
+    if(!pre&&Math.abs(v.currentTime-want)>0.04){v.currentTime=want;try{await once(v,'seeked',4000);}catch(e){}}
     curClip=it;curPlayer=p;curAOn=audioOn(it,o);applyClipVol();   // volume della clip (entra anche nel video esportato)
-    try{await v.play();}catch(e){setStatus('Il video «'+it.name+'» non parte: '+e.message,true);done+=it.dur;continue;}
+    if(!pre){try{await v.play();}catch(e){setStatus('Il video «'+it.name+'» non parte: '+e.message,true);done+=it.dur;continue;}}
+    const nx=items[i+1]&&items[i+1].type==='vid'?items[i+1]:null;let np=null;
     await new Promise(res=>{let fin=false;
       const stop=()=>{if(fin)return;fin=true;res();};
       v.addEventListener('ended',stop,{once:true});
       const loop=()=>{if(fin)return;if(stopReq){v.pause();return stop();}
         if(v.readyState>=2){clear();drawFit(x,v,v.videoWidth,v.videoHeight,w,h,mode);}
         const lt=v.currentTime-(it.tin||0);tick(done+Math.max(0,lt));gateAudio(lt);
-        if(lt>=it.dur-0.035){v.pause();return stop();}     // fine del pezzo (un fotogramma prima: la clip dopo parte senza pausa)
+        // cambio clip senza buco: la clip dopo parte in anticipo (muta) del tempo che il telefono impiega ad avviarla,
+        // e si passa a lei appena le sue immagini si muovono
+        if(nx&&!np&&!rec&&lt>=it.dur-preLat-0.01){const e=plan.get(i+1);
+          if(e&&e.ready&&e.p.v.paused){np=e.p;if(np.g)np.g.gain.value=0;np.pre=performance.now();np.t0=np.v.currentTime;const pr=np.v.play();if(pr&&pr.catch)pr.catch(()=>{np.pre=0;});}}
+        if(np&&np.pre&&np.v.currentTime>np.t0+0.004){const lat=(performance.now()-np.pre)/1000;
+          preLat=Math.max(0.03,Math.min(0.5,preLat*0.6+lat*0.4));try{localStorage.setItem('arnovideo-avvio',preLat.toFixed(3));}catch(e){}
+          v.pause();return stop();}
+        if(lt>=it.dur-0.035){if(np&&np.pre&&performance.now()-np.pre<600){requestAnimationFrame(loop);return;}   // aspetta un attimo la clip dopo
+          v.pause();return stop();}     // fine del pezzo (un fotogramma prima: la clip dopo parte senza pausa)
         if(v.currentTime>=it.dur-0.02&&v.paused&&!(it.tin>0))return stop();
         requestAnimationFrame(loop);};
       requestAnimationFrame(loop);
@@ -1614,6 +1624,7 @@ async function runSequence(rec,startT=0){
     v.pause();p.warm=null;done+=it.dur;
   }
   if(rec&&rec.state!=='inactive'){await sleep(150);rec.stop();}
+  players.forEach(q=>{if(q&&q.pre){q.pre=0;try{q.v.pause();}catch(e){}}});
   curClip=null;curPlayer=null;musicStop();
   if(mon)mon.gain.value=Math.max(0.0001,monVol*monVol);
 }
@@ -1630,6 +1641,7 @@ $('stopBtn').onclick=()=>{stopReq=true;const nr=nativeRender();if(nr)nr.postMess
 
 /* ---------- posizione, fotogramma e comandi di trasporto ---------- */
 let playT=0,playing=false,exporting=false,runP=null;
+let preLat=0.15;try{preLat=parseFloat(localStorage.getItem('arnovideo-avvio'))||0.15;}catch(e){}   // tempo di avvio di un video, misurato
 function setT(t){const tot=totalDur();playT=Math.max(0,Math.min(tot,t||0));const sc=$('scrub');sc.max=tot;sc.value=playT;
   sc.style.setProperty('--p',(tot?playT/tot*100:0)+'%');$('clock').textContent=fmtT(playT)+' / '+fmtT(tot);if(layout.length===items.length)placeHead();}
 function locate(t){let acc=0;for(let i=0;i<items.length;i++){const d=items[i].dur;
