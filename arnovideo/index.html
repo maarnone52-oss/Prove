@@ -248,7 +248,7 @@ select{width:100%;min-height:46px;font-size:16px;background:#111317;color:var(--
 .transport .btn.big{min-width:80px;font-size:24px}
 .transport .btn.hold{background:linear-gradient(180deg,#ffc44d,#e89a00);color:#1b1305;border-color:#ffcf6b}
 #speed{font:800 16px "SF Mono",Menlo,monospace;color:#46ff7a;min-width:56px;text-align:center;text-shadow:0 0 8px rgba(70,255,122,.5)}
-#hidden{position:fixed;left:-10px;top:-10px;width:2px;height:2px;opacity:0;pointer-events:none;overflow:hidden}
+#hidden{position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none;overflow:hidden;z-index:-1}
 footer{text-align:center;color:var(--dim);font-size:13px;margin-top:20px;letter-spacing:.08em}
 #result[hidden],#busy[hidden]{display:none}
 .help{display:none!important}
@@ -519,7 +519,7 @@ body.showhelp .help:not([hidden]){display:block!important}
 
 <script>
 'use strict';
-const VERSION='1.15.2';
+const VERSION='1.15.3';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -611,8 +611,19 @@ function stripHTML(it){const ts=stripTimes(it.dur),ok=it.strip&&it.strip.length=
   return '<div class="strip'+(ok?'':' wait')+'">'+ts.map((t,k)=>'<i data-t="'+t.toFixed(2)+'"'+(ok?' style="background-image:url('+it.strip[k]+')"':'')+'><span>'+(it.dur<20?fmtT(t):fmtT(t).replace(/\.\d$/,''))+'</span></i>').join('')+'</div>';}
 const stripQ=[];let stripRunning=false;
 // prende un fotogramma: su iPhone e Mac (Safari) il video va fatto partire un attimo prima, altrimenti il fotogramma resta vuoto
+// lettori fissi per miniature e fotogrammi: su iPhone (soprattutto in risparmio energetico) un video può partire, anche muto,
+// solo se è stato «sbloccato» da un tocco; questi vengono sbloccati al primo tocco sulla pagina e poi riusati sempre
+const thumbPool=[];let poolBlessed=false;
+function poolVideo(i){while(thumbPool.length<=i){const v=makeVideo();v.muted=true;thumbPool.push(v);}return thumbPool[i];}
+function poolLoad(v,url){if(v.dataset.url!==url){v.__primed=false;v.src=url;v.dataset.url=url;}return v;}
+for(let i=0;i<4;i++)poolVideo(i);
+function blessPool(){if(poolBlessed)return;poolBlessed=true;
+  thumbPool.forEach(v=>{try{v.muted=true;const p=v.play();if(p&&p.catch)p.catch(()=>{});v.pause();}catch(e){}});
+  // ciò che non era riuscito prima del tocco si rifà adesso
+  media.forEach(m=>{if(m.type==='vid'&&!m.thumb)m.stripTries=0;});queueStrips();setTimeout(()=>paintTrack(true),300);}
+['pointerdown','touchend','keydown'].forEach(t=>document.addEventListener(t,blessPool,{capture:true,passive:true}));
 async function primeVideo(v){if(v.__primed)return;v.__primed=true;
-  try{v.muted=true;const p=v.play();if(p&&p.then)await Promise.race([p.catch(()=>{}),sleep(1500)]);
+  try{v.muted=true;const p=v.play();if(p&&p.then)await Promise.race([p.catch(e=>{if(e&&e.name==='NotAllowedError')v.__primed=false;}),sleep(1500)]);
     await Promise.race([new Promise(r=>v.addEventListener('timeupdate',r,{once:true})),sleep(800)]);}catch(e){}
   try{v.pause();}catch(e){}}
 async function grabAt(v,t,W,H){
@@ -637,12 +648,12 @@ async function runStrips(){if(stripRunning)return;stripRunning=true;let nDone=0;
     const it=stripQ.shift();if(!media.includes(it))continue;
     const times=[0.001];
     let res=await nativeThumbs(it,times);
-    if(!res){const v=makeVideo();v.muted=true;v.src=it.url;res=[];
+    if(!res){const v=poolLoad(poolVideo(0),it.url);res=[];
       try{await once(v,'loadedmetadata',20000);if(v.readyState<2){try{await once(v,'loadeddata',5000);}catch(e){}}
         await primeVideo(v);
         res.push(await grabAt(v,0.001,240,135));
       }catch(e){}
-      v.removeAttribute('src');v.load();v.remove();}
+      }
     if(res[0])it.thumb=res[0];
     if(!res[0]&&!it.stripTries){it.stripTries=1;setTimeout(()=>{if(media.includes(it)&&!it.thumb){stripQ.push(it);runStrips();}},4000);}  // un secondo tentativo
     renderLib();renderTrack();scheduleSave();nDone++;
@@ -720,7 +731,7 @@ async function showSpace(){try{let u=null;if(navigator.storage&&navigator.storag
   $('spaceLcd').textContent=(u!=null?mb(u):'?')+' · '+files+' file';}catch(e){$('spaceLcd').textContent='non disponibile';}}
 $('cacheBtn').onclick=async()=>{if(busy)return;$('cacheBtn').disabled=true;const box=$('cacheRes');box.hidden=false;box.innerHTML='Svuoto la cache…';
   const before=await storageInfo(),rf=frameCache.size,rb=Math.max(0,ramBytes),nv=frameVideos.size;
-  frameCache.clear();ramBytes=0;frameQ.length=0;frameVideos.forEach(v=>{v.removeAttribute('src');v.load();v.remove();});frameVideos.clear();
+  frameCache.clear();ramBytes=0;frameQ.length=0;frameVideos.clear();thumbPool.forEach(v=>{v.removeAttribute('src');v.dataset.url='';v.__primed=false;});
   await saveNow();const del=await gcFiles(true);
   const after=await storageInfo();paintTrack(true);await showSpace();ramT=0;showRam();
   const freed=before.u!=null&&after.u!=null?Math.max(0,before.u-after.u):del.bytes;
@@ -840,9 +851,10 @@ async function runFrames(){if(frameBusy)return;frameBusy=true;
     const nat=await nativeThumbs(m,times,true);
     if(nat){batch.forEach((q,i)=>cachePut(q.key,nat[i]));continue;}
     let v=frameVideos.get(m);
-    if(!v){if(frameVideos.size>=3){const [k,old]=frameVideos.entries().next().value;old.removeAttribute('src');old.load();old.remove();frameVideos.delete(k);}
-      v=makeVideo();v.muted=true;v.src=m.url;frameVideos.set(m,v);
-      try{await once(v,'loadedmetadata',20000);}catch(e){}await primeVideo(v);}
+    if(!v){if(frameVideos.size>=3){const [k]=frameVideos.entries().next().value;frameVideos.delete(k);}
+      const used=new Set(frameVideos.values());let k=1;while(used.has(poolVideo(k)))k++;   // lettori 1-3 del gruppo fisso
+      v=poolLoad(poolVideo(k),m.url);frameVideos.set(m,v);
+      if(v.readyState<1){try{await once(v,'loadedmetadata',20000);}catch(e){}}await primeVideo(v);}
     for(const q of batch){if(!frameWanted.has(q.key))continue;const u=await grabAt(v,q.fi/FPS+0.001,192,108);if(u)cachePut(q.key,u);}
   }}finally{frameBusy=false;}}
 
