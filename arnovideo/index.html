@@ -344,7 +344,7 @@ body.showhelp .help:not([hidden]){display:block!important}
 #mp4Dlg .dt{font-weight:700;font-size:15px;color:#ffb21e;margin-bottom:4px}#mp4Dlg .dn{color:#9aa0aa;margin-bottom:10px;word-break:break-all}
 #mp4Dlg label{display:block;margin:8px 0}#mp4Dlg select{width:100%;margin-top:4px}#mp4Dlg .chk input{margin-right:6px}
 #mp4Dlg .dhint{font-size:11px;color:#9aa0aa;line-height:1.4}
-#peek .pi{margin-top:6px;font:500 11px/1.45 Helvetica,Arial;color:#cfd3da}#peek .pi b{color:#46ff7a}#peek .pi:empty{display:none}
+#peek .pi{margin-top:6px;font:500 11px/1.45 Helvetica,Arial;color:#cfd3da}#peek .pi b{color:#46ff7a}#peek .pi:empty{display:none}#peek .pi .cv{display:block;margin-top:3px;color:#ffb21e}
 #peek .pa{font-size:34px;text-align:center;color:#b47cff;padding:6px 0}
 /* interfaccia al 75%: i comandi dell'anteprima vanno a capo invece di uscire dal riquadro */
 /* interfaccia al 60% (iPhone): i comandi dell'anteprima vanno a capo invece di uscire dal riquadro */
@@ -622,7 +622,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.30.1';
+const VERSION='1.30.2';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -782,11 +782,14 @@ async function toMP4(m,size,pre){size=size||'1920x1080';pre=pre||'';const nr=nat
     const name=m.name.replace(/\.[^.]+$/,'').replace(/-\d+x\d+$/,'')+'-'+size.split('x')[1]+'p.mp4',f=new File([blob],name,{type:'video/mp4'});
     const it={mid:++uid,type:'vid',file:f,url:URL.createObjectURL(f),name,dur:0,w:0,h:0,thumb:'',size:f.size,fkey:'f'+Date.now()+'-'+Math.random().toString(36).slice(2,8)};
     await loadVideo(it);if(m.peaks)it.peaks=m.peaks;
+    // verifica: formato e risoluzione prima e dopo
+    const before=infoShort(m,await mediaInfo(m)),after=infoShort(it,await mediaInfo(it));
+    it.conv={from:(m.conv&&m.conv.from)||m.name,target:size,before:(m.conv&&m.conv.before)||before,after};
     pushUndo('conversione in MP4 di «'+m.name+'»');
     const k=media.indexOf(m);if(k>=0)media.splice(k,1,it);else media.push(it);
     for(let i=0;i<items.length;i++){const c=items[i];if(c.media===m){const n=mkClip(it,Math.min(c.dur,Math.max(0.1,it.dur-(c.tin||0))),Math.min(c.tin||0,Math.max(0,it.dur-0.1)),c.vol,c.ain,c.aout);if(selId===c.id)selId=n.id;items[i]=n;}}
     copyQ.push(it);runCopies();queueStrips();
-    setStatus('«'+name+'» pronto ('+mb(f.size)+'): sostituisce «'+m.name+'» nell\'elenco e nella timeline.');ok=true;
+    setStatus('«'+name+'» pronto: '+after+' (prima: '+it.conv.before+'). Tieni premuto il file nell\'elenco per i dettagli.');ok=true;
   }catch(e){setStatus('Conversione in MP4 non riuscita: '+(e&&e.message||e),true);}
   finally{loading=false;loadUI(null);setBusy(false);render();}
   return ok;}
@@ -1198,6 +1201,9 @@ async function mediaInfo(m){if(m._info)return m._info;const f=m.file;const info=
         info.a.push(t);}}
   }catch(e){info.err=e.message;}
   return info;}
+function infoShort(m,info){const t=(info.v||[])[0],a=(info.a||[])[0];if(!t)return (info.box||info.ext||'?')+(m.w?' · '+m.w+'×'+m.h:'');
+  const w=Math.abs(t.rot)===90?t.h:t.w,h=Math.abs(t.rot)===90?t.w:t.h;
+  return (info.box||info.ext)+' · '+t.codec+' '+w+'×'+h+(t.fps?' '+Math.round(t.fps*100)/100+' fps':'')+(t.hdr?' '+t.hdr:'')+(a?' · audio '+a.codec:' · senza audio');}
 function infoHTML(m,info){const L=[],r=v=>Math.round(v*100)/100;
   L.push('<b>'+(info.box||info.ext||'?')+'</b> · '+mb(info.size||0)+(m.dur&&m.type!=='img'?' · '+fmtT(m.dur):''));
   if(m.type==='img')L.push('Foto '+(m.w||'?')+'×'+(m.h||'?'));
@@ -1207,6 +1213,7 @@ function infoHTML(m,info){const L=[],r=v=>Math.round(v*100)/100;
   (info.a||[]).forEach(t=>L.push('🔊 '+t.codec+' · '+(t.sr?(t.sr/1000)+' kHz':'')+(t.ch?' · '+(t.ch===1?'mono':t.ch===2?'stereo':t.ch+' canali'):'')));
   if(m.type==='vid'&&info.a&&!info.a.length&&info.v&&info.v.length)L.push('🔇 senza audio');
   if(info.a&&info.a.length>1)L.push('⚠︎ '+info.a.length+' tracce audio');
+  if(m.conv)L.push('<span class="cv">✔︎ Convertito in MP4 (scelto '+m.conv.target.replace('x','×')+')<br>prima: '+m.conv.before+'<br>dopo: '+m.conv.after+'</span>');
   if(info.size&&m.dur&&m.type!=='img')L.push('Velocità dati '+(info.size*8/m.dur/1e6).toFixed(1)+' Mbit/s');
   return L.join('<br>');}
 async function peaksFromAAC(m){
@@ -2067,7 +2074,7 @@ async function saveNow(){clearTimeout(saveTimer);saveTimer=null;if(!db||restorin
   if(!curProj){if(!items.length&&!media.length)return;curProj={id:'p'+Date.now(),name:defaultName(),created:Date.now()};showProj();}
   const rec={id:curProj.id,name:curProj.name,created:curProj.created,updated:Date.now(),playT,
     settings:{fmt:$('fmt').value,fit:$('fit').value,defDur:$('defDur').value,quality:$('quality').value},
-    media:media.map(m=>({pv:2,mid:m.mid,type:m.type,name:m.name,dur:m.dur,w:m.w,h:m.h,thumb:m.thumb,thumbV:m.thumbV||0,strip:m.strip||null,size:m.size||0,fkey:m.fkey,peaks:m.peaks||null,noAudio:!!m.noAudio})),
+    media:media.map(m=>({pv:2,mid:m.mid,type:m.type,name:m.name,dur:m.dur,w:m.w,h:m.h,thumb:m.thumb,thumbV:m.thumbV||0,strip:m.strip||null,size:m.size||0,fkey:m.fkey,peaks:m.peaks||null,noAudio:!!m.noAudio,conv:m.conv||null})),
     clips:items.map(c=>({mid:c.media.mid,dur:c.dur,tin:c.tin||0,vol:c.vol!=null?c.vol:1,ain:c.ain||0,aout:c.aout||0})),
     music:music.map(mc=>({mid:mc.media.mid,start:mc.start,tin:mc.tin,dur:mc.dur,vol:mc.vol})),mix:Object.assign({},mix)};
   try{await dbPut('projects',rec);const d=new Date();$('saved').textContent='salvato alle '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
