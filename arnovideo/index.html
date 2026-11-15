@@ -600,7 +600,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.21.1';
+const VERSION='1.21.2';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1110,7 +1110,7 @@ function peekClose(){const pk=$('peek');if(pk.hidden)return;const el=pk.querySel
   pk.querySelector('.pb').innerHTML='';pk.hidden=true;}
 function peekOpen(m,row){peekClose();const pk=$('peek'),pb=pk.querySelector('.pb');pk.querySelector('.ph span').textContent=m.name;let el;
   if(m.type==='img'){el=document.createElement('img');el.src=m.url;}
-  else{el=document.createElement(m.type==='aud'?'audio':'video');el.controls=true;el.playsInline=true;el.setAttribute('playsinline','');el.preload='auto';
+  else{el=document.createElement(m.type==='aud'?'audio':'video');el.controls=false;el.disablePictureInPicture=true;el.disableRemotePlayback=true;el.playsInline=true;el.setAttribute('playsinline','');el.preload='auto';
     el.src=m.url;try{el.volume=Math.max(0.05,monVol);}catch(e){}
     el.play().catch(()=>{el.muted=true;el.play().catch(()=>{});});}   // se il telefono non lascia partire l'audio, parte almeno l'immagine
   if(m.type==='aud')pb.innerHTML='<div class="pa">♪</div>';pb.appendChild(el);pk.hidden=false;
