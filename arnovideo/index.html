@@ -3,11 +3,6 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<script>/* dimensione dell'interfaccia (iPhone e iPad): 75% = più spazio di lavoro, come in ARNOCLICK */
-(function(){try{var t=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-var s=parseFloat(localStorage.getItem('arnovideo.uiScale'));
-if(t&&s>=0.5&&s<0.999){document.documentElement.classList.add('uis');
-document.querySelector('meta[name=viewport]').setAttribute('content','width=device-width, initial-scale='+s+', minimum-scale='+s+', maximum-scale='+s+', user-scalable=no, viewport-fit=cover');}}catch(e){}})();</script>
 <title>ARNOVIDEO</title>
 <meta name="theme-color" content="#0d0e10">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -340,8 +335,6 @@ body.showhelp .help:not([hidden]){display:block!important}
 #peek audio{display:block;width:100%}
 #peek .pa{font-size:34px;text-align:center;color:#b47cff;padding:6px 0}
 /* interfaccia al 75%: i comandi dell'anteprima vanno a capo invece di uscire dal riquadro */
-html.uis .mini{flex-wrap:wrap;justify-content:center;row-gap:8px}
-html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 /* === 1.10.1: modifiche fatte in ARNODESIGN sullo schermo iPhone 15 === */
 @media (max-width:520px){
 /* intestazione: riquadro del logo più stretto e alto, ARNO sopra e VIDEO sotto spostato a destra,
@@ -577,11 +570,6 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
         <div class="row" style="margin-top:6px;flex-wrap:nowrap"><span class="lcd" id="spaceLcd" style="font-size:16px;flex:1">–</span><button class="btn sm" id="cacheBtn" type="button">Svuota cache</button></div>
         <div class="ramrow"><span class="lbl">cache in RAM</span><span class="lcd g" id="ramLcd">–</span></div>
         <div id="cacheRes" hidden></div></label>
-      <label id="uisRow" hidden><span class="lbl">Dimensione dell'interfaccia</span>
-        <select id="uisSel">
-          <option value="1">100% (normale)</option>
-          <option value="0.75">75% (più spazio di lavoro)</option>
-        </select></label>
       <label><span class="lbl">Formato del fotogramma</span>
         <select id="frameFmt">
           <option value="jpg" selected>JPEG (foto, file più piccolo)</option>
@@ -598,7 +586,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.25.2';
+const VERSION='1.26.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -855,13 +843,12 @@ async function runStrips(){if(stripRunning)return;stripRunning=true;let nDone=0;
     while(exporting||playing)await sleep(500);          // non disturba riproduzione ed esportazione
     const it=stripQ.shift();if(!media.includes(it))continue;
     const times=[0.001];
-    let res=await nativeThumbs(it,times);
-    if(!res){const v=poolLoad(poolVideo(0),it.url);res=[];
-      try{await once(v,'loadedmetadata',20000);if(v.readyState<2){try{await once(v,'loadeddata',5000);}catch(e){}}
+    let res=[];{const v=poolLoad(poolVideo(0),it.url);   // prima il lettore della pagina, poi il Mac
+      try{if(v.readyState<1)await once(v,'loadedmetadata',20000);if(v.readyState<2){try{await once(v,'loadeddata',5000);}catch(e){}}
         await primeVideo(v);
         res.push(await grabAt(v,0.001,240,135));
-      }catch(e){}
-      }
+      }catch(e){}}
+    if(!res[0]){const n=await nativeThumbs(it,times);if(n)res=n;}
     if(res[0])it.thumb=res[0];
     if(!res[0]&&!it.stripTries){it.stripTries=1;setTimeout(()=>{if(media.includes(it)&&!it.thumb){stripQ.push(it);runStrips();}},4000);}  // un secondo tentativo
     renderLib();renderTrack();scheduleSave();nDone++;
@@ -965,9 +952,8 @@ let showHelp=false;try{showHelp=localStorage.getItem('arnovideo-aiuto')==='1';}c
 function setHelp(v){showHelp=v;document.body.classList.toggle('showhelp',v);$('helpBtn').classList.toggle('on',v);$('helpBtn').textContent=v?'✓ Aiuto visibile':'？ Aiuto';
   try{localStorage.setItem('arnovideo-aiuto',v?'1':'0');}catch(e){}}
 $('helpBtn').onclick=()=>setHelp(!showHelp);
-(function(){const t=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);if(!t)return;
-  let v=1;try{v=parseFloat(localStorage.getItem('arnovideo.uiScale'))||1;}catch(e){}$('uisRow').hidden=false;$('uisSel').value=v<0.999?'0.75':'1';
-  $('uisSel').onchange=async()=>{try{localStorage.setItem('arnovideo.uiScale',$('uisSel').value);}catch(e){}setStatus('Cambio la dimensione…');try{await saveNow();}catch(e){}location.reload();};})();setHelp(showHelp);
+try{localStorage.removeItem('arnovideo.uiScale');}catch(e){}   // l'opzione 75% è stata tolta
+setHelp(showHelp);
 
 /* ---------- anteprima ripetuta sopra la timeline (copia dell'anteprima principale) ---------- */
 (function(){const c2=$('cv2'),x2=c2.getContext('2d');let last=0;
@@ -1209,16 +1195,17 @@ async function runFrames(){if(frameBusy)return;frameBusy=true;
     // solo quelli ancora visibili, prima quelli dello stesso file
     for(let i=frameQ.length-1;i>=0;i--)if(!frameWanted.has(frameQ[i].key))frameQ.splice(i,1);
     if(!frameQ.length)break;
-    const m=frameQ[0].m,batch=frameQ.filter(q=>q.m===m).slice(0,nativeRender()?4:12);batch.forEach(q=>frameQ.splice(frameQ.indexOf(q),1));
-    const times=batch.map(q=>q.fi/FPS+0.001);
-    const nat=await nativeThumbs(m,times,false,true);   // con un decimo di secondo di tolleranza: molto più veloce sui video dell'iPhone
-    let left=batch;
-    if(nat){batch.forEach((q,i)=>{if(nat[i])cachePut(q.key,nat[i]);});left=batch.filter((q,i)=>!nat[i]);if(!left.length){thDiagShow();continue;}}   // nell'app Mac il lettore della pagina darebbe immagini nere: si riprova più tardi   // sul Mac non si usa il lettore della pagina (le immagini resterebbero vuote)
+    const m=frameQ[0].m,batch=frameQ.filter(q=>q.m===m).slice(0,12);batch.forEach(q=>frameQ.splice(frameQ.indexOf(q),1));
+    // prima il lettore della pagina (come su iPhone), poi il Mac per quelle non riuscite
     let v=frameVideos.get(m);
     if(!v){frameVideos.clear();
       v=poolLoad(poolVideo(1),m.url);frameVideos.set(m,v);
       if(v.readyState<1){try{await once(v,'loadedmetadata',20000);}catch(e){}}await primeVideo(v);}
-    for(const q of left){if(!frameWanted.has(q.key))continue;const u=await grabAt(v,q.fi/FPS+0.001,192,108);if(u)cachePut(q.key,u);}
+    const left=[];
+    for(const q of batch){if(!frameWanted.has(q.key))continue;const u=await grabAt(v,q.fi/FPS+0.001,192,108);if(u)cachePut(q.key,u);else left.push(q);}
+    for(let k=0;k<left.length&&nativeRender();k+=4){const part=left.slice(k,k+4);
+      const nat=await nativeThumbs(m,part.map(q=>q.fi/FPS+0.001),false,true);
+      if(nat)part.forEach((q,i)=>{if(nat[i])cachePut(q.key,nat[i]);});}
     thDiagShow();
   }}finally{frameBusy=false;if(!frameQ.length){frameVideos.clear();poolFree(poolVideo(1));}}}
 
