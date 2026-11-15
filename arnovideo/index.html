@@ -184,7 +184,7 @@ button{font:inherit;color:var(--text);cursor:pointer}
 .mclip .trim::before{content:"";position:absolute;left:4px;top:12px;width:2px;height:16px;border-left:2px solid rgba(0,0,0,.5)}
 .mclip .trim.l{left:0;border-radius:4px 0 0 4px}.mclip .trim.r{right:0;border-radius:0 4px 4px 0}
 .mclip .mgrip{left:14px!important}.mclip .mname{left:36px!important;right:16px!important}.mclip .mvol{right:16px!important}
-#trimTip{position:fixed;z-index:95;pointer-events:none;transform:translate(-50%,-130%);background:#0a0403;border:1px solid #ffb21e;border-radius:8px;
+#trimTip{position:fixed;z-index:95;pointer-events:none;transform:none;background:#0a0403;border:1px solid #ffb21e;border-radius:8px;
  padding:4px 8px;font:800 14px "SF Mono",Menlo,monospace;color:#ffb21e;white-space:nowrap;box-shadow:0 6px 16px rgba(0,0,0,.7)}
 #trimTip[hidden]{display:none}
 .tclip .tname{padding-left:22px!important}
@@ -575,7 +575,7 @@ body.showhelp .help:not([hidden]){display:block!important}
 
 <script>
 'use strict';
-const VERSION='1.19.0';
+const VERSION='1.19.1';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1073,6 +1073,9 @@ async function runFrames(){if(frameBusy)return;frameBusy=true;
 
 function revealHead(){if(!items.length||layout.length!==items.length)return;const tr=$('track'),x=tToX(playT);   // porta in vista il segno rosso
   if(x<tr.scrollLeft+20||x>tr.scrollLeft+tr.clientWidth-40)tr.scrollLeft=Math.max(0,x-tr.clientWidth*0.4);}
+/* etichetta del taglio: sempre sopra la timeline (il dito non la copre), allineata al dito ma dentro lo schermo */
+function placeTip(tip,cx){const r=$('track').getBoundingClientRect(),w=tip.offsetWidth||200,h=tip.offsetHeight||30,vw=window.innerWidth;
+  tip.style.left=Math.max(6,Math.min(vw-w-6,cx-w/2))+'px';tip.style.top=Math.max(6,r.top-h-10)+'px';}
 /* ---------- traccia musicale: selezione e spostamento ---------- */
 (function(){let mv=null;
   $('mlane').addEventListener('pointerdown',e=>{const el=e.target.closest('.mclip');if(!el||busy)return;const mc=music.find(x=>x.id===+el.dataset.mid);if(!mc)return;
@@ -1092,7 +1095,7 @@ function revealHead(){if(!items.length||layout.length!==items.length)return;cons
     else{const t=Math.max(0,q(xToTe(Math.max(0,mv.x0+dx))));mc.start=t;tipTxt='♪ parte da '+fmtT(t);}
     mv.el.style.left=tToXe(mc.start)+'px';mv.el.style.width=Math.max(24,tToXe(mc.start+mc.dur)-tToXe(mc.start))+'px';
     mv.el.querySelector('.mname').textContent='♪ '+mc.media.name+' · da '+fmtT(mc.start);paintSoon();
-    const tip=$('trimTip');tip.hidden=false;tip.style.left=e.clientX+'px';tip.style.top=e.clientY+'px';tip.textContent=tipTxt;});
+    const tip=$('trimTip');tip.hidden=false;tip.textContent=tipTxt;placeTip(tip,e.clientX);});
   const up=e=>{if(!mv||e.pointerId!==mv.pid)return;const m=mv;mv=null;$('trimTip').hidden=true;
     selMusic=m.mc.id;selId=null;[...$('lane').children].forEach(x=>x.classList.remove('sel'));
     if(m.drag){render();}else{renderMusic();renderSel();}};
@@ -1110,7 +1113,7 @@ function revealHead(){if(!items.length||layout.length!==items.length)return;cons
     const px=e.clientX-r.left+tr.scrollLeft,q=v=>Math.round(v*FPS)/FPS;let tip;
     if(at.side==='l'){c.ain=Math.max(0,Math.min(c.dur-aOut(c)-0.1,q((px-L.x)/L.w*c.dur)));tip='🔇 audio da '+fmtT(c.ain)+' (muto all\'inizio)';}
     else{c.aout=Math.max(0,Math.min(c.dur-aIn(c)-0.1,q((L.x+L.w-px)/L.w*c.dur)));tip='🔇 audio fino a '+fmtT(c.dur-c.aout)+' (muto gli ultimi '+fmtT(c.aout)+')';}
-    paintSoon();const t=$('trimTip');t.hidden=false;t.style.left=e.clientX+'px';t.style.top=e.clientY+'px';t.textContent=tip;
+    paintSoon();const t=$('trimTip');t.hidden=false;t.textContent=tip;placeTip(t,e.clientX);
     if(e.clientX>r.right-30)tr.scrollLeft+=10;else if(e.clientX<r.left+30)tr.scrollLeft-=10;});
   const up=e=>{if(!at||e.pointerId!==at.pid)return;const a=at;at=null;$('trimTip').hidden=true;if(a.moved){scheduleSave();renderSel();paintSoon();}};
   al.addEventListener('pointerup',up);al.addEventListener('pointercancel',up);})();
@@ -1139,8 +1142,8 @@ function relayout(){   // aggiorna larghezze e tempi senza ricostruire la timeli
       const max=c.type==='vid'?c.media.dur-(c.tin||0):60;c.dur=Math.max(TRIM_MIN,Math.min(max,q(tr.dur+d)));
     }
     relayout();
-    const tip=$('trimTip');tip.hidden=false;tip.style.left=e.clientX+'px';tip.style.top=e.clientY+'px';
-    tip.textContent=c.type==='vid'?(tr.side==='l'?'✂ inizio '+fmtT(c.tin):'✂ fine '+fmtT(c.tin+c.dur))+' · '+fmtT(c.dur):'durata '+fmtT(c.dur);
+    const tip=$('trimTip');tip.hidden=false;
+    tip.textContent=c.type==='vid'?(tr.side==='l'?'✂ inizio '+fmtT(c.tin):'✂ fine '+fmtT(c.tin+c.dur))+' · '+fmtT(c.dur):'durata '+fmtT(c.dur);placeTip(tip,e.clientX);
     // anteprima sul punto di taglio
     const i=items.indexOf(c),st=startOf(i);showFrame(tr.side==='l'?st:st+Math.max(0,c.dur-1/FPS));
     const box=$('track'),r=box.getBoundingClientRect();if(e.clientX>r.right-30)box.scrollLeft+=10;else if(e.clientX<r.left+30)box.scrollLeft-=10;});
