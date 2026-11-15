@@ -600,7 +600,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.24.3';
+const VERSION='1.24.4';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1698,7 +1698,7 @@ $('playBtn').onclick=()=>{unlockPv();if(playing)stopPlay();else startPlay();};
 let contPlay=false;try{contPlay=localStorage.getItem('arnovideo-continuo')==='1';}catch(e){}
 function setCont(v){contPlay=v;$('contBtn').classList.toggle('on',v);$('contBtn').textContent=v?'▶ Continuo ✓':'▶ Continuo';
   try{localStorage.setItem('arnovideo-continuo',v?'1':'0');}catch(e){}}
-$('contBtn').onclick=()=>{setCont(!contPlay);};   // solo acceso/spento: la riproduzione la avvia ▶ (o lo spostamento del cursore, se acceso)setCont(contPlay);
+$('contBtn').onclick=()=>{setCont(!contPlay);if(!contPlay&&playing)stopPlay();};   // spento: si ferma anche la riproduzione   // solo acceso/spento: la riproduzione la avvia ▶ (o lo spostamento del cursore, se acceso)setCont(contPlay);
 async function waitStopped(){let n=0;while(playing&&n++<300)await sleep(10);}   // aspetta che la fermata in corso sia finita
 const resumeAfter=was=>(was||contPlay)&&playT<totalDur()-0.05&&items.length&&!exporting;
 async function jumpTo(t){const was=playing;await stopPlay();showFrame(t);revealHead();if(resumeAfter(was)){seekWant=null;await waitStopped();startPlay();}}
