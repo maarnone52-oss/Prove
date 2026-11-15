@@ -600,7 +600,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.22.1';
+const VERSION='1.22.2';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1433,9 +1433,14 @@ function syncMusic(T){if(!music.length){musicStop();return;}musicInit();
   if(!mc){if(!musicEl.paused)musicEl.pause();musicCur=null;return;}
   if(musicCur!==mc){musicCur=mc;if(musicEl.dataset.url!==mc.media.url){musicEl.src=mc.media.url;musicEl.dataset.url=mc.media.url;}applyMusicVol();}
   const want=mc.tin+(T-mc.start);
-  if(musicEl.readyState>=1){if(Math.abs(musicEl.currentTime-want)>0.25)musicEl.currentTime=want;}
+  // la musica non si sposta a ogni piccola differenza (ogni spostamento si sente come uno scatto, soprattutto con gli MP3):
+  // si sposta solo alla partenza o se è lontana più di 1 s; le piccole differenze si recuperano accelerando o rallentando appena
+  if(musicEl.readyState>=1){const d=musicEl.currentTime-want;
+    if(musicEl.paused?Math.abs(d)>0.05:Math.abs(d)>1){musicEl.currentTime=want;musicRate(1);}
+    else{const k=Math.abs(d);musicRate(k<0.05?1:(d>0?(k>0.3?0.92:0.96):(k>0.3?1.08:1.04)));}}
   if(musicEl.paused&&musicEl.readyState>=1){const p=musicEl.play();if(p&&p.catch)p.catch(()=>{});}}
-function musicStop(){if(musicEl&&!musicEl.paused)musicEl.pause();musicCur=null;}
+function musicRate(r){if(musicEl&&musicEl.playbackRate!==r){try{musicEl.preservesPitch=musicEl.webkitPreservesPitch=true;musicEl.playbackRate=r;}catch(e){}}}
+function musicStop(){if(musicEl&&!musicEl.paused)musicEl.pause();musicRate(1);musicCur=null;}
 
 let busC=null,busM=null,meterC=null,meterM=null;   // mixer: audio delle clip e musica
 function audioInit(){
