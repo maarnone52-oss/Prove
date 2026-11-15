@@ -502,6 +502,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
     <div class="tlbar">
       <button class="btn xs" id="undoBtn" disabled>↶ <span id="undoN"></span></button>
       <button class="btn xs" id="redoBtn" disabled>↷ <span id="redoN"></span></button>
+      <button class="btn xs" id="cutBtn" title="Taglia la clip nel punto del segno rosso" style="padding:0 10px">✂ Taglia</button>
       <span class="sp"></span>
       <button class="btn xs" id="clearBtn" disabled>Svuota</button>
     </div>
@@ -622,7 +623,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.30.3';
+const VERSION='1.31.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1818,6 +1819,23 @@ function setT(t){const tot=totalDur();playT=Math.max(0,Math.min(tot,t||0));const
 function locate(t){let acc=0;for(let i=0;i<items.length;i++){const d=items[i].dur;
   if(t<acc+d||i===items.length-1)return {i,off:Math.max(0,Math.min(d,t-acc)),acc};acc+=d;}return null;}
 function startOf(i){let a=0;for(let k=0;k<i;k++)a+=items[k].dur;return a;}
+/* taglio della clip nel punto del segno rosso: diventa due clip */
+async function splitAtHead(){if(busy||!items.length)return;await stopPlay();
+  const L=locate(playT);if(!L){return;}const c=items[L.i];let off=Math.round(L.off*FPS)/FPS;
+  if(off<0.1||off>c.dur-0.1){setStatus('Per tagliare, porta il segno rosso dentro una clip (non proprio all\'inizio o alla fine).',true);return;}
+  pushUndo('taglio di «'+c.name+'»');
+  const ain=aIn(c),aout=aOut(c),d2=c.dur-off;
+  const n=mkClip(c.media,d2,c.type==='vid'?(c.tin||0)+off:0,c.vol,Math.max(0,ain-off),Math.min(aout,d2));
+  c.ain=Math.min(ain,off);c.aout=Math.max(0,off-(c.dur-aout));c.dur=off;
+  items.splice(L.i+1,0,n);selId=n.id;
+  render();setStatus('«'+c.name+'» tagliata in due a '+fmtT(playT)+'.');}
+$('cutBtn').onclick=()=>splitAtHead();
+// tasto ⌫ (o Canc): toglie dalla timeline la clip o la musica selezionata
+function deleteSelected(){if(busy)return false;
+  if(selMusic){const mc=music.find(x=>x.id===selMusic);if(!mc)return false;pushUndo('musica tolta');music.splice(music.indexOf(mc),1);selMusic=null;render();return true;}
+  const i=items.findIndex(c=>c.id===selId);if(i<0)return false;const c=items[i];
+  pushUndo('tolto dalla timeline «'+c.name+'»');items.splice(i,1);
+  selId=items[Math.min(i,items.length-1)]?items[Math.min(i,items.length-1)].id:null;render();return true;}
 function markCur(i){[...$('lane').children].forEach((c,k)=>c.classList.toggle('cur',k===i));}
 function blank(){const cv=$('cv');cv.width=1280;cv.height=720;fitCv();const x=cv.getContext('2d');x.fillStyle='#000';x.fillRect(0,0,1280,720);
   x.fillStyle='#3a3f47';x.font='bold 40px Helvetica, Arial';x.textAlign='center';x.fillText('ARNOVIDEO',640,370);markCur(-1);}
@@ -2022,7 +2040,7 @@ function applySnap(h){if(h.mix){Object.assign(mix,h.mix);applyMix();}music.lengt
 function undo(){if(busy||!undoSt.length)return;const h=undoSt.pop();redoSt.push(snap(h.label));applySnap(h);lastTag='';render();setStatus('Annullato: '+h.label+'.');}
 function redo(){if(busy||!redoSt.length)return;const h=redoSt.pop();undoSt.push(snap(h.label));applySnap(h);lastTag='';render();setStatus('Ripetuto: '+h.label+'.');}
 function resetHistory(){undoSt.length=0;redoSt.length=0;lastTag='';setSnap=readSettings();updUndo();}
-function updUndo(){$('undoBtn').disabled=busy||!undoSt.length;$('redoBtn').disabled=busy||!redoSt.length;
+function updUndo(){$('cutBtn').disabled=busy||!items.length;$('undoBtn').disabled=busy||!undoSt.length;$('redoBtn').disabled=busy||!redoSt.length;
   $('undoN').textContent=undoSt.length?'('+undoSt.length+')':'';$('redoN').textContent=redoSt.length?'('+redoSt.length+')':'';}
 $('undoBtn').onclick=undo;$('redoBtn').onclick=redo;
 const setNames={fmt:'formato',fit:'adattamento',defDur:'durata predefinita delle foto',quality:'qualità'};
@@ -2052,7 +2070,8 @@ document.addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey)return
   const el=document.activeElement,tag=el&&el.tagName;if(tag==='INPUT'&&el.type!=='range'||tag==='SELECT'||tag==='TEXTAREA')return;
   if(e.key===' '){e.preventDefault();if(el&&el.blur)el.blur();arnoMenu('play');}
   else if(e.key==='ArrowLeft'&&tag!=='INPUT'){e.preventDefault();arnoMenu('rew');}
-  else if(e.key==='ArrowRight'&&tag!=='INPUT'){e.preventDefault();arnoMenu('ffw');}});
+  else if(e.key==='ArrowRight'&&tag!=='INPUT'){e.preventDefault();arnoMenu('ffw');}
+  else if((e.key==='Backspace'||e.key==='Delete')&&tag!=='INPUT'){if(deleteSelected())e.preventDefault();}});
 // niente menu del tasto destro (con «Ricarica»), tranne nei campi di testo dove serve per copiare e incollare
 document.addEventListener('contextmenu',e=>{if(!e.target.closest('input[type=text],input:not([type]),textarea'))e.preventDefault();});
 ['dragover','drop'].forEach(ev=>document.addEventListener(ev,e=>{if(!e.dataTransfer||![...e.dataTransfer.types].includes('Files'))return;
