@@ -600,7 +600,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.24.2';
+const VERSION='1.24.3';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -944,9 +944,12 @@ $('helpBtn').onclick=()=>setHelp(!showHelp);
     const cv=$('cv');const w=Math.min(640,cv.width),h=Math.round(w*cv.height/cv.width);
     if(c2.width!==w||c2.height!==h){c2.width=w;c2.height=h;ver=-1;}
     if(ver!==cvVer||!(playing||exporting)){ver=cvVer;try{x2.drawImage(cv,0,0,w,h);}catch(e){}}   // copia solo i fotogrammi nuovi
-    $('clock2').textContent=$('clock').textContent.split(' / ')[0];
-    $('play2').textContent=$('playBtn').textContent;$('play2').classList.toggle('red',playing);$('play2').classList.toggle('play',!playing);
-    const dis=$('playBtn').disabled;document.querySelectorAll('#mirrorBox [data-m]').forEach(b=>b.disabled=dis);}
+    // si cambia la pagina solo quando serve: riscrivere i pulsanti 30 volte al secondo fa perdere i clic su Safari (Mac)
+    const set=(el,v)=>{if(el.textContent!==v)el.textContent=v;};
+    set($('clock2'),$('clock').textContent.split(' / ')[0]);
+    const p2=$('play2');set(p2,$('playBtn').textContent);
+    if(p2.classList.contains('red')!==playing){p2.classList.toggle('red',playing);p2.classList.toggle('play',!playing);}
+    const dis=$('playBtn').disabled;document.querySelectorAll('#mirrorBox [data-m]').forEach(b=>{if(b.disabled!==dis)b.disabled=dis;});}
   requestAnimationFrame(loop);
   $('mirrorBox').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(!b||b.disabled)return;unlockPv();const m=b.dataset.m;
     if(m==='play')$('playBtn').click();else if(m==='frame')$('frameBtn').click();else if(m==='prevItem'||m==='nextItem')$(m).click();
@@ -1695,7 +1698,7 @@ $('playBtn').onclick=()=>{unlockPv();if(playing)stopPlay();else startPlay();};
 let contPlay=false;try{contPlay=localStorage.getItem('arnovideo-continuo')==='1';}catch(e){}
 function setCont(v){contPlay=v;$('contBtn').classList.toggle('on',v);$('contBtn').textContent=v?'▶ Continuo ✓':'▶ Continuo';
   try{localStorage.setItem('arnovideo-continuo',v?'1':'0');}catch(e){}}
-$('contBtn').onclick=()=>{setCont(!contPlay);if(contPlay&&!playing&&items.length&&!busy)startPlay();};setCont(contPlay);
+$('contBtn').onclick=()=>{setCont(!contPlay);};   // solo acceso/spento: la riproduzione la avvia ▶ (o lo spostamento del cursore, se acceso)setCont(contPlay);
 async function waitStopped(){let n=0;while(playing&&n++<300)await sleep(10);}   // aspetta che la fermata in corso sia finita
 const resumeAfter=was=>(was||contPlay)&&playT<totalDur()-0.05&&items.length&&!exporting;
 async function jumpTo(t){const was=playing;await stopPlay();showFrame(t);revealHead();if(resumeAfter(was)){seekWant=null;await waitStopped();startPlay();}}
