@@ -83,7 +83,7 @@ button{font:inherit;color:var(--text);cursor:pointer}
 #track{position:relative;overflow-x:auto;overflow-y:hidden;background:#0b0c0e;border-radius:10px;box-shadow:inset 0 2px 8px rgba(0,0,0,.85);
  -webkit-overflow-scrolling:touch;min-height:118px}
 #track.over{box-shadow:inset 0 0 0 2px #46ff7a,inset 0 2px 8px rgba(0,0,0,.85)}
-#trackIn{position:relative;min-width:100%;height:160px}
+#trackIn{position:relative;min-width:100%;height:206px}
 #ruler{position:absolute;left:0;right:0;top:0;height:22px;cursor:ew-resize;touch-action:none;border-bottom:1px solid #2a2d33;background:#121418}
 #ruler b{position:absolute;top:0;height:22px;border-left:1px solid #3b3f46;font:600 10px "SF Mono",Menlo,monospace;color:var(--dim);padding:5px 0 0 3px;pointer-events:none}
 #lane{position:absolute;left:0;top:28px;height:84px;display:flex;gap:0}
@@ -136,6 +136,12 @@ button{font:inherit;color:var(--text);cursor:pointer}
 #ramLcd{font-size:14px}
 #cacheRes{margin-top:8px;background:#0a0403;border:1px solid #46ff7a;border-radius:8px;padding:8px 10px;font:600 13px/1.5 "SF Mono",Menlo,monospace;color:#cfe9d6}
 #cacheRes b{color:#46ff7a}#cacheRes[hidden]{display:none}
+/* traccia audio sotto le clip: forma d'onda di ogni clip, allineata al video */
+#alane{position:absolute;left:0;top:116px;height:44px;pointer-events:none}
+#alane .aclip{position:absolute;top:0;height:44px;border-radius:6px;background:#121418;box-shadow:inset 0 0 0 1px #2a2d33;box-sizing:border-box}
+#alane .aclip.none::after{content:attr(data-msg);position:absolute;left:8px;top:14px;font:600 10px "SF Mono",Menlo,monospace;color:#4b5058;white-space:nowrap}
+#wave{position:absolute;top:116px;height:44px;pointer-events:none;z-index:1}
+.albl{position:absolute;left:6px;top:118px;font:700 9px "SF Mono",Menlo,monospace;color:#7d838c;letter-spacing:.1em;z-index:2;pointer-events:none;position:sticky}
 #trimTip{position:fixed;z-index:95;pointer-events:none;transform:translate(-50%,-130%);background:#0a0403;border:1px solid #ffb21e;border-radius:8px;
  padding:4px 8px;font:800 14px "SF Mono",Menlo,monospace;color:#ffb21e;white-space:nowrap;box-shadow:0 6px 16px rgba(0,0,0,.7)}
 #trimTip[hidden]{display:none}
@@ -145,7 +151,7 @@ button{font:inherit;color:var(--text);cursor:pointer}
  background:linear-gradient(90deg,rgba(0,0,0,.55),transparent);color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center}
 #phead{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:#ff4530;box-shadow:0 0 6px #ff4530;pointer-events:none;z-index:3}
 /* fascia sotto la timeline: si tocca o si trascina il pallino per spostare la posizione */
-#kzone{position:absolute;left:0;right:0;top:116px;bottom:0;touch-action:none;cursor:ew-resize;z-index:2;
+#kzone{position:absolute;left:0;right:0;top:162px;bottom:0;touch-action:none;cursor:ew-resize;z-index:2;
  background:linear-gradient(#0b0c0e,#121418);border-top:1px solid #2a2d33}
 body:not(.showhelp) #kzone::after{display:none!important}
 #kzone::after{content:"trascina il pallino rosso";position:sticky;left:12px;display:inline-block;margin:14px 0 0 12px;font-size:11px;color:#4b5058;letter-spacing:.06em;pointer-events:none}
@@ -432,7 +438,7 @@ body.showhelp .help:not([hidden]){display:block!important}
       <span class="sp"></span>
       <button class="btn xs" id="clearBtn" disabled>Svuota</button>
     </div>
-    <div id="track"><div id="trackIn"><div id="ruler"></div><div id="lane" data-empty="Trascina qui video e foto dall'elenco"></div><div id="kzone"></div><div id="phead"><div id="pknob"></div></div><div id="ins"></div></div></div>
+    <div id="track"><div id="trackIn"><div id="ruler"></div><div id="lane" data-empty="Trascina qui video e foto dall'elenco"></div><div id="alane"></div><canvas id="wave"></canvas><div id="kzone"></div><div id="phead"><div id="pknob"></div></div><div id="ins"></div></div></div>
     <div class="under"><div id="selBar"></div>
       <div class="zoombox"><button class="btn xs" id="zFit">Adatta</button>
         <div id="zslider" aria-label="Zoom della timeline"><div class="zline"></div><div id="zthumb"></div></div>
@@ -519,7 +525,7 @@ body.showhelp .help:not([hidden]){display:block!important}
 
 <script>
 'use strict';
-const VERSION='1.15.4';
+const VERSION='1.16.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -659,7 +665,7 @@ async function runStrips(){if(stripRunning)return;stripRunning=true;let nDone=0;
     if(!res[0]&&!it.stripTries){it.stripTries=1;setTimeout(()=>{if(media.includes(it)&&!it.thumb){stripQ.push(it);runStrips();}},4000);}  // un secondo tentativo
     renderLib();renderTrack();scheduleSave();nDone++;
   }
-  stripRunning=false;poolFree(poolVideo(0));
+  stripRunning=false;poolFree(poolVideo(0));queuePeaks();
   if(!loading){loadUI(100,'Miniature pronte.');setTimeout(()=>{if(!loading&&!stripRunning)loadUI(null);},1000);}}
 function queueStrips(){media.forEach(it=>{if(it.type==='vid'&&!it.thumb&&!stripQ.includes(it))stripQ.push(it);});runStrips();}
 
@@ -824,7 +830,63 @@ function paintTrack(force){
       const lbl=step<1?Math.floor(t+1e-6)+'s f'+Math.round((t-Math.floor(t+1e-6))*FPS):fmtT(t).replace(/\.0$/,'');
       h+='<b style="left:'+tToX(t)+'px">'+lbl+'</b>';}}
   $('ruler').innerHTML=h;
+  paintAudio(v0+TILE_W,v1-TILE_W);
 }
+/* ---------- traccia audio: forma d'onda (picchi ogni centesimo di secondo) ---------- */
+const PEAK_RATE=100;
+function peaksOf(m){if(!m.peaks)return null;if(!m._pk){try{const b=atob(m.peaks),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);m._pk=a;}catch(e){return null;}}return m._pk;}
+function paintAudio(v0,v1){
+  const tr=$('track'),cv=$('wave'),al=$('alane'),dpr=Math.min(2,window.devicePixelRatio||1);
+  const W=Math.max(1,Math.round(tr.clientWidth)),H=44;
+  cv.style.left=tr.scrollLeft+'px';cv.style.width=W+'px';cv.style.height=H+'px';
+  if(cv.width!==W*dpr||cv.height!==H*dpr){cv.width=W*dpr;cv.height=H*dpr;}
+  const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,W,H);
+  // riquadri delle clip (anche fuori vista non servono)
+  let html='';
+  items.forEach((c,i)=>{const L=layout[i];if(!L)return;
+    const pk=c.type==='vid'?peaksOf(c.media):null;
+    const msg=c.type==='img'?'foto · nessun audio':c.media.noAudio?'senza audio':pk?'':'forma d\'onda in preparazione…';
+    html+='<div class="aclip'+(msg?' none':'')+'" data-msg="'+msg+'" style="left:'+L.x+'px;width:'+L.w+'px"></div>';
+    if(!pk||L.x+L.w<tr.scrollLeft||L.x>tr.scrollLeft+W)return;
+    const vol=clipGain(c),mid=H/2,amp=(H/2-3);
+    x.fillStyle=vol===0?'#4b5058':(c.id===selId?'#46ff7a':'#ffb21e');
+    const a=Math.max(L.x,tr.scrollLeft),b=Math.min(L.x+L.w,tr.scrollLeft+W);
+    for(let px=Math.floor(a);px<b;px++){
+      const t0=(c.tin||0)+(px-L.x)/L.w*c.dur,t1=(c.tin||0)+(px+1-L.x)/L.w*c.dur;
+      let i0=Math.floor(t0*PEAK_RATE),i1=Math.max(i0+1,Math.ceil(t1*PEAK_RATE)),m=0;
+      for(let k=i0;k<i1&&k<pk.length;k++)if(pk[k]>m)m=pk[k];
+      const hgt=Math.max(0.5,Math.sqrt(m/255)*amp*Math.max(0.08,vol));   // scala con radice: si vedono anche i suoni deboli
+      x.fillRect(px-tr.scrollLeft,mid-hgt,1,hgt*2);}
+  });
+  if(al.dataset.h!==html){al.innerHTML=html;al.dataset.h=html;}
+}
+// calcolo dei picchi: sul Mac li calcola il Mac; altrove si decodifica l'audio del file (con un limite di durata sul telefono)
+const peakQ=[];let peakBusy=false;
+function queuePeaks(){media.forEach(m=>{if(m.type==='vid'&&!m.peaks&&!m.noAudio&&!m.peakFail&&!peakQ.includes(m))peakQ.push(m);});runPeaks();}
+function nativePeaks(m){const nr=nativeRender();if(!nr)return Promise.resolve(undefined);const id='p'+(++thumbReq);
+  return new Promise(r=>{const to=setTimeout(()=>{delete arnoNative._wait[id];r(undefined);},60000);
+    arnoNative._wait[id]=a=>{clearTimeout(to);r(a);};
+    nr.postMessage({cmd:'peaks',id,key:m.name+'|'+((m.file&&m.file.size)||m.size||0),rate:PEAK_RATE});});}
+async function runPeaks(){if(peakBusy)return;peakBusy=true;
+  try{while(peakQ.length){while(exporting||playing||copying)await sleep(500);
+    const m=peakQ.shift();if(!media.includes(m))continue;
+    let res=await nativePeaks(m);                       // stringa base64, '' se senza audio, undefined se non disponibile
+    if(res===undefined){
+      const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
+      if(m.dur>(mobile?600:3600)||(m.size||0)>(mobile?700:3000)*1048576){m.peakFail=true;continue;}   // troppo grande per la memoria
+      try{audioInit();const buf=await m.file.arrayBuffer();
+        const ab=await new Promise((ok,ko)=>{const p=actx.decodeAudioData(buf,ok,ko);if(p&&p.then)p.then(ok,ko);});
+        const n=Math.ceil(ab.duration*PEAK_RATE),out=new Uint8Array(n),sr=ab.sampleRate,per=sr/PEAK_RATE,ch=[];
+        for(let c=0;c<ab.numberOfChannels;c++)ch.push(ab.getChannelData(c));
+        for(let i=0;i<n;i++){let mx=0;const a=Math.floor(i*per),b=Math.min(ab.length,Math.floor((i+1)*per));
+          for(const d of ch)for(let k=a;k<b;k+=2){const v=d[k]<0?-d[k]:d[k];if(v>mx)mx=v;}
+          out[i]=Math.min(255,Math.round(mx*255));if(i%2000===0)await sleep(0);}
+        let s='';for(let i=0;i<out.length;i+=8192)s+=String.fromCharCode.apply(null,out.subarray(i,i+8192));res=btoa(s);
+      }catch(e){res='';}   // nessuna traccia audio leggibile
+    }
+    if(res){m.peaks=res;m._pk=null;}else m.noAudio=true;
+    paintTrack();scheduleSave();}
+  }finally{peakBusy=false;}}
 function setTile(e,c,key){const src=c.type==='img'?c.thumb:(frameCache.get(key)||c.thumb);
   e.style.backgroundImage=src?'url('+src+')':'';e.classList.toggle('ph',c.type==='vid'&&!frameCache.has(key));}
 
@@ -897,12 +959,12 @@ function relayout(){   // aggiorna larghezze e tempi senza ricostruire la timeli
 function placeHead(){const ph=$('phead');if(!items.length){ph.style.display='none';return;}ph.style.display='';
   const x=tToX(playT);ph.style.left=x+'px';
   if(playing||exporting){const tr=$('track');if(x<tr.scrollLeft+20||x>tr.scrollLeft+tr.clientWidth-40)tr.scrollLeft=x-tr.clientWidth*0.3;}}
-function setClipVol(c,v){c.vol=v;applyClipVol();const cv=$('clipVal');if(cv)cv.textContent=Math.round(v*100)+'%';
+function setClipVol(c,v){c.vol=v;applyClipVol();paintSoon();const cv=$('clipVal');if(cv)cv.textContent=Math.round(v*100)+'%';
   const mi=$('selBar').querySelector('[data-s=mute]');if(mi)mi.textContent=v===0?'🔇':'🔊';
   const el=$('lane').querySelector('.tclip[data-id="'+c.id+'"]');if(el){let t=el.querySelector('.tvol');
     if(v<0.995){if(!t){t=document.createElement('div');t.className='tvol';el.appendChild(t);}t.textContent=v===0?'🔇':'🔈 '+Math.round(v*100)+'%';}else if(t)t.remove();}
   scheduleSave();}
-function renderSel(){const bar=$('selBar'),i=items.findIndex(c=>c.id===selId);
+function renderSel(){paintSoon();const bar=$('selBar'),i=items.findIndex(c=>c.id===selId);
   if(i<0){bar.innerHTML='';return;}
   const c=items[i];
   bar.innerHTML='<span class="nm"></span>'+
@@ -1432,7 +1494,7 @@ async function saveNow(){clearTimeout(saveTimer);saveTimer=null;if(!db||restorin
   if(!curProj){if(!items.length&&!media.length)return;curProj={id:'p'+Date.now(),name:defaultName(),created:Date.now()};showProj();}
   const rec={id:curProj.id,name:curProj.name,created:curProj.created,updated:Date.now(),playT,
     settings:{fmt:$('fmt').value,fit:$('fit').value,defDur:$('defDur').value,quality:$('quality').value},
-    media:media.map(m=>({mid:m.mid,type:m.type,name:m.name,dur:m.dur,w:m.w,h:m.h,thumb:m.thumb,thumbV:m.thumbV||0,strip:m.strip||null,size:m.size||0,fkey:m.fkey})),
+    media:media.map(m=>({mid:m.mid,type:m.type,name:m.name,dur:m.dur,w:m.w,h:m.h,thumb:m.thumb,thumbV:m.thumbV||0,strip:m.strip||null,size:m.size||0,fkey:m.fkey,peaks:m.peaks||null,noAudio:!!m.noAudio})),
     clips:items.map(c=>({mid:c.media.mid,dur:c.dur,tin:c.tin||0,vol:c.vol!=null?c.vol:1}))};
   try{await dbPut('projects',rec);const d=new Date();$('saved').textContent='salvato alle '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
     localStorage.setItem('arnovideo-last',curProj.id);}catch(e){$('saved').textContent='non salvato';}
