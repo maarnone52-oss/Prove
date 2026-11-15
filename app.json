@@ -1,22 +1,22 @@
 [
-  {
-    "cartella": "arnoclick",
-    "nome": "ARNOCLICK",
-    "stato": "Uguale alla definitiva 3.0.1 — nessuna modifica in prova"
-  },
-  {
-    "cartella": "arnovideo",
-    "nome": "ARNOVIDEO",
-    "stato": "Prova 1.19.0 (dalla definitiva 1.15.4): forma d'onda, traccia musicale con maniglie, mixer audio clip/musica, «Aggiungi file multimediali», taglio in testa e in coda dell'audio delle clip"
-  },
-  {
-    "cartella": "podpro",
-    "nome": "POD Pro Remote",
-    "stato": "Uguale alla definitiva — nessuna modifica in prova"
-  },
-  {
-    "cartella": "arnodesign",
-    "nome": "ARNODESIGN",
-    "stato": "Uguale alla definitiva 1.3.3 — nessuna modifica in prova"
-  }
+ {
+  "cartella": "arnoclick",
+  "nome": "ARNOCLICK",
+  "stato": "Uguale alla definitiva 3.0.1 — nessuna modifica in prova"
+ },
+ {
+  "cartella": "arnovideo",
+  "nome": "ARNOVIDEO",
+  "stato": "Prova 1.19.0 (dalla definitiva 1.15.4): forma d'onda, traccia musicale con maniglie, mixer audio clip/musica, «Aggiungi file multimediali», taglio in testa e in coda dell'audio delle clip"
+ },
+ {
+  "cartella": "podpro",
+  "nome": "POD Pro Remote",
+  "stato": "Uguale alla definitiva — nessuna modifica in prova"
+ },
+ {
+  "cartella": "arnodesign",
+  "nome": "ARNODESIGN",
+  "stato": "Uguale alla definitiva 1.3.3 — nessuna modifica in prova"
+ }
 ]
