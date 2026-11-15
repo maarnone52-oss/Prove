@@ -622,7 +622,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.30.2';
+const VERSION='1.30.3';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -777,8 +777,15 @@ async function toMP4(m,size,pre){size=size||'1920x1080';pre=pre||'';const nr=nat
     const res=await new Promise(r=>{arnoNative._wait[id]=r;nr.postMessage({cmd:'vconv',id,size,key:m.name+'|'+((m.file&&m.file.size)||m.size||0),name:m.name.replace(/\.[^.]+$/,'')});});
     delete arnoNative._wait['p'+id];
     if(!res||res.error)throw new Error(res&&res.error||'nessuna risposta');
-    loadUI(92,'Converto in MP4 · carico il file convertito…');
-    const blob=await (await fetch(res.url)).blob();
+    // il file convertito si legge dal Mac a pezzi (la pagina non può aprirlo direttamente)
+    const parts=[];let off=0,tot=1;const CH=4*1048576;
+    while(off<tot){const r=await new Promise(ok=>{const rid='r'+(++thumbReq);arnoNative._wait[rid]=ok;nr.postMessage({cmd:'readconv',id:rid,url:res.url,offset:off,length:CH});
+        setTimeout(()=>{if(arnoNative._wait[rid]){delete arnoNative._wait[rid];ok(null);}},60000);});
+      if(!r||!r.data)throw new Error('non riesco a leggere il file convertito');
+      tot=r.size;const bin=atob(r.data),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+      parts.push(u);off+=u.length;if(!u.length)break;
+      loadUI(Math.round(90+off/tot*8),'Converto in MP4 · carico il file convertito · '+mb(off)+' di '+mb(tot));}
+    const blob=new Blob(parts,{type:'video/mp4'});
     const name=m.name.replace(/\.[^.]+$/,'').replace(/-\d+x\d+$/,'')+'-'+size.split('x')[1]+'p.mp4',f=new File([blob],name,{type:'video/mp4'});
     const it={mid:++uid,type:'vid',file:f,url:URL.createObjectURL(f),name,dur:0,w:0,h:0,thumb:'',size:f.size,fkey:'f'+Date.now()+'-'+Math.random().toString(36).slice(2,8)};
     await loadVideo(it);if(m.peaks)it.peaks=m.peaks;
