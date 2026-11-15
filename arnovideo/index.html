@@ -600,7 +600,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.24.4';
+const VERSION='1.24.5';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -816,11 +816,30 @@ async function grabAt(v,t,W,H){
   }catch(e){return '';}}
 // sul Mac le miniature le prepara il Mac stesso (più affidabile)
 let thumbReq=0;
-function nativeThumbs(m,times,exact){const nr=nativeRender();if(!nr)return Promise.resolve(null);
+function nativeThumbsRaw(m,times,exact){const nr=nativeRender();if(!nr)return Promise.resolve(null);
   const id='t'+(++thumbReq);
   return new Promise(r=>{const to=setTimeout(()=>{delete arnoNative._wait[id];r(null);},20000);
-    arnoNative._wait[id]=a=>{clearTimeout(to);r(a&&a.length===times.length&&a.every(Boolean)?a:null);};
+    arnoNative._wait[id]=a=>{clearTimeout(to);r(Array.isArray(a)&&a.length===times.length?a:null);};
     nr.postMessage({cmd:'thumbs',id,key:m.name+'|'+((m.file&&m.file.size)||m.size||0),times,exact:!!exact});});}
+// il Mac deve conoscere il file: se è stato trascinato nella finestra o il progetto viene da un'altra cartella, glielo si manda
+async function nativeKnow(m){const nr=nativeRender();if(!nr||!m.file)return false;if(m._natSent)return m._natSent;
+  m._natSent=(async()=>{const key=m.name+'|'+(m.file.size||m.size||0);
+    const miss=await new Promise(r=>{const cid='c'+(++thumbReq);arnoNative._wait[cid]=r;nr.postMessage({cmd:'check',id:cid,keys:[key]});
+      setTimeout(()=>{if(arnoNative._wait[cid]){delete arnoNative._wait[cid];r(null);}},10000);});
+    if(!miss)return false;if(!miss.length)return true;
+    const b64=part=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const s=String(r.result);res(s.slice(s.indexOf(',')+1));};r.onerror=()=>rej(r.error);r.readAsDataURL(part);});
+    const f=m.file,CH=4*1048576,count=Math.max(1,Math.ceil(f.size/CH));
+    for(let i=0;i<count;i++){nr.postMessage({cmd:'upload',key,index:i,count,base64:await b64(f.slice(i*CH,(i+1)*CH))});await sleep(0);}
+    return true;})();
+  return m._natSent;}
+// miniature dal Mac: un fotogramma mancato non fa perdere gli altri; quelli mancati si chiedono di nuovo con un po' di tolleranza
+async function nativeThumbs(m,times,exact,partial){if(!nativeRender())return null;
+  let a=await nativeThumbsRaw(m,times,exact);
+  if(!a&&await nativeKnow(m))a=await nativeThumbsRaw(m,times,exact);
+  if(!a)return null;
+  const miss=[];a.forEach((u,i)=>{if(!u)miss.push(i);});
+  if(miss.length&&exact){const b=await nativeThumbsRaw(m,miss.map(i=>times[i]),false);if(b)miss.forEach((i,k)=>{if(b[k])a[i]=b[k];});}
+  return a.every(Boolean)||partial?a:null;}
 async function runStrips(){if(stripRunning)return;stripRunning=true;let nDone=0;
   while(stripQ.length){
     if(!loading)loadUI(nDone/(nDone+stripQ.length)*100,'Preparo le anteprime dei video · '+(nDone+1)+' di '+(nDone+stripQ.length));
@@ -1179,8 +1198,8 @@ async function runFrames(){if(frameBusy)return;frameBusy=true;
     if(!frameQ.length)break;
     const m=frameQ[0].m,batch=frameQ.filter(q=>q.m===m).slice(0,12);batch.forEach(q=>frameQ.splice(frameQ.indexOf(q),1));
     const times=batch.map(q=>q.fi/FPS+0.001);
-    const nat=await nativeThumbs(m,times,true);
-    if(nat){batch.forEach((q,i)=>cachePut(q.key,nat[i]));continue;}
+    const nat=await nativeThumbs(m,times,true,true);
+    if(nat){batch.forEach((q,i)=>{if(nat[i])cachePut(q.key,nat[i]);});continue;}   // sul Mac non si usa il lettore della pagina (le immagini resterebbero vuote)
     let v=frameVideos.get(m);
     if(!v){frameVideos.clear();
       v=poolLoad(poolVideo(1),m.url);frameVideos.set(m,v);
