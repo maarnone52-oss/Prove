@@ -99,7 +99,7 @@ button{font:inherit;color:var(--text);cursor:pointer}
 .tclip.sel{border-color:#fff;box-shadow:0 0 0 2px #46ff7a}
 .tclip.cur .tname{color:#46ff7a}
 .tclip.drag{opacity:.3}
-.tclip .tiles{position:absolute;inset:0;pointer-events:none}
+.tclip .tiles{position:absolute;top:0;right:0;bottom:0;left:0;pointer-events:none}
 .tclip .tiles i{position:absolute;top:0;height:100%;background:#16181c center/contain no-repeat;border-right:1px solid rgba(0,0,0,.7);box-sizing:border-box}
 .tclip .tiles i.ph{opacity:.45}
 .tclip .tiles i b{position:absolute;left:3px;bottom:2px;font:600 9px "SF Mono",Menlo,monospace;color:#fff;text-shadow:0 0 3px #000,0 0 2px #000}
@@ -265,7 +265,7 @@ select{width:100%;min-height:46px;font-size:16px;background:#111317;color:var(--
 #loadBox{margin-top:12px}#loadBox[hidden]{display:none}
 #loadBox .bar{height:16px;margin:0 0 6px;position:relative}
 #loadBar{transition:width .25s ease}
-#loadBox .bar::after{content:"";position:absolute;inset:0;border-radius:6px;opacity:.35;
+#loadBox .bar::after{content:"";position:absolute;top:0;right:0;bottom:0;left:0;border-radius:6px;opacity:.35;
  background:repeating-linear-gradient(-45deg,rgba(255,255,255,.35) 0 8px,transparent 8px 16px);background-size:22px 22px;animation:loadmove .6s linear infinite}
 @keyframes loadmove{from{background-position:0 0}to{background-position:22px 0}}
 #loadTxt{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:75%}
@@ -599,7 +599,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.27.1';
+const VERSION='1.27.2';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
