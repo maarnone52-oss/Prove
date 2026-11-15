@@ -600,7 +600,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.23.1';
+const VERSION='1.24.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -939,10 +939,11 @@ $('helpBtn').onclick=()=>setHelp(!showHelp);
 
 /* ---------- anteprima ripetuta sopra la timeline (copia dell'anteprima principale) ---------- */
 (function(){const c2=$('cv2'),x2=c2.getContext('2d');let last=0;
+  let ver=-1;
   function loop(t){requestAnimationFrame(loop);if(document.hidden||t-last<33)return;last=t;
-    const cv=$('cv');const w=Math.min(960,cv.width),h=Math.round(w*cv.height/cv.width);
-    if(c2.width!==w||c2.height!==h){c2.width=w;c2.height=h;}
-    try{x2.drawImage(cv,0,0,w,h);}catch(e){}
+    const cv=$('cv');const w=Math.min(640,cv.width),h=Math.round(w*cv.height/cv.width);
+    if(c2.width!==w||c2.height!==h){c2.width=w;c2.height=h;ver=-1;}
+    if(ver!==cvVer||!(playing||exporting)){ver=cvVer;try{x2.drawImage(cv,0,0,w,h);}catch(e){}}   // copia solo i fotogrammi nuovi
     $('clock2').textContent=$('clock').textContent.split(' / ')[0];
     $('play2').textContent=$('playBtn').textContent;$('play2').classList.toggle('red',playing);$('play2').classList.toggle('play',!playing);
     const dis=$('playBtn').disabled;document.querySelectorAll('#mirrorBox [data-m]').forEach(b=>b.disabled=dis);}
@@ -1445,6 +1446,9 @@ function outSize(){
   const k=Math.min(1,1920/Math.max(w,h));w=Math.round(w*k/2)*2;h=Math.round(h*k/2)*2;return {w,h};
 }
 
+// anteprima più leggera: il riquadro è piccolo, basta al massimo 960 punti (l'esportazione resta a piena risoluzione)
+function pvSize(){const o=outSize(),k=Math.min(1,960/Math.max(o.w,o.h));return {w:Math.round(o.w*k/2)*2,h:Math.round(o.h*k/2)*2};}
+let cvVer=0;   // cresce a ogni nuovo disegno dell'anteprima: la seconda finestra copia solo quando serve
 /* ---------- motore di riproduzione (anteprima ed esportazione) ---------- */
 let actx=null,dest=null,mon=null;
 /* ---------- cursori stile mixer ---------- */
@@ -1561,7 +1565,7 @@ async function prepare(p,it){
 }
 
 async function runSequence(rec,startT=0){
-  const cv=$('cv'),{w,h}=outSize();cv.width=w;cv.height=h;fitCv();
+  const cv=$('cv'),{w,h}=rec?outSize():pvSize();if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;fitCv();}
   const x=cv.getContext('2d'),mode=$('fit').value,total=totalDur();
   audioInit();if(actx&&actx.state!=='running'){try{await actx.resume();}catch(e){}}
   if(mon)mon.gain.value=rec?0.0001:Math.max(0.0001,monVol*monVol);    // in esportazione non si sente (resta registrato)
@@ -1587,8 +1591,10 @@ async function runSequence(rec,startT=0){
     const it=items[i],o=i===first?off:0;mark(i);setStatus((rec?'Esporto':'Riproduzione')+' · '+(i+1)+'/'+items.length+' · '+it.name);
     if(it.type==='img'){
       const t0=performance.now()-o*1000;
+      let drawn=0;
       while(!stopReq){const el=(performance.now()-t0)/1000;if(el>=it.dur)break;
-        clear();drawFit(x,it.el,it.w,it.h,w,h,mode);tick(done+el);await new Promise(r=>requestAnimationFrame(r));}
+        if(!drawn||(rec&&performance.now()-drawn>=33)){clear();drawFit(x,it.el,it.w,it.h,w,h,mode);drawn=performance.now();cvVer++;}   // la foto non cambia: si ridisegna solo per la registrazione
+        tick(done+el);await new Promise(r=>requestAnimationFrame(r));}
       done+=it.dur;continue;
     }
     // video
@@ -1602,11 +1608,12 @@ async function runSequence(rec,startT=0){
     curClip=it;curPlayer=p;curAOn=audioOn(it,o);applyClipVol();   // volume della clip (entra anche nel video esportato)
     if(!pre){try{await v.play();}catch(e){setStatus('Il video «'+it.name+'» non parte: '+e.message,true);done+=it.dur;continue;}}
     const nx=items[i+1]&&items[i+1].type==='vid'?items[i+1]:null;let np=null;
+    let lastDraw=-1;
     await new Promise(res=>{let fin=false;
       const stop=()=>{if(fin)return;fin=true;res();};
       v.addEventListener('ended',stop,{once:true});
       const loop=()=>{if(fin)return;if(stopReq){v.pause();return stop();}
-        if(v.readyState>=2){clear();drawFit(x,v,v.videoWidth,v.videoHeight,w,h,mode);}
+        if(v.readyState>=2&&v.currentTime!==lastDraw){lastDraw=v.currentTime;clear();drawFit(x,v,v.videoWidth,v.videoHeight,w,h,mode);cvVer++;}   // solo se c'è un fotogramma nuovo
         const lt=v.currentTime-(it.tin||0);tick(done+Math.max(0,lt));gateAudio(lt);
         // cambio clip senza buco: la clip dopo parte in anticipo (muta) del tempo che il telefono impiega ad avviarla,
         // e si passa a lei appena le sue immagini si muovono
@@ -1659,7 +1666,7 @@ function showFrame(t){setT(t);seekWant=playT;if(seekBusy)return;seekBusy=true;
 async function drawAt(t){
   if(!items.length)return blank();
   const L=locate(t),it=items[L.i];markCur(L.i);
-  const cv=$('cv'),{w,h}=outSize();if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;fitCv();}
+  const cv=$('cv'),{w,h}=pvSize();if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;fitCv();}cvVer++;
   const x=cv.getContext('2d'),mode=$('fit').value;
   if(it.type==='img'){x.fillStyle='#000';x.fillRect(0,0,w,h);drawFit(x,it.el,it.w,it.h,w,h,mode);return;}
   if(pv.dataset.url!==it.url){pv.src=it.url;pv.dataset.url=it.url;await once(pv,'loadedmetadata',15000);}
