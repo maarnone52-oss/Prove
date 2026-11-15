@@ -338,6 +338,7 @@ body.showhelp .help:not([hidden]){display:block!important}
 #peek .ph button{min-height:26px;height:26px;width:30px;padding:0;font-size:14px}
 #peek video,#peek img{display:block;width:100%;max-height:50vh;border-radius:6px;background:#000;object-fit:contain}
 #peek audio{display:block;width:100%}
+#peek .pi{margin-top:6px;font:500 11px/1.45 Helvetica,Arial;color:#cfd3da}#peek .pi b{color:#46ff7a}#peek .pi:empty{display:none}
 #peek .pa{font-size:34px;text-align:center;color:#b47cff;padding:6px 0}
 /* interfaccia al 75%: i comandi dell'anteprima vanno a capo invece di uscire dal riquadro */
 /* interfaccia al 60% (iPhone): i comandi dell'anteprima vanno a capo invece di uscire dal riquadro */
@@ -595,11 +596,11 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 </main>
 <div id="hidden"></div>
 <div id="trimTip" hidden></div>
-<div id="peek" hidden><div class="ph"><span></span></div><div class="pb"></div></div>
+<div id="peek" hidden><div class="ph"><span></span></div><div class="pb"></div><div class="pi"></div></div>
 
 <script>
 'use strict';
-const VERSION='1.28.0';
+const VERSION='1.29.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1127,6 +1128,56 @@ function paintAudio(v0,v1){
 }
 /* lettura diretta dell'audio AAC da file .mov/.mp4 (iPhone): si estraggono solo i pacchetti audio, a blocchi,
    e si decodificano un pezzo alla volta. Così funziona anche dove Safari non sa aprire il file intero, e usa poca memoria. */
+/* ---------- caratteristiche del file (formato, risoluzione, audio): si leggono dall'intestazione del file ---------- */
+const CODECS={avc1:'H.264',avc3:'H.264',hvc1:'HEVC (H.265)',hev1:'HEVC (H.265)',dvh1:'HEVC Dolby Vision',dvhe:'HEVC Dolby Vision',mp4v:'MPEG-4',
+  ap4h:'ProRes 4444',ap4x:'ProRes 4444 XQ',apch:'ProRes 422 HQ',apcn:'ProRes 422',apcs:'ProRes 422 LT',apco:'ProRes 422 Proxy',jpeg:'Motion JPEG',mjpa:'Motion JPEG',
+  'xdvc':'XDCAM / HDV (MPEG-2)',xd5c:'XDCAM HD (MPEG-2)',hdv2:'HDV (MPEG-2)',hdv3:'HDV (MPEG-2)',mx5p:'IMX (MPEG-2)',m2v1:'MPEG-2',vp09:'VP9',av01:'AV1',
+  mp4a:'AAC',lpcm:'PCM (non compresso)',twos:'PCM (non compresso)',sowt:'PCM (non compresso)',in24:'PCM 24 bit',in32:'PCM 32 bit',fl32:'PCM float',
+  'ac-3':'Dolby Digital (AC-3)','ec-3':'Dolby Digital Plus (E-AC-3)',alac:'Apple Lossless','.mp3':'MP3',Opus:'Opus',fLaC:'FLAC'};
+async function mediaInfo(m){if(m._info)return m._info;const f=m.file;const info={size:f?f.size:m.size,ext:(m.name.match(/\.([^.]+)$/)||['',''])[1].toUpperCase()};
+  m._info=info;if(!f||!/\.(mp4|m4v|mov|m4a|3gp)$/i.test(m.name))return info;
+  try{const rd=async(o,n)=>new DataView(await f.slice(o,o+n).arrayBuffer());
+    const fourcc=(dv,o)=>String.fromCharCode(dv.getUint8(o),dv.getUint8(o+1),dv.getUint8(o+2),dv.getUint8(o+3));
+    let off=0,moov=null;
+    while(off+8<=f.size){const h=await rd(off,16);let sz=h.getUint32(0),t=fourcc(h,4);
+      if(sz===1)sz=Number(h.getBigUint64(8));else if(sz===0)sz=f.size-off;if(sz<8)break;
+      if(t==='ftyp'){const b=fourcc(h,8);info.box=b==='qt  '?'MOV (QuickTime)':/^M4V/.test(b)?'M4V':/^M4A/.test(b)?'M4A':'MP4 ('+b.trim()+')';}
+      if(t==='moov'){moov=new DataView(await f.slice(off,off+sz).arrayBuffer());break;}off+=sz;}
+    if(!moov)return info;
+    const kids=(dv,a,b)=>{const out=[];let o=a;while(o+8<=b){let sz=dv.getUint32(o),hl=8;const t=fourcc(dv,o+4);
+      if(sz===1){sz=Number(dv.getBigUint64(o+8));hl=16;}else if(sz===0)sz=b-o;if(sz<8||o+sz>b)break;out.push({t,o,s:o+hl,e:o+sz});o+=sz;}return out;};
+    const find=(box,path)=>{let cur=box;for(const p of path){const k=kids(moov,cur.s,cur.e).find(x=>x.t===p);if(!k)return null;cur=k;}return cur;};
+    const has=(a,b,t)=>{for(let o=a;o<b-4;o++)if(fourcc(moov,o)===t)return o;return -1;};
+    info.v=[];info.a=[];
+    for(const tr of kids(moov,8,moov.byteLength).filter(x=>x.t==='trak')){
+      const hd=find(tr,['mdia','hdlr']),md=find(tr,['mdia','mdhd']),sd=find(tr,['mdia','minf','stbl','stsd']);if(!hd||!sd)continue;
+      const kind=fourcc(moov,hd.s+8),ent=sd.s+8,code=fourcc(moov,ent+4),es=ent+8;
+      let ts=0,du=0;if(md){const v=moov.getUint8(md.s);ts=moov.getUint32(md.s+(v===1?20:12));du=v===1?Number(moov.getBigUint64(md.s+24)):moov.getUint32(md.s+16);}
+      if(kind==='vide'){const t={codec:CODECS[code]||code,w:moov.getUint16(es+24),h:moov.getUint16(es+26)};
+        const st=find(tr,['mdia','minf','stbl','stts']);if(st&&ts&&du){let n=0;const ne=moov.getUint32(st.s+4);for(let i=0;i<ne;i++)n+=moov.getUint32(st.s+8+i*8);t.fps=n*ts/du;
+          if(ne>1){let a=1e9,b=0;for(let i=0;i<ne;i++){const d=moov.getUint32(st.s+12+i*8);a=Math.min(a,d);b=Math.max(b,d);}if(b>a*1.05)t.vfr=true;}}
+        const tk=find(tr,['tkhd']);if(tk){const v=moov.getUint8(tk.s),mo=tk.s+(v===1?52:40),A=moov.getInt32(mo),B=moov.getInt32(mo+4);t.rot=Math.round(Math.atan2(B,A)*180/Math.PI);}
+        const sEnd=Math.min(sd.e,ent+moov.getUint32(ent));const c=has(es,sEnd,'colr');
+        if(c>=0&&/ncl[xc]/.test(fourcc(moov,c+4))){const tf=moov.getUint16(c+10);if(tf===18)t.hdr='HDR (HLG)';else if(tf===16)t.hdr='HDR (PQ)';}
+        if(has(es,sEnd,'dvcC')>=0||has(es,sEnd,'dvvC')>=0)t.hdr='Dolby Vision';
+        if(/hvc1|hev1|dvh/.test(code)){const hc=has(es,sEnd,'hvcC');if(hc>=0){const bd=(moov.getUint8(hc+4+17)&7)+8;t.bits=bd;}}
+        info.v.push(t);}
+      else if(kind==='soun'){const t={codec:CODECS[code]||code,ch:moov.getUint16(es+16),sr:moov.getUint32(es+24)>>>16};
+        if(code==='mp4a'){const e=has(es,Math.min(sd.e,ent+moov.getUint32(ent)),'esds');if(e>=0){let q=e+8;const tag=moov.getUint8(q);if(tag===3){q++;while(moov.getUint8(q)&0x80)q++;q+=4;if(moov.getUint8(q)===4){q++;while(moov.getUint8(q)&0x80)q++;q++;const oti=moov.getUint8(q);if(oti===0x6B||oti===0x69)t.codec='MP3';}}}}
+        info.a.push(t);}}
+  }catch(e){info.err=e.message;}
+  return info;}
+function infoHTML(m,info){const L=[],r=v=>Math.round(v*100)/100;
+  L.push('<b>'+(info.box||info.ext||'?')+'</b> · '+mb(info.size||0)+(m.dur&&m.type!=='img'?' · '+fmtT(m.dur):''));
+  if(m.type==='img')L.push('Foto '+(m.w||'?')+'×'+(m.h||'?'));
+  (info.v||[]).forEach(t=>{const w=Math.abs(t.rot)===90?t.h:t.w,h=Math.abs(t.rot)===90?t.w:t.h;
+    L.push('🎬 '+t.codec+' · '+w+'×'+h+(t.fps?' · '+r(t.fps)+' fps'+(t.vfr?' variabili':''):'')+(t.bits?' · '+t.bits+' bit':'')+(t.hdr?' · '+t.hdr:'')+(t.rot?' · ruotato '+t.rot+'°':''));});
+  if(m.type==='vid'&&!(info.v||[]).length&&m.w)L.push('🎬 '+m.w+'×'+m.h);
+  (info.a||[]).forEach(t=>L.push('🔊 '+t.codec+' · '+(t.sr?(t.sr/1000)+' kHz':'')+(t.ch?' · '+(t.ch===1?'mono':t.ch===2?'stereo':t.ch+' canali'):'')));
+  if(m.type==='vid'&&info.a&&!info.a.length&&info.v&&info.v.length)L.push('🔇 senza audio');
+  if(info.a&&info.a.length>1)L.push('⚠︎ '+info.a.length+' tracce audio');
+  if(info.size&&m.dur&&m.type!=='img')L.push('Velocità dati '+(info.size*8/m.dur/1e6).toFixed(1)+' Mbit/s');
+  return L.join('<br>');}
 async function peaksFromAAC(m){
   const f=m.file,rd=async(o,n)=>new DataView(await f.slice(o,o+n).arrayBuffer());
   const fourcc=(dv,o)=>String.fromCharCode(dv.getUint8(o),dv.getUint8(o+1),dv.getUint8(o+2),dv.getUint8(o+3));
@@ -1263,6 +1314,8 @@ function peekOpen(m,row){peekClose();const pk=$('peek'),pb=pk.querySelector('.pb
     el.src=m.url;try{el.volume=Math.max(0.05,monVol);}catch(e){}
     el.play().catch(()=>{el.muted=true;el.play().catch(()=>{});});}   // se il telefono non lascia partire l'audio, parte almeno l'immagine
   if(m.type==='aud')pb.innerHTML='<div class="pa">♪</div>';pb.appendChild(el);pk.hidden=false;
+  const pi=pk.querySelector('.pi');pi.innerHTML=infoHTML(m,m._info||{size:m.size,ext:''});
+  mediaInfo(m).then(inf=>{if(!pk.hidden&&pk.querySelector('.ph span').textContent===m.name){pi.innerHTML=infoHTML(m,inf);place();}});
   const place=()=>{const cur=document.querySelector('#lib .clip[data-mid="'+m.mid+'"]')||row,r=cur.getBoundingClientRect(),w=pk.offsetWidth,h=pk.offsetHeight,vw=window.innerWidth;   // a destra e sopra la riga del file
     pk.style.left=Math.max(6,Math.min(vw-w-6,r.right-w))+'px';pk.style.top=Math.max(6,r.top-h-6)+'px';};
   place();el.addEventListener(m.type==='img'?'load':'loadedmetadata',place,{once:true});return el;}
