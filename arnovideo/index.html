@@ -310,7 +310,7 @@ body.showhelp .help:not([hidden]){display:block!important}
 #helpBtn{left:18px;top:79px;margin:0;width:77px;min-height:35px;height:35px;padding:0}
 .tag{left:0;right:0;top:129px;line-height:30px}
 /* 1 · elenco: i due pulsanti uno sopra l'altro allineati a destra, elenco più alto */
-#addBtn{min-height:26px;height:26px;width:202px;padding:0;white-space:nowrap;letter-spacing:-.02em;overflow:visible}
+#addBtn{min-height:26px;height:26px;width:202px;padding:0;white-space:nowrap;letter-spacing:-.03em;overflow:visible;font-size:14.5px}
 .rack .row.c:has(#addBtn){flex-direction:column;align-items:flex-end;gap:8px;width:202px;margin:-6px auto 0;position:relative;left:2px}
 #allBtn{width:180px;padding:0;white-space:nowrap}
 #lib{min-height:156px;margin-top:10px!important;box-sizing:border-box}
@@ -417,13 +417,13 @@ body.showhelp .help:not([hidden]){display:block!important}
   <section class="rack">
     <span class="lbl">1 · Elenco dei file caricati</span>
     <div class="row c">
-      <button class="btn play" id="addBtn">＋ Aggiungi video e foto</button>
+      <button class="btn play" id="addBtn">＋ Aggiungi file multimediali</button>
       <button class="btn sm" id="allBtn" disabled>⇣ Tutti nella timeline</button>
     </div>
-    <input type="file" id="file" accept="video/mp4,video/quicktime,video/*,image/*,audio/*,.mp3,.m4a,.aac,.wav,.aif,.aiff" multiple hidden>
+    <input type="file" id="file" multiple hidden>
     <div id="loadBox" hidden><div class="bar"><i id="loadBar"></i></div>
       <div class="row" style="justify-content:space-between;flex-wrap:nowrap"><span class="note" id="loadTxt"></span><span class="lcd" id="loadPct">0%</span></div></div>
-    <div id="lib" style="margin-top:12px" data-empty="Nessun file. Tocca «Aggiungi video e foto» (sul Mac puoi anche trascinarli qui)."></div>
+    <div id="lib" style="margin-top:12px" data-empty="Nessun file. Tocca «Aggiungi file multimediali»: video, foto e musica (sul Mac puoi anche trascinarli qui)."></div>
     <p class="note help">Trascina un elemento tenendolo per la maniglia ⠿ (col mouse anche dal nome) e lascialo nella timeline, nel punto che vuoi. Oppure tocca «＋ Timeline» per metterlo in fondo. Lo stesso file si può usare più volte.</p>
   </section>
 
@@ -538,7 +538,7 @@ body.showhelp .help:not([hidden]){display:block!important}
 
 <script>
 'use strict';
-const VERSION='1.17.0';
+const VERSION='1.17.1';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -575,6 +575,8 @@ async function addFiles(files){if(!files.length||busy)return;
   for(const f of files){k++;show(f,0.05,'lettura…');
     const isImg=/^image\//.test(f.type)||/\.(jpe?g|png|heic|heif|gif|webp)$/i.test(f.name);
     const isAud=!isImg&&(/^audio\//.test(f.type)||/\.(mp3|m4a|aac|wav|aif|aiff|flac|ogg|caf)$/i.test(f.name));
+    const isVid=/^video\//.test(f.type)||/\.(mp4|m4v|mov|3gp|webm|mkv)$/i.test(f.name);
+    if(!isImg&&!isAud&&!isVid){setStatus('«'+f.name+'» non è un video, una foto o un file audio: saltato.',true);done+=f.size;await sleep(1200);continue;}
     const it={mid:++uid,type:isImg?'img':isAud?'aud':'vid',file:f,url:URL.createObjectURL(f),name:f.name,dur:0,w:0,h:0,thumb:'',size:f.size,
       fkey:'f'+Date.now()+'-'+Math.random().toString(36).slice(2,8)};
     try{ if(isImg)await loadImage(it); else if(isAud)await loadAudio(it); else await loadVideo(it);
