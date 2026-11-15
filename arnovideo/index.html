@@ -600,7 +600,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.24.1';
+const VERSION='1.24.2';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1478,8 +1478,12 @@ function makeVFader(el,get,set,opt){opt=opt||{};el.innerHTML='<div class="ticks"
   requestAnimationFrame(loop);})();
 requestAnimationFrame(applyMix);
 // volume di ascolto dell'anteprima (non entra nel video esportato)
+// app del Mac: l'esportazione la fa il Mac, quindi l'audio si suona direttamente dai lettori
+// (nella pagina dell'app il motore audio del browser resta muto)
+function elAudio(){return !!nativeRender();}
+const monK=()=>monVol*monVol;
 let monVol=0.8;try{const v=parseFloat(localStorage.getItem('arnovideo-ascolto'));if(v>=0&&v<=1)monVol=v;}catch(e){}
-function applyMon(){if(mon&&!exporting)mon.gain.value=Math.max(0.0001,monVol*monVol);   // scala più naturale per l'orecchio
+function applyMon(){if(mon&&!exporting)mon.gain.value=Math.max(0.0001,monVol*monVol);if(elAudio()){applyClipVol();applyMusicVol();}   // scala più naturale per l'orecchio
   $('monVal').textContent=Math.round(monVol*100)+'%';$('monIcon').textContent=$('monIcon2').textContent=monVol===0?'🔇':'🎧';
   try{localStorage.setItem('arnovideo-ascolto',String(monVol));}catch(e){}
   [$('monFader'),$('monFader2')].forEach(f=>f._pos&&f._pos());}
@@ -1502,21 +1506,21 @@ document.addEventListener('pointerdown',e=>{document.querySelectorAll('.volrow.c
 let curClip=null,curPlayer=null;
 function clipGain(c){return Math.max(0,Math.min(1,c&&c.vol!=null?c.vol:1));}
 let curAOn=true;
-function applyClipVol(){if(curPlayer&&curClip){const k=curAOn?clipGain(curClip):0;if(curPlayer.g)curPlayer.g.gain.value=k;else try{curPlayer.v.volume=k*mixLevel('c');}catch(e){}}}
+function applyClipVol(){if(curPlayer&&curClip){const k=curAOn?clipGain(curClip):0;if(curPlayer.g)curPlayer.g.gain.value=k;else try{curPlayer.v.volume=Math.min(1,k*mixLevel('c')*(curPlayer.src?1:monK()));}catch(e){}}}
 function gateAudio(lt){if(!curClip)return;const on=audioOn(curClip,lt);if(on===curAOn)return;curAOn=on;   // taglio audio: muto prima/dopo le maniglie
   if(curPlayer&&curPlayer.g&&actx){const g=curPlayer.g.gain;try{g.cancelScheduledValues(actx.currentTime);g.setTargetAtTime(on?clipGain(curClip):0,actx.currentTime,0.006);}catch(e){applyClipVol();}}else applyClipVol();}
 /* ---------- mixer: volume generale dell'audio delle clip e della musica (vale anche per il video esportato) ---------- */
 const mix={c:1,m:1,cm:false,mm:false};
 function mixLevel(k){return mix[k+'m']?0:mix[k];}
-function applyMix(){if(busC)busC.gain.value=mixLevel('c');if(busM)busM.gain.value=mixLevel('m');
+function applyMix(){if(busC)busC.gain.value=mixLevel('c');if(busM)busM.gain.value=mixLevel('m');if(elAudio()){try{applyClipVol();applyMusicVol();}catch(e){}}
   ['c','m'].forEach(k=>{const v=$('mxv'+k),b=$('mxm'+k),f=$('mxf'+k);if(v)v.textContent=mix[k+'m']?'muto':Math.round(mix[k]*100)+'%';
     if(b)b.classList.toggle('on',mix[k+'m']);if(f&&f._pos)f._pos();});}
 
 /* ---------- riproduzione della traccia musicale (insieme alla timeline, anche nel video esportato) ---------- */
 let musicEl=null,musicNode=null,musicGain=null,musicCur=null;
 function musicInit(){if(!musicEl){musicEl=document.createElement('audio');musicEl.preload='auto';$('hidden').appendChild(musicEl);}
-  if(actx&&!musicNode){try{musicNode=actx.createMediaElementSource(musicEl);musicGain=actx.createGain();musicNode.connect(musicGain);musicGain.connect(busM);}catch(e){}}}
-function applyMusicVol(){if(!musicCur)return;const v=Math.max(0,Math.min(1,musicCur.vol));if(musicGain)musicGain.gain.value=v;else if(musicEl)try{musicEl.volume=v*mixLevel('m');}catch(e){}}
+  if(actx&&!musicNode&&!elAudio()){try{musicNode=actx.createMediaElementSource(musicEl);musicGain=actx.createGain();musicNode.connect(musicGain);musicGain.connect(busM);}catch(e){}}}
+function applyMusicVol(){if(!musicCur)return;const v=Math.max(0,Math.min(1,musicCur.vol));if(musicGain)musicGain.gain.value=v;else if(musicEl)try{musicEl.volume=Math.min(1,v*mixLevel('m')*monK());}catch(e){}}
 function syncMusic(T){if(!music.length){musicStop();return;}musicInit();
   const mc=music.find(m=>T>=m.start&&T<m.start+m.dur-0.02);
   if(!mc){if(!musicEl.paused)musicEl.pause();musicCur=null;return;}
@@ -1543,12 +1547,12 @@ function audioInit(){
 const players=[];             // due lettori che si alternano: il successivo si prepara mentre suona l'attuale
 function player(i){
   if(!players[i]){const v=makeVideo();const p={v,src:null};
-    if(actx){try{p.src=actx.createMediaElementSource(v);p.g=actx.createGain();p.src.connect(p.g);p.g.connect(busC);}catch(e){p.src=null;p.g=null;}}
+    if(actx&&!elAudio()){try{p.src=actx.createMediaElementSource(v);p.g=actx.createGain();p.src.connect(p.g);p.g.connect(busC);}catch(e){p.src=null;p.g=null;}}
     players[i]=p;}
   return players[i];
 }
 async function prepare(p,it){
-  p.v.muted=!actx||!p.src;          // senza motore audio non si può registrare il suono
+  p.v.muted=!elAudio()&&(!actx||!p.src);          // senza motore audio non si può registrare il suono
   if(p.v.dataset.url!==it.url){p.v.src=it.url;p.v.dataset.url=it.url;}
   // Safari (iPhone e Mac) ignora lo spostamento se il video non ha ancora caricato le informazioni: prima si aspetta, poi si va al punto di taglio
   if(p.v.readyState<1){try{await once(p.v,'loadedmetadata',20000);}catch(e){}}
@@ -1618,7 +1622,7 @@ async function runSequence(rec,startT=0){
         // cambio clip senza buco: la clip dopo parte in anticipo (muta) del tempo che il telefono impiega ad avviarla,
         // e si passa a lei appena le sue immagini si muovono
         if(nx&&!np&&!rec&&lt>=it.dur-preLat-0.01){const e=plan.get(i+1);
-          if(e&&e.ready&&e.p.v.paused){np=e.p;if(np.g)np.g.gain.value=0;np.pre=performance.now();np.t0=np.v.currentTime;const pr=np.v.play();if(pr&&pr.catch)pr.catch(()=>{np.pre=0;});}}
+          if(e&&e.ready&&e.p.v.paused){np=e.p;if(np.g)np.g.gain.value=0;else try{np.v.volume=0;}catch(_){}np.pre=performance.now();np.t0=np.v.currentTime;const pr=np.v.play();if(pr&&pr.catch)pr.catch(()=>{np.pre=0;});}}
         if(np&&np.pre&&np.v.currentTime>np.t0+0.004){const lat=(performance.now()-np.pre)/1000;
           preLat=Math.max(0.03,Math.min(0.5,preLat*0.6+lat*0.4));try{localStorage.setItem('arnovideo-avvio',preLat.toFixed(3));}catch(e){}
           v.pause();return stop();}
