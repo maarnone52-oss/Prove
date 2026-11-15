@@ -575,7 +575,7 @@ body.showhelp .help:not([hidden]){display:block!important}
 
 <script>
 'use strict';
-const VERSION='1.19.1';
+const VERSION='1.19.2';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1832,6 +1832,11 @@ if(nativeRender()){$('expNoteMac').hidden=false;$('expNote').hidden=true;}
   catch(e){$('saved').textContent='salvataggio non disponibile';}})();
 // copia sul dispositivo per usarla anche senza internet (solo come pagina web, non nell'app)
 if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+/* aggiornamento automatico: quando l'app torna in primo piano (o si apre) controlla se sul sito c'è una versione nuova e la carica */
+if(/^https?:/.test(location.protocol)){let chk=0;const checkNew=async()=>{if(Date.now()-chk<20000||busy||exporting)return;chk=Date.now();
+  try{const t=await (await fetch('index.html?v='+Date.now(),{cache:'no-store'})).text();const m=t.match(/const VERSION='([^']+)'/);
+    if(m&&m[1]!==VERSION){setStatus('Arriva la versione '+m[1]+'…');await saveNow();setTimeout(()=>location.reload(),300);}}catch(e){}};
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkNew();});setTimeout(checkNew,3000);}
 </script>
 </body>
 </html>
