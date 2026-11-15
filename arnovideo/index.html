@@ -210,6 +210,7 @@ body:not(.showhelp) #kzone::after{display:none!important}
 .tclip.tiny .trim,.tclip.tiny .tgrip,.tclip.tiny .tiles i b{display:none}.tclip.tiny{border-width:1px}
 .tclip.narrow .trim{width:7px}.tclip.narrow .trim::before{width:2px;border:0;background:rgba(0,0,0,.55)}
 #ins::after{content:"inserisci qui";position:absolute;top:-20px;left:50%;transform:translateX(-50%);white-space:nowrap;font:700 10px Helvetica,Arial;color:#06210f;background:#46ff7a;border-radius:4px;padding:1px 5px}
+#snapBtn.on{background:linear-gradient(180deg,#5cff8e,#1fbf55);color:#06210f;border-color:#8affb0;border-bottom-color:#0b5a25}
 #ins{position:absolute;top:24px;bottom:2px;width:4px;margin-left:-2px;background:#46ff7a;border-radius:2px;box-shadow:0 0 10px #46ff7a;display:none;z-index:4}
 .dragghost{position:fixed;z-index:90;pointer-events:none;opacity:.92;border-radius:8px;overflow:hidden;box-shadow:0 14px 30px rgba(0,0,0,.8);border:2px solid #46ff7a;
  width:120px;height:68px;background:#000 center/contain no-repeat}
@@ -507,6 +508,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
     <div class="tlbar">
       <button class="btn xs" id="undoBtn" disabled>↶ <span id="undoN"></span></button>
       <button class="btn xs" id="redoBtn" disabled>↷ <span id="redoN"></span></button>
+      <button class="btn xs" id="snapBtn" title="Aggancio: il segno rosso e la musica si attaccano ai tagli fra le clip" style="padding:0 10px">🧲 Aggancio</button>
       <button class="btn xs" id="cutBtn" title="Taglia la clip nel punto del segno rosso" style="padding:0 10px">✂ Taglia</button>
       <span class="sp"></span>
       <button class="btn xs" id="clearBtn" disabled>Svuota</button>
@@ -635,7 +637,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.32.2';
+const VERSION='1.33.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1085,6 +1087,11 @@ function zoomLabel(){const sec=TILE_W/pps,f=Math.round(sec*FPS);
   $('zLbl').title='Durata di ogni riquadro della timeline';
   const v=Math.log(pps/PPS_MIN)/Math.log(PPS_MAX/PPS_MIN);$('zthumb').style.left=(Math.max(0,Math.min(1,v))*$('zslider').clientWidth)+'px';}
 // tempo ↔ posizione anche oltre la fine del video (la musica può continuare)
+/* aggancio (calamita): il segno rosso e la musica si agganciano ai tagli fra le clip (e la musica anche al segno rosso) */
+let snapOn=true;try{snapOn=localStorage.getItem('arnovideo-aggancio')!=='0';}catch(e){}
+function snapX(x,withHead){if(!snapOn||!layout.length)return x;const R=10;let best=x,bd=R+1;
+  const pts=layout.map(L=>L.x);pts.push(endX());if(withHead&&items.length)pts.push(tToX(playT));
+  for(const p of pts){const d=Math.abs(p-x);if(d<bd){bd=d;best=p;}}return bd<=R?best:x;}
 function endX(){const L=layout[layout.length-1];return L?L.x+L.w:0;}
 function tToXe(t){const tot=totalDur();return t<=tot&&items.length?tToX(t):endX()+(t-tot)*pps;}
 function xToTe(x){const e=endX();return x<=e&&items.length?xToT(x):totalDur()+(x-e)/pps;}
@@ -1410,11 +1417,11 @@ document.addEventListener('pointerdown',e=>{if(!$('peek').hidden&&!e.target.clos
     if(!mv.drag){if(Math.abs(e.clientX-mv.sx)<4)return;mv.drag=true;pushUndo(mv.side?'taglio della musica':'spostamento della musica');}
     const q=v=>Math.round(v*FPS)/FPS,mc=mv.mc,dx=e.clientX-mv.sx,MIN=0.5;let tipTxt;
     if(mv.side==='l'){   // taglio in testa: la fine resta ferma
-      const end=mv.start+mv.dur;let st=q(xToTe(Math.max(0,mv.x0+dx)));st=Math.max(mv.start-mv.tin,Math.min(end-MIN,Math.max(0,st)));
+      const end=mv.start+mv.dur;let st=q(xToTe(snapX(Math.max(0,mv.x0+dx),true)));st=Math.max(mv.start-mv.tin,Math.min(end-MIN,Math.max(0,st)));
       mc.tin=mv.tin+(st-mv.start);mc.start=st;mc.dur=end-st;tipTxt='✂ inizio dal punto '+fmtT(mc.tin)+' del brano · parte da '+fmtT(st);}
     else if(mv.side==='r'){   // taglio in coda
-      const en=q(xToTe(Math.max(0,mv.x1+dx)));mc.dur=Math.max(MIN,Math.min(mc.media.dur-mc.tin,en-mc.start));tipTxt='✂ fine a '+fmtT(mc.start+mc.dur)+' · dura '+fmtT(mc.dur);}
-    else{const t=Math.max(0,q(xToTe(Math.max(0,mv.x0+dx))));mc.start=t;tipTxt='♪ parte da '+fmtT(t);}
+      const en=q(xToTe(snapX(Math.max(0,mv.x1+dx),true)));mc.dur=Math.max(MIN,Math.min(mc.media.dur-mc.tin,en-mc.start));tipTxt='✂ fine a '+fmtT(mc.start+mc.dur)+' · dura '+fmtT(mc.dur);}
+    else{const t=Math.max(0,q(xToTe(snapX(Math.max(0,mv.x0+dx),true))));mc.start=t;tipTxt='♪ parte da '+fmtT(t);}
     mv.el.style.left=tToXe(mc.start)+'px';mv.el.style.width=Math.max(24,tToXe(mc.start+mc.dur)-tToXe(mc.start))+'px';
     mv.el.querySelector('.mname').textContent='♪ '+mc.media.name+' · da '+fmtT(mc.start);paintSoon();
     const tip=$('trimTip');tip.hidden=false;tip.textContent=tipTxt;placeTip(tip,e.clientX);});
@@ -1600,7 +1607,7 @@ const goToItem=id=>{const i=items.findIndex(x=>x.id===id);if(i>=0&&!exporting){u
     $('ins').style.display='none';$('track').classList.remove('over');$('mlane').classList.remove('over');if(dd.ghost)dd.ghost.remove();if(dd.el)dd.el.classList.remove('drag');
     if(dd.from==='tap'||(dd.from==='track'&&!dd.ghost)){   // tocco/clic su un elemento: lo seleziona e porta lì la posizione
       const id=dd.id;selId=id;selMusic=null;renderMusic();const x=trackX(e);renderSel();[...$('lane').children].forEach(el=>el.classList.toggle('sel',+el.dataset.id===id));
-      if(!exporting){unlockPv();jumpTo(xToT(x));}return;}
+      if(!exporting){unlockPv();jumpTo(xToT(snapX(x)));}return;}
     if(!dd.ghost||dd.at==null||e.type==='pointercancel')return;
     if(dd.from==='lib'&&dd.m.type==='aud'){pushUndo('musica «'+dd.m.name+'»');const mc=mkMusic(dd.m,playT);music.push(mc);selMusic=mc.id;selId=null;render();return;}
     if(dd.from==='lib'){pushUndo('aggiunta di «'+dd.m.name+'»');const c=mkClip(dd.m);items.splice(dd.at,0,c);selId=c.id;render();}
@@ -1610,16 +1617,16 @@ const goToItem=id=>{const i=items.findIndex(x=>x.id===id);if(i>=0&&!exporting){u
   // righello: tocca o trascina per spostare la posizione
   let scr=false,scrWas=false;
   $('ruler').addEventListener('pointerdown',e=>{if(!items.length||exporting)return;e.preventDefault();scr=true;unlockPv();scrWas=playing;
-    try{e.target.setPointerCapture(e.pointerId);}catch(_){}stopPlay().then(()=>showFrame(xToT(trackX(e))));});
-  $('ruler').addEventListener('pointermove',e=>{if(scr&&!playing)showFrame(xToT(trackX(e)));});
+    try{e.target.setPointerCapture(e.pointerId);}catch(_){}stopPlay().then(()=>showFrame(xToT(snapX(trackX(e)))));});
+  $('ruler').addEventListener('pointermove',e=>{if(scr&&!playing)showFrame(xToT(snapX(trackX(e))));});
   ['pointerup','pointercancel'].forEach(t=>$('ruler').addEventListener(t,async()=>{if(!scr)return;scr=false;
     if(resumeAfter(scrWas)){seekWant=null;await waitStopped();startPlay();}scrWas=false;}));
   // fascia col pallino: come il righello, e scorre la timeline vicino ai bordi
   let kz=false,kzWas=false;
   $('kzone').addEventListener('pointerdown',async e=>{if(!items.length||exporting)return;e.preventDefault();kz=true;unlockPv();$('phead').classList.add('drag');
-    try{e.target.setPointerCapture(e.pointerId);}catch(_){}kzWas=playing;await stopPlay();if(kz)showFrame(xToT(trackX(e)));});
+    try{e.target.setPointerCapture(e.pointerId);}catch(_){}kzWas=playing;await stopPlay();if(kz)showFrame(xToT(snapX(trackX(e))));});
   $('kzone').addEventListener('pointermove',e=>{if(!kz||playing)return;const tr=$('track'),r=tr.getBoundingClientRect();
-    if(e.clientX<r.left+30)tr.scrollLeft-=12;else if(e.clientX>r.right-30)tr.scrollLeft+=12;showFrame(xToT(trackX(e)));});
+    if(e.clientX<r.left+30)tr.scrollLeft-=12;else if(e.clientX>r.right-30)tr.scrollLeft+=12;showFrame(xToT(snapX(trackX(e))));});
   const kzEnd=async()=>{if(!kz)return;kz=false;$('phead').classList.remove('drag');
     if(resumeAfter(kzWas)){seekWant=null;await waitStopped();startPlay();}kzWas=false;};
   ['pointerup','pointercancel'].forEach(t=>$('kzone').addEventListener(t,kzEnd));
@@ -1859,6 +1866,8 @@ async function splitAtHead(){if(busy||!items.length)return;await stopPlay();
   items.splice(L.i+1,0,n);selId=n.id;
   render();setStatus('«'+c.name+'» tagliata in due a '+fmtT(playT)+'.');}
 $('cutBtn').onclick=()=>splitAtHead();
+function setAggancio(v){snapOn=v;$('snapBtn').classList.toggle('on',v);$('snapBtn').textContent=v?'🧲 Aggancio ✓':'🧲 Aggancio';try{localStorage.setItem('arnovideo-aggancio',v?'1':'0');}catch(e){}}
+$('snapBtn').onclick=()=>setAggancio(!snapOn);setAggancio(snapOn);
 // tasto ⌫ (o Canc): toglie dalla timeline la clip o la musica selezionata
 function deleteSelected(){if(busy)return false;
   if(selMusic){const mc=music.find(x=>x.id===selMusic);if(!mc)return false;pushUndo('musica tolta');music.splice(music.indexOf(mc),1);selMusic=null;render();return true;}
