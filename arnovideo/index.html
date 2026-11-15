@@ -128,6 +128,10 @@ button{font:inherit;color:var(--text);cursor:pointer}
 .volrow .vv{font:700 12px "SF Mono",Menlo,monospace;color:#ffb21e;min-width:38px}
 .tclip .tvol{position:absolute;left:44px;bottom:3px;font:700 10px "SF Mono",Menlo,monospace;color:#fff;background:rgba(0,0,0,.65);border-radius:4px;padding:0 4px;pointer-events:none}
 #contBtn.on{background:linear-gradient(180deg,#5cff8e,#1fbf55);color:#06210f;border-color:#8affb0;border-bottom-color:#0b5a25}
+.ramrow{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+#ramLcd{font-size:14px}
+#cacheRes{margin-top:8px;background:#0a0403;border:1px solid #46ff7a;border-radius:8px;padding:8px 10px;font:600 13px/1.5 "SF Mono",Menlo,monospace;color:#cfe9d6}
+#cacheRes b{color:#46ff7a}#cacheRes[hidden]{display:none}
 #trimTip{position:fixed;z-index:95;pointer-events:none;transform:translate(-50%,-130%);background:#0a0403;border:1px solid #ffb21e;border-radius:8px;
  padding:4px 8px;font:800 14px "SF Mono",Menlo,monospace;color:#ffb21e;white-space:nowrap;box-shadow:0 6px 16px rgba(0,0,0,.7)}
 #trimTip[hidden]{display:none}
@@ -493,7 +497,9 @@ body.showhelp .help:not([hidden]){display:block!important}
           <option value="16">Massima</option>
         </select></label>
       <label><span class="lbl">Spazio usato</span>
-        <div class="row" style="margin-top:6px;flex-wrap:nowrap"><span class="lcd" id="spaceLcd" style="font-size:16px;flex:1">–</span><button class="btn sm" id="cacheBtn" type="button">Svuota cache</button></div></label>
+        <div class="row" style="margin-top:6px;flex-wrap:nowrap"><span class="lcd" id="spaceLcd" style="font-size:16px;flex:1">–</span><button class="btn sm" id="cacheBtn" type="button">Svuota cache</button></div>
+        <div class="ramrow"><span class="lbl">cache in RAM</span><span class="lcd g" id="ramLcd">–</span></div>
+        <div id="cacheRes" hidden></div></label>
       <label><span class="lbl">Formato del fotogramma</span>
         <select id="frameFmt">
           <option value="jpg" selected>JPEG (foto, file più piccolo)</option>
@@ -509,7 +515,7 @@ body.showhelp .help:not([hidden]){display:block!important}
 
 <script>
 'use strict';
-const VERSION='1.15.0';
+const VERSION='1.15.1';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -698,13 +704,28 @@ $('lib').addEventListener('click',e=>{const row=e.target.closest('.clip');if(!ro
 $('allBtn').onclick=()=>{if(busy||!media.length)return;pushUndo('tutti nella timeline');media.forEach(m=>items.push(mkClip(m)));render();};
 
 /* ---------- spazio usato e svuotamento della cache ---------- */
+function ramText(){return frameCache.size+' fotogrammi · '+mb(Math.max(0,ramBytes))+' di '+mb(RAM_MAX);}
+let ramT=0;function showRam(){const now=Date.now();if(now-ramT<500)return;ramT=now;const e=$('ramLcd');if(e)e.textContent=ramText();}
+async function storageInfo(){let u=null,files=0,fbytes=0;
+  try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();u=e.usage;}}catch(e){}
+  try{const all=await dbAll('files');files=all.length;all.forEach(f=>fbytes+=(f.blob&&f.blob.size)||0);}catch(e){}
+  return {u,files,fbytes};}
 async function showSpace(){try{let u=null;if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();u=e.usage;}
   let files=0;try{files=(await dbKeys('files')).length;}catch(e){}
   $('spaceLcd').textContent=(u!=null?mb(u):'?')+' · '+files+' file';}catch(e){$('spaceLcd').textContent='non disponibile';}}
-$('cacheBtn').onclick=async()=>{if(busy)return;$('cacheBtn').disabled=true;
-  frameCache.clear();frameQ.length=0;frameVideos.forEach(v=>{v.removeAttribute('src');v.load();v.remove();});frameVideos.clear();
-  await saveNow();await gcFiles(true);paintTrack(true);await showSpace();setStatus('Cache svuotata: fotogrammi della timeline e file non usati da nessun progetto.');
-  $('cacheBtn').disabled=false;};
+$('cacheBtn').onclick=async()=>{if(busy)return;$('cacheBtn').disabled=true;const box=$('cacheRes');box.hidden=false;box.innerHTML='Svuoto la cache…';
+  const before=await storageInfo(),rf=frameCache.size,rb=Math.max(0,ramBytes),nv=frameVideos.size;
+  frameCache.clear();ramBytes=0;frameQ.length=0;frameVideos.forEach(v=>{v.removeAttribute('src');v.load();v.remove();});frameVideos.clear();
+  await saveNow();const del=await gcFiles(true);
+  const after=await storageInfo();paintTrack(true);await showSpace();ramT=0;showRam();
+  const freed=before.u!=null&&after.u!=null?Math.max(0,before.u-after.u):del.bytes;
+  box.innerHTML='<b>✓ Cache svuotata</b><br>'+
+    'RAM: liberati <b>'+rf+'</b> fotogrammi ('+mb(rb)+')'+(nv?' e '+nv+' lettori video':'')+'<br>'+
+    'Archivio: eliminati <b>'+del.n+'</b> file non usati ('+mb(del.bytes)+')<br>'+
+    'Spazio usato: '+(before.u!=null?mb(before.u):'?')+' → <b>'+(after.u!=null?mb(after.u):'?')+'</b>'+(freed>0?' (−'+mb(freed)+')':'')+'<br>'+
+    'File nei progetti: '+after.files+' ('+mb(after.fbytes)+')'+
+    '<br><span style="color:#7d838c">I fotogrammi della timeline si rifanno da soli quando servono.</span>';
+  setStatus('Cache svuotata.');$('cacheBtn').disabled=false;};
 setTimeout(showSpace,1500);setInterval(()=>{if(!busy&&!document.hidden)showSpace();},30000);
 
 /* ---------- aiuto ---------- */
@@ -793,7 +814,14 @@ function setTile(e,c,key){const src=c.type==='img'?c.thumb:(frameCache.get(key)|
 /* fotogrammi per la timeline: preparati quando servono e tenuti in memoria */
 const frameCache=new Map(),frameWanted=new Set(),frameQ=[];let frameBusy=false;
 const frameVideos=new Map();   // un lettore nascosto per file (al massimo 3)
-function cachePut(key,url){frameCache.set(key,url);if(frameCache.size>900){const k=frameCache.keys().next().value;frameCache.delete(k);}
+// cache di lavoro in RAM: i fotogrammi della timeline restano in memoria fino a un tetto che dipende dal dispositivo
+let ramBytes=0;
+const RAM_MAX=(()=>{const dm=navigator.deviceMemory||(/iPhone|iPad/.test(navigator.userAgent)?4:8);return Math.min(400,Math.max(80,dm*30))*1048576;})();
+function ramSize(u){return Math.round((u||'').length*0.75);}
+function cachePut(key,url){const old=frameCache.get(key);if(old)ramBytes-=ramSize(old);
+  frameCache.delete(key);frameCache.set(key,url);ramBytes+=ramSize(url);
+  while(ramBytes>RAM_MAX&&frameCache.size){const k=frameCache.keys().next().value;ramBytes-=ramSize(frameCache.get(k));frameCache.delete(k);}
+  showRam();
   document.querySelectorAll('#lane i[data-key="'+key+'"]').forEach(e=>{e.style.backgroundImage='url('+url+')';e.classList.remove('ph');});}
 function requestFrame(m,fi,key){if(frameQ.some(q=>q.key===key))return;frameQ.push({m,fi,key});runFrames();}
 async function runFrames(){if(frameBusy)return;frameBusy=true;
@@ -1397,7 +1425,10 @@ async function gcFiles(now){   // elimina i file che nessun progetto usa più
   try{const ps=await dbAll('projects'),used=new Set();ps.forEach(p=>(p.media||p.items||[]).forEach(i=>i.fkey&&used.add(i.fkey)));
     media.forEach(i=>i.fkey&&used.add(i.fkey));
     [...undoSt,...redoSt].forEach(h=>(h.media||[]).forEach(m=>m.fkey&&used.add(m.fkey)));
-    for(const k of await dbKeys('files')){const t=+String(k).slice(1).split('-')[0];if(!used.has(k)&&(now||Date.now()-t>60000)&&!copyQ.some(c=>c.fkey===k))await dbDel('files',k);}}catch(e){}}
+    let n=0,bytes=0;
+    for(const k of await dbKeys('files')){const t=+String(k).slice(1).split('-')[0];
+      if(!used.has(k)&&(now||Date.now()-t>60000)&&!copyQ.some(c=>c.fkey===k)){try{const f=await dbGet('files',k);bytes+=(f&&f.blob&&f.blob.size)||0;}catch(e){}await dbDel('files',k);n++;}}
+    return {n,bytes};}catch(e){return {n:0,bytes:0};}}
 function clearItems(){media.forEach(m=>URL.revokeObjectURL(m.url));media.length=0;items.length=0;selId=null;}
 function projStats(p){const ms=p.media||p.items||[],byId={};ms.forEach(m=>byId[m.mid]=m);
   const cl=p.clips?p.clips.map(c=>({dur:c.dur,m:byId[c.mid]})).filter(c=>c.m):(p.items||[]).map(i=>({dur:i.dur,m:i}));
