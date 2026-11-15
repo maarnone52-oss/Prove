@@ -490,6 +490,8 @@ body.showhelp .help:not([hidden]){display:block!important}
           <option value="10" selected>Alta</option>
           <option value="16">Massima</option>
         </select></label>
+      <label><span class="lbl">Spazio usato</span>
+        <div class="row" style="margin-top:6px;flex-wrap:nowrap"><span class="lcd" id="spaceLcd" style="font-size:16px;flex:1">–</span><button class="btn sm" id="cacheBtn" type="button">Svuota cache</button></div></label>
       <label><span class="lbl">Formato del fotogramma</span>
         <select id="frameFmt">
           <option value="jpg" selected>JPEG (foto, file più piccolo)</option>
@@ -505,7 +507,7 @@ body.showhelp .help:not([hidden]){display:block!important}
 
 <script>
 'use strict';
-const VERSION='1.13.2';
+const VERSION='1.14.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -541,16 +543,24 @@ async function addFiles(files){if(!files.length||busy)return;
     const it={mid:++uid,type:isImg?'img':'vid',file:f,url:URL.createObjectURL(f),name:f.name,dur:0,w:0,h:0,thumb:'',size:f.size,
       fkey:'f'+Date.now()+'-'+Math.random().toString(36).slice(2,8)};
     try{ if(isImg)await loadImage(it); else await loadVideo(it);
-      show(f,0.35,'copia nel progetto…');
-      try{await dbPut('files',{key:it.fkey,blob:f});}catch(e){it.fkey=null;setStatus('Spazio insufficiente: «'+f.name+'» non verrà conservato nel progetto.',true);await sleep(1500);}
-      media.push(it); }
+      media.push(it);copyQ.push(it); }   // subito utilizzabile; la copia nel progetto si fa in sottofondo
     catch(err){URL.revokeObjectURL(it.url);setStatus('Non riesco a leggere «'+f.name+'»: '+err.message,true);await sleep(1500);}
-    done+=f.size;show(f,0,'fatto');render();
+    done+=f.size;show(f,0,'pronto');render();
   }
-  loading=false;loadUI(100,'File caricati: '+files.length+' · '+mb(tot));
-  setStatus('File caricati: trascinali nella timeline.');queueStrips();
-  setTimeout(()=>{if(!loading&&!stripRunning)loadUI(null);},1200);
+  setStatus('File caricati: trascinali nella timeline.');
+  runCopies();
 }
+// copia dei file nell'archivio del progetto, uno alla volta, senza bloccare il lavoro
+const copyQ=[];let copying=false;
+async function runCopies(){if(copying)return;copying=true;loading=true;
+  let n=0;const tot0=copyQ.length;
+  while(copyQ.length){const it=copyQ.shift();n++;
+    loadUI(Math.round((n-1)/(n-1+copyQ.length+1)*100),'Copio nel progetto '+n+' di '+(n+copyQ.length)+' · '+it.name+' ('+mb(it.size||0)+') · puoi già lavorare');
+    if(!media.includes(it)&&!undoSt.some(h=>h.media&&h.media.includes(it)))continue;
+    try{await dbPut('files',{key:it.fkey,blob:it.file});}catch(e){it.fkey=null;setStatus('Spazio insufficiente: «'+it.name+'» non verrà conservato nel progetto.',true);}
+    scheduleSave();}
+  copying=false;loading=false;loadUI(100,'File pronti e salvati nel progetto.');queueStrips();
+  setTimeout(()=>{if(!loading&&!stripRunning)loadUI(null);},1200);}
 async function loadImage(it){
   const img=new Image();img.src=it.url;await once(img,'load',20000);
   it.el=img;it.w=img.naturalWidth;it.h=img.naturalHeight;it.dur=parseFloat($('defDur').value);
@@ -684,6 +694,16 @@ $('lib').addEventListener('click',e=>{const row=e.target.closest('.clip');if(!ro
     for(let i=items.length-1;i>=0;i--)if(items[i].media===m)items.splice(i,1);render();}
 });
 $('allBtn').onclick=()=>{if(busy||!media.length)return;pushUndo('tutti nella timeline');media.forEach(m=>items.push(mkClip(m)));render();};
+
+/* ---------- spazio usato e svuotamento della cache ---------- */
+async function showSpace(){try{let u=null;if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();u=e.usage;}
+  let files=0;try{files=(await dbKeys('files')).length;}catch(e){}
+  $('spaceLcd').textContent=(u!=null?mb(u):'?')+' · '+files+' file';}catch(e){$('spaceLcd').textContent='non disponibile';}}
+$('cacheBtn').onclick=async()=>{if(busy)return;$('cacheBtn').disabled=true;
+  frameCache.clear();frameQ.length=0;frameVideos.forEach(v=>{v.removeAttribute('src');v.load();v.remove();});frameVideos.clear();
+  await saveNow();await gcFiles(true);paintTrack(true);await showSpace();setStatus('Cache svuotata: fotogrammi della timeline e file non usati da nessun progetto.');
+  $('cacheBtn').disabled=false;};
+setTimeout(showSpace,1500);setInterval(()=>{if(!busy&&!document.hidden)showSpace();},30000);
 
 /* ---------- aiuto ---------- */
 let showHelp=false;try{showHelp=localStorage.getItem('arnovideo-aiuto')==='1';}catch(e){}
@@ -1017,6 +1037,13 @@ async function prepare(p,it){
   const t0=it.tin||0;
   if(Math.abs(p.v.currentTime-t0)>0.02){p.v.currentTime=t0;try{await once(p.v,'seeked',5000);}catch(e){}}
   if(p.v.readyState<3){try{await once(p.v,'canplay',20000);}catch(e){}}
+  // «scalda» il lettore: avvio muto per un istante e ritorno al punto di partenza, così al cambio di clip il primo fotogramma è già pronto
+  if(!p.warm||p.warm!==it.url+'@'+t0){const v=p.v,was=v.muted;
+    try{v.muted=true;if(p.g)p.g.gain.value=0;const pr=v.play();if(pr&&pr.then)await Promise.race([pr.catch(()=>{}),sleep(800)]);
+      await Promise.race([new Promise(r=>v.requestVideoFrameCallback?v.requestVideoFrameCallback(()=>r()):v.addEventListener('timeupdate',r,{once:true})),sleep(400)]);}catch(e){}
+    try{v.pause();}catch(e){}v.muted=was;
+    if(Math.abs(v.currentTime-t0)>0.01){v.currentTime=t0;try{await once(v,'seeked',3000);}catch(e){}}
+    p.warm=it.url+'@'+t0;}
 }
 
 async function runSequence(rec,startT=0){
@@ -1033,7 +1060,14 @@ async function runSequence(rec,startT=0){
   if(items[first]&&off>=items[first].dur-0.05&&first<items.length-1){first++;done+=items[first-1].dur;off=0;}
   // prepara il primo video
   const nextVid=k=>{for(let j=k;j<items.length;j++)if(items[j].type==='vid')return j;return -1;};
-  let pending=null;{const j=nextVid(first);if(j>=0)pending={j,prom:prepare(player(0),items[j]),p:player(0)};}
+  // lettori pronti in anticipo: le prossime due clip video (tre lettori a rotazione)
+  const plan=new Map();
+  const ensurePlan=(from,busyP)=>{let j=from-1;
+    for(let n=0;n<2;n++){j=nextVid(j+1);if(j<0)break;if(plan.has(j))continue;
+      const used=new Set([busyP,...[...plan.values()].map(e=>e.p)]);
+      let k=0;while(k<3&&used.has(player(k)))k++;if(k>=3)break;
+      const pl=player(k);plan.set(j,{p:pl,prom:prepare(pl,items[j])});}};
+  ensurePlan(first,null);
   if(rec)rec.start(1000);
   for(let i=first;i<items.length&&!stopReq;i++){
     const it=items[i],o=i===first?off:0;mark(i);setStatus((rec?'Esporto':'Riproduzione')+' · '+(i+1)+'/'+items.length+' · '+it.name);
@@ -1044,10 +1078,9 @@ async function runSequence(rec,startT=0){
       done+=it.dur;continue;
     }
     // video
-    let p;if(pending&&pending.j===i){await pending.prom;p=pending.p;}else{p=player(pi);await prepare(p,it);}
-    pi=players.indexOf(p);
-    // prepara già il video successivo nell'altro lettore
-    const nj=nextVid(i+1);pending=nj>=0?{j:nj,p:player(1-pi)}:null;if(pending)pending.prom=prepare(pending.p,items[nj]);
+    let p;const pe=plan.get(i);if(pe){await pe.prom;p=pe.p;plan.delete(i);}else{p=player(0);await prepare(p,it);}
+    for(const [j,e] of plan)if(j<i)plan.delete(j);
+    ensurePlan(i+1,p);                 // mentre suona questa, si preparano le due successive
     const v=p.v;
     const want=(it.tin||0)+o;   // controlla di partire davvero dal punto giusto (taglio in testa)
     if(Math.abs(v.currentTime-want)>0.04){v.currentTime=want;try{await once(v,'seeked',4000);}catch(e){}}
@@ -1059,12 +1092,12 @@ async function runSequence(rec,startT=0){
       const loop=()=>{if(fin)return;if(stopReq){v.pause();return stop();}
         if(v.readyState>=2){clear();drawFit(x,v,v.videoWidth,v.videoHeight,w,h,mode);}
         const lt=v.currentTime-(it.tin||0);tick(done+Math.max(0,lt));
-        if(lt>=it.dur-0.01){v.pause();return stop();}      // fine del pezzo tagliato
+        if(lt>=it.dur-0.035){v.pause();return stop();}     // fine del pezzo (un fotogramma prima: la clip dopo parte senza pausa)
         if(v.currentTime>=it.dur-0.02&&v.paused&&!(it.tin>0))return stop();
         requestAnimationFrame(loop);};
       requestAnimationFrame(loop);
     });
-    v.pause();done+=it.dur;
+    v.pause();p.warm=null;done+=it.dur;
   }
   if(rec&&rec.state!=='inactive'){await sleep(150);rec.stop();}
   curClip=null;curPlayer=null;
@@ -1350,11 +1383,11 @@ async function saveNow(){clearTimeout(saveTimer);saveTimer=null;if(!db||restorin
     localStorage.setItem('arnovideo-last',curProj.id);}catch(e){$('saved').textContent='non salvato';}
   if(!$('recent').hidden)listRecent();
 }
-async function gcFiles(){   // elimina i file che nessun progetto usa più
+async function gcFiles(now){   // elimina i file che nessun progetto usa più
   try{const ps=await dbAll('projects'),used=new Set();ps.forEach(p=>(p.media||p.items||[]).forEach(i=>i.fkey&&used.add(i.fkey)));
     media.forEach(i=>i.fkey&&used.add(i.fkey));
     [...undoSt,...redoSt].forEach(h=>(h.media||[]).forEach(m=>m.fkey&&used.add(m.fkey)));
-    for(const k of await dbKeys('files')){const t=+String(k).slice(1).split('-')[0];if(!used.has(k)&&Date.now()-t>60000)await dbDel('files',k);}}catch(e){}}
+    for(const k of await dbKeys('files')){const t=+String(k).slice(1).split('-')[0];if(!used.has(k)&&(now||Date.now()-t>60000)&&!copyQ.some(c=>c.fkey===k))await dbDel('files',k);}}catch(e){}}
 function clearItems(){media.forEach(m=>URL.revokeObjectURL(m.url));media.length=0;items.length=0;selId=null;}
 function projStats(p){const ms=p.media||p.items||[],byId={};ms.forEach(m=>byId[m.mid]=m);
   const cl=p.clips?p.clips.map(c=>({dur:c.dur,m:byId[c.mid]})).filter(c=>c.m):(p.items||[]).map(i=>({dur:i.dur,m:i}));
