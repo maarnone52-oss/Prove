@@ -127,6 +127,7 @@ button{font:inherit;color:var(--text);cursor:pointer}
 .volrow .vi{font-size:18px;cursor:pointer;min-width:24px;text-align:center}
 .volrow .vv{font:700 12px "SF Mono",Menlo,monospace;color:#ffb21e;min-width:38px}
 .tclip .tvol{position:absolute;left:44px;bottom:3px;font:700 10px "SF Mono",Menlo,monospace;color:#fff;background:rgba(0,0,0,.65);border-radius:4px;padding:0 4px;pointer-events:none}
+#contBtn.on{background:linear-gradient(180deg,#5cff8e,#1fbf55);color:#06210f;border-color:#8affb0;border-bottom-color:#0b5a25}
 #trimTip{position:fixed;z-index:95;pointer-events:none;transform:translate(-50%,-130%);background:#0a0403;border:1px solid #ffb21e;border-radius:8px;
  padding:4px 8px;font:800 14px "SF Mono",Menlo,monospace;color:#ffb21e;white-space:nowrap;box-shadow:0 6px 16px rgba(0,0,0,.7)}
 #trimTip[hidden]{display:none}
@@ -419,6 +420,7 @@ body.showhelp .help:not([hidden]){display:block!important}
     <div class="tlbar">
       <button class="btn xs" id="undoBtn" disabled>↶ <span id="undoN"></span></button>
       <button class="btn xs" id="redoBtn" disabled>↷ <span id="redoN"></span></button>
+      <button class="btn xs" id="contBtn" title="Play continuo: dopo ogni spostamento della posizione la riproduzione riparte da sola" style="padding:0 10px">▶ Continuo</button>
       <span class="sp"></span>
       <button class="btn xs" id="clearBtn" disabled>Svuota</button>
     </div>
@@ -507,7 +509,7 @@ body.showhelp .help:not([hidden]){display:block!important}
 
 <script>
 'use strict';
-const VERSION='1.14.1';
+const VERSION='1.15.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -952,11 +954,12 @@ const goToItem=id=>{const i=items.findIndex(x=>x.id===id);if(i>=0&&!exporting){u
   };
   window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
   // righello: tocca o trascina per spostare la posizione
-  let scr=false;
-  $('ruler').addEventListener('pointerdown',e=>{if(!items.length||exporting)return;e.preventDefault();scr=true;unlockPv();
+  let scr=false,scrWas=false;
+  $('ruler').addEventListener('pointerdown',e=>{if(!items.length||exporting)return;e.preventDefault();scr=true;unlockPv();scrWas=playing;
     try{e.target.setPointerCapture(e.pointerId);}catch(_){}stopPlay().then(()=>showFrame(xToT(trackX(e))));});
   $('ruler').addEventListener('pointermove',e=>{if(scr&&!playing)showFrame(xToT(trackX(e)));});
-  ['pointerup','pointercancel'].forEach(t=>$('ruler').addEventListener(t,()=>{scr=false;}));
+  ['pointerup','pointercancel'].forEach(t=>$('ruler').addEventListener(t,async()=>{if(!scr)return;scr=false;
+    if(resumeAfter(scrWas)){seekWant=null;await waitStopped();startPlay();}scrWas=false;}));
   // fascia col pallino: come il righello, e scorre la timeline vicino ai bordi
   let kz=false,kzWas=false;
   $('kzone').addEventListener('pointerdown',async e=>{if(!items.length||exporting)return;e.preventDefault();kz=true;unlockPv();$('phead').classList.add('drag');
@@ -964,7 +967,7 @@ const goToItem=id=>{const i=items.findIndex(x=>x.id===id);if(i>=0&&!exporting){u
   $('kzone').addEventListener('pointermove',e=>{if(!kz||playing)return;const tr=$('track'),r=tr.getBoundingClientRect();
     if(e.clientX<r.left+30)tr.scrollLeft-=12;else if(e.clientX>r.right-30)tr.scrollLeft+=12;showFrame(xToT(trackX(e)));});
   const kzEnd=async()=>{if(!kz)return;kz=false;$('phead').classList.remove('drag');
-    if(kzWas&&playT<totalDur()-0.05){while(seekBusy)await sleep(10);startPlay();}kzWas=false;};
+    if(resumeAfter(kzWas)){seekWant=null;await waitStopped();startPlay();}kzWas=false;};
   ['pointerup','pointercancel'].forEach(t=>$('kzone').addEventListener(t,kzEnd));
 })();
 
@@ -1154,7 +1157,14 @@ async function startPlay(){
 async function stopPlay(){if(!playing)return;stopReq=true;await runP;while(playing)await sleep(10);}
 $('playBtn').onclick=()=>{unlockPv();if(playing)stopPlay();else startPlay();};
 
-async function jumpTo(t){const was=playing;await stopPlay();showFrame(t);revealHead();if(was){while(seekBusy)await sleep(10);startPlay();}}
+// play continuo: dopo ogni riposizionamento la riproduzione riparte da sola
+let contPlay=false;try{contPlay=localStorage.getItem('arnovideo-continuo')==='1';}catch(e){}
+function setCont(v){contPlay=v;$('contBtn').classList.toggle('on',v);$('contBtn').textContent=v?'▶ Continuo ✓':'▶ Continuo';
+  try{localStorage.setItem('arnovideo-continuo',v?'1':'0');}catch(e){}}
+$('contBtn').onclick=()=>{setCont(!contPlay);if(contPlay&&!playing&&items.length&&!busy)startPlay();};setCont(contPlay);
+async function waitStopped(){let n=0;while(playing&&n++<300)await sleep(10);}   // aspetta che la fermata in corso sia finita
+const resumeAfter=was=>(was||contPlay)&&playT<totalDur()-0.05&&items.length&&!exporting;
+async function jumpTo(t){const was=playing;await stopPlay();showFrame(t);revealHead();if(resumeAfter(was)){seekWant=null;await waitStopped();startPlay();}}
 $('prevItem').onclick=()=>{unlockPv();if(!items.length)return;const L=locate(playT);
   const s=startOf(L.i);jumpTo(playT-s>1||L.i===0?s:startOf(L.i-1));};
 $('nextItem').onclick=()=>{unlockPv();if(!items.length)return;const L=locate(playT);
@@ -1176,7 +1186,7 @@ $('nextItem').onclick=()=>{unlockPv();if(!items.length)return;const L=locate(pla
   };
   const end=async()=>{if(!hold)return;const h=hold;hold=null;clearInterval(h.timer);h.btn.classList.remove('hold');$('speed').textContent='';
     if(!h.scan)showFrame(playT+h.dir*5);
-    if(h.was&&playT<totalDur()-0.05){while(seekBusy)await sleep(10);startPlay();}};
+    if(resumeAfter(h.was)){seekWant=null;await waitStopped();startPlay();}};
   [['rew',-1],['ffw',1]].forEach(([id,d])=>{const b=$(id);
     b.addEventListener('pointerdown',e=>begin(e,d));
     b.addEventListener('pointerup',end);b.addEventListener('pointercancel',end);
@@ -1187,7 +1197,7 @@ $('nextItem').onclick=()=>{unlockPv();if(!items.length)return;const L=locate(pla
 (function(){let was=false,active=false;const sc=$('scrub');
   sc.addEventListener('pointerdown',async()=>{unlockPv();if(active)return;active=true;was=playing;await stopPlay();});
   sc.addEventListener('input',async()=>{if(playing)await stopPlay();showFrame(+sc.value);});
-  const fine=async()=>{if(!active)return;active=false;if(was&&playT<totalDur()-0.05){while(seekBusy)await sleep(10);startPlay();}was=false;};
+  const fine=async()=>{if(!active)return;active=false;if(resumeAfter(was)){seekWant=null;await waitStopped();startPlay();}was=false;};
   sc.addEventListener('change',fine);sc.addEventListener('pointerup',fine);
 })();
 ['fmt','fit'].forEach(id=>$(id).addEventListener('change',()=>{if(!busy&&items.length)showFrame(playT);}));
