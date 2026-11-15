@@ -103,6 +103,10 @@ button{font:inherit;color:var(--text);cursor:pointer}
 #lib .lgrip{flex:none;width:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#16181c;
  color:#ffb21e;font-size:20px;touch-action:none;cursor:grab;border-right:1px solid #2a2d33}
 #lib .clip.img .lgrip{color:#38c6ff}
+.lthumb{flex:none;align-self:center;width:72px;height:41px;margin-left:6px;border-radius:5px;background:#000 center/contain no-repeat;
+ box-shadow:inset 0 0 0 1px #2a2d33;touch-action:none;cursor:grab}
+.lthumb.wait{background:linear-gradient(90deg,#16181c,#22252b,#16181c);background-size:200% 100%;animation:lthw 1.2s linear infinite}
+@keyframes lthw{from{background-position:100% 0}to{background-position:-100% 0}}
 #lib .lgrip small{font-size:8px;letter-spacing:.08em;color:var(--dim);font-weight:700}
 .tclip .tname{position:absolute;left:0;right:0;top:0;padding:2px 6px;font-size:11px;font-weight:700;color:#fff;background:linear-gradient(rgba(0,0,0,.75),transparent);
  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
@@ -515,7 +519,7 @@ body.showhelp .help:not([hidden]){display:block!important}
 
 <script>
 'use strict';
-const VERSION='1.15.1';
+const VERSION='1.15.2';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -686,6 +690,7 @@ function renderLib(){
   media.forEach(m=>{
     const c=document.createElement('div');c.className='clip '+m.type;c.dataset.mid=m.mid;const u=usedCount(m);
     c.innerHTML='<div class="lgrip" title="Trascina nella timeline">⠿<small>'+(m.type==='img'?'FOTO':'VIDEO')+'</small></div>'+
+      '<div class="lthumb'+(m.thumb?'':' wait')+'"'+(m.thumb?' style="background-image:url('+m.thumb+')"':'')+'></div>'+
       '<div class="cbody"><div class="cname"></div><div class="cdur">'+fmtT(m.dur)+'</div>'+(u?'<span class="used">nella timeline'+(u>1?' ×'+u:'')+'</span>':'')+
       '<div class="cbtns"><button class="btn xs" data-a="add" style="padding:0 10px">＋ Timeline</button><button class="btn xs" data-a="del" aria-label="Togli dall\'elenco">✕</button></div></div>';
     c.querySelector('.cname').textContent=m.name;
@@ -950,7 +955,7 @@ const goToItem=id=>{const i=items.findIndex(x=>x.id===id);if(i>=0&&!exporting){u
     d=Object.assign({from,sx:e.clientX,sy:e.clientY,pid:e.pointerId,ghost:null,thumb,name,moved:false},data);
     try{e.target.setPointerCapture(e.pointerId);}catch(_){}}
   $('lib').addEventListener('pointerdown',e=>{if(busy)return;const row=e.target.closest('.clip');if(!row||e.target.closest('button')||e.target.closest('.strip'))return;
-    const onThumb=!!e.target.closest('.lgrip');if(!onThumb&&e.pointerType!=='mouse')return;   // col dito: solo dalla maniglia (il resto scorre)
+    const onThumb=!!e.target.closest('.lgrip,.lthumb');if(!onThumb&&e.pointerType!=='mouse')return;   // col dito: solo dalla maniglia (il resto scorre)
     if(onThumb)e.preventDefault();
     const m=media.find(x=>x.mid===+row.dataset.mid);if(m)start(e,'lib',{m},m.thumb,m.name);});
   $('lane').addEventListener('pointerdown',e=>{if(e.target.closest('.trim'))return;const el=e.target.closest('.tclip');if(!el)return;
