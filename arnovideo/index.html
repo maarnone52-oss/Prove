@@ -72,7 +72,7 @@ button{font:inherit;color:var(--text);cursor:pointer}
 .clip.vid{border-top:3px solid #ffb21e}
 /* vista a elenco: finestra che scorre in verticale, nome del file accanto */
 #lib{flex-direction:column;overflow-x:hidden;overflow-y:auto;max-height:min(440px,58vh);min-height:120px;gap:8px;padding:8px;overscroll-behavior:contain;scroll-snap-type:none}
-#lib .clip{-webkit-user-select:none;user-select:none;width:100%;display:flex;align-items:stretch;border-top:1px solid #4b5058;border-left:4px solid #ffb21e}
+#lib .clip{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;position:relative;width:100%;display:flex;align-items:stretch;border-top:1px solid #4b5058;border-left:4px solid #ffb21e}
 #lib .clip.img{border-left-color:#38c6ff}
 #lib .thumb{flex:none;width:132px;height:auto;min-height:74px;aspect-ratio:16/9;background-size:contain;background-color:#000}
 #lib .thumb .grip{font-size:11px}
@@ -329,6 +329,17 @@ body.showhelp .help:not([hidden]){display:block!important}
 #zslider.drag #zthumb::after{transform:scale(1.15)}
 #zLbl{min-width:70px}
 
+/* anteprima rapida: tenendo premuto 3 s un file dell'elenco (si chiude alzando il dito) */
+#lib .clip .hold{position:absolute;left:0;bottom:0;height:3px;width:0;background:#46ff7a;pointer-events:none}
+#lib .clip.holding .hold{width:100%;transition:width 2.6s linear}
+#peek{position:fixed;z-index:96;pointer-events:none;width:240px;background:#0a0403;border:2px solid #46ff7a;border-radius:10px;padding:6px;box-shadow:0 12px 34px rgba(0,0,0,.75);box-sizing:border-box}
+#peek[hidden]{display:none}
+#peek .ph{display:flex;align-items:center;gap:6px;margin-bottom:5px;font:600 12px Helvetica,Arial;color:#cfd3da}
+#peek .ph span{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#peek .ph button{min-height:26px;height:26px;width:30px;padding:0;font-size:14px}
+#peek video,#peek img{display:block;width:100%;max-height:50vh;border-radius:6px;background:#000;object-fit:contain}
+#peek audio{display:block;width:100%}
+#peek .pa{font-size:34px;text-align:center;color:#b47cff;padding:6px 0}
 /* interfaccia al 75%: i comandi dell'anteprima vanno a capo invece di uscire dal riquadro */
 html.uis .mini{flex-wrap:wrap;justify-content:center;row-gap:8px}
 html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
@@ -585,10 +596,11 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 </main>
 <div id="hidden"></div>
 <div id="trimTip" hidden></div>
+<div id="peek" hidden><div class="ph"><span></span></div><div class="pb"></div></div>
 
 <script>
 'use strict';
-const VERSION='1.20.0';
+const VERSION='1.21.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -788,7 +800,7 @@ function renderLib(){
     c.innerHTML='<div class="lgrip" title="Trascina nella timeline">⠿<small>'+(m.type==='img'?'FOTO':m.type==='aud'?'AUDIO':'VIDEO')+'</small></div>'+
       (m.type==='aud'?'<div class="lthumb aud">♪</div>':'<div class="lthumb'+(m.thumb?'':' wait')+'"'+(m.thumb?' style="background-image:url('+m.thumb+')"':'')+'></div>')+
       '<div class="cbody"><div class="cname"></div><div class="cdur">'+fmtT(m.dur)+'</div>'+((u||mu)?'<span class="used">nella timeline'+((u||mu)>1?' ×'+(u||mu):'')+'</span>':'')+
-      '<div class="cbtns"><button class="btn xs" data-a="add" style="padding:0 10px">＋ Timeline</button><button class="btn xs" data-a="del" aria-label="Togli dall\'elenco">✕</button></div></div>';
+      '<div class="cbtns"><button class="btn xs" data-a="add" style="padding:0 10px">＋ Timeline</button><button class="btn xs" data-a="del" aria-label="Togli dall\'elenco">✕</button></div></div><i class="hold"></i>';
     c.querySelector('.cname').textContent=m.name;
     box.appendChild(c);});
   box.scrollTop=st;$('allBtn').disabled=!media.length||busy;
@@ -1092,6 +1104,34 @@ function revealHead(){if(!items.length||layout.length!==items.length)return;cons
 /* etichetta del taglio: sempre sopra la timeline (il dito non la copre), allineata al dito ma dentro lo schermo */
 function placeTip(tip,cx){const r=$('track').getBoundingClientRect(),w=tip.offsetWidth||200,h=tip.offsetHeight||30,vw=window.innerWidth;
   tip.style.left=Math.max(6,Math.min(vw-w-6,cx-w/2))+'px';tip.style.top=Math.max(6,r.top-h-10)+'px';}
+/* ---------- anteprima rapida: tieni premuto 3 secondi un file dell'elenco ---------- */
+const HOLD_MS=3000;
+function peekClose(){const pk=$('peek');if(pk.hidden)return;const el=pk.querySelector('video,audio');if(el){try{el.pause();el.removeAttribute('src');el.load();}catch(e){}}
+  pk.querySelector('.pb').innerHTML='';pk.hidden=true;}
+function peekOpen(m,row){peekClose();const pk=$('peek'),pb=pk.querySelector('.pb');pk.querySelector('.ph span').textContent=m.name;let el;
+  if(m.type==='img'){el=document.createElement('img');el.src=m.url;}
+  else{el=document.createElement(m.type==='aud'?'audio':'video');el.controls=true;el.playsInline=true;el.setAttribute('playsinline','');el.preload='auto';
+    el.src=m.url;try{el.volume=Math.max(0.05,monVol);}catch(e){}
+    el.play().catch(()=>{el.muted=true;el.play().catch(()=>{});});}   // se il telefono non lascia partire l'audio, parte almeno l'immagine
+  if(m.type==='aud')pb.innerHTML='<div class="pa">♪</div>';pb.appendChild(el);pk.hidden=false;
+  const place=()=>{const cur=document.querySelector('#lib .clip[data-mid="'+m.mid+'"]')||row,r=cur.getBoundingClientRect(),w=pk.offsetWidth,h=pk.offsetHeight,vw=window.innerWidth;   // a destra e sopra la riga del file
+    pk.style.left=Math.max(6,Math.min(vw-w-6,r.right-w))+'px';pk.style.top=Math.max(6,r.top-h-6)+'px';};
+  place();el.addEventListener(m.type==='img'?'load':'loadedmetadata',place,{once:true});return el;}
+document.addEventListener('pointerdown',e=>{if(!$('peek').hidden&&!e.target.closest('#peek')&&!e.target.closest('#lib .clip'))peekClose();},true);
+(function(){let h=null;
+  const cancel=()=>{if(!h)return;clearTimeout(h.t);clearTimeout(h.t0);h.row.classList.remove('holding');h=null;};
+  $('lib').addEventListener('pointerdown',e=>{cancel();const row=e.target.closest('.clip');if(!row||e.target.closest('button')||exporting)return;
+    const m=media.find(x=>x.mid===+row.dataset.mid);if(!m)return;
+    h={m,row,pid:e.pointerId,sx:e.clientX,sy:e.clientY,fired:null};
+    h.t0=setTimeout(()=>{if(h)row.classList.add('holding');},400);   // barretta verde: mostra che sta per aprirsi
+    h.t=setTimeout(()=>{if(!h)return;row.classList.remove('holding');h.fired=peekOpen(m,row);try{navigator.vibrate&&navigator.vibrate(15);}catch(e){}},HOLD_MS);});
+  window.addEventListener('pointermove',e=>{if(h&&!h.fired&&e.pointerId===h.pid&&Math.hypot(e.clientX-h.sx,e.clientY-h.sy)>8)cancel();});
+  const up=e=>{if(!h||e.pointerId!==h.pid)return;const f=h.fired;cancel();if(f)peekClose();};   // si vede solo finché tieni premuto
+  window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
+  $('lib').addEventListener('scroll',()=>{if(h&&!h.fired)cancel();},{passive:true});
+  $('lib').addEventListener('touchmove',e=>{if(h&&h.fired)e.preventDefault();},{passive:false});   // mentre guardi, l'elenco non scorre
+  $('lib').addEventListener('contextmenu',e=>{if(e.target.closest('.clip'))e.preventDefault();});})();
+
 /* ---------- traccia musicale: selezione e spostamento ---------- */
 (function(){let mv=null;
   $('mlane').addEventListener('pointerdown',e=>{const el=e.target.closest('.mclip');if(!el||busy)return;const mc=music.find(x=>x.id===+el.dataset.mid);if(!mc)return;
