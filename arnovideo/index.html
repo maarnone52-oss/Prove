@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<script>/* dimensione dell'interfaccia, solo su iPhone: 60% = più spazio di lavoro */
+(function(){try{var t=/iPhone|iPod/i.test(navigator.userAgent);
+var s=parseFloat(localStorage.getItem('arnovideo.uiScale'));
+if(t&&s>=0.5&&s<0.999){document.documentElement.classList.add('uis');
+document.querySelector('meta[name=viewport]').setAttribute('content','width=device-width, initial-scale='+s+', minimum-scale='+s+', maximum-scale='+s+', user-scalable=no, viewport-fit=cover');}}catch(e){}})();</script>
 <title>ARNOVIDEO</title>
 <meta name="theme-color" content="#0d0e10">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -335,6 +340,9 @@ body.showhelp .help:not([hidden]){display:block!important}
 #peek audio{display:block;width:100%}
 #peek .pa{font-size:34px;text-align:center;color:#b47cff;padding:6px 0}
 /* interfaccia al 75%: i comandi dell'anteprima vanno a capo invece di uscire dal riquadro */
+/* interfaccia al 60% (iPhone): i comandi dell'anteprima vanno a capo invece di uscire dal riquadro */
+html.uis .mini{flex-wrap:wrap;justify-content:center;row-gap:8px}
+html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 /* === 1.10.1: modifiche fatte in ARNODESIGN sullo schermo iPhone 15 === */
 @media (max-width:520px){
 /* intestazione: riquadro del logo più stretto e alto, ARNO sopra e VIDEO sotto spostato a destra,
@@ -570,6 +578,11 @@ body.showhelp .help:not([hidden]){display:block!important}
         <div class="row" style="margin-top:6px;flex-wrap:nowrap"><span class="lcd" id="spaceLcd" style="font-size:16px;flex:1">–</span><button class="btn sm" id="cacheBtn" type="button">Svuota cache</button></div>
         <div class="ramrow"><span class="lbl">cache in RAM</span><span class="lcd g" id="ramLcd">–</span></div>
         <div id="cacheRes" hidden></div></label>
+      <label id="uisRow" hidden><span class="lbl">Dimensione dell'interfaccia</span>
+        <select id="uisSel">
+          <option value="1">100% (normale)</option>
+          <option value="0.6">60% (più spazio di lavoro)</option>
+        </select></label>
       <label><span class="lbl">Formato del fotogramma</span>
         <select id="frameFmt">
           <option value="jpg" selected>JPEG (foto, file più piccolo)</option>
@@ -586,7 +599,7 @@ body.showhelp .help:not([hidden]){display:block!important}
 
 <script>
 'use strict';
-const VERSION='1.26.0';
+const VERSION='1.27.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -952,7 +965,9 @@ let showHelp=false;try{showHelp=localStorage.getItem('arnovideo-aiuto')==='1';}c
 function setHelp(v){showHelp=v;document.body.classList.toggle('showhelp',v);$('helpBtn').classList.toggle('on',v);$('helpBtn').textContent=v?'✓ Aiuto visibile':'？ Aiuto';
   try{localStorage.setItem('arnovideo-aiuto',v?'1':'0');}catch(e){}}
 $('helpBtn').onclick=()=>setHelp(!showHelp);
-try{localStorage.removeItem('arnovideo.uiScale');}catch(e){}   // l'opzione 75% è stata tolta
+(function(){if(!/iPhone|iPod/i.test(navigator.userAgent)){try{localStorage.removeItem('arnovideo.uiScale');}catch(e){}return;}   // solo iPhone
+  let v=1;try{v=parseFloat(localStorage.getItem('arnovideo.uiScale'))||1;}catch(e){}$('uisRow').hidden=false;$('uisSel').value=v<0.999?'0.6':'1';
+  $('uisSel').onchange=async()=>{try{localStorage.setItem('arnovideo.uiScale',$('uisSel').value);}catch(e){}setStatus('Cambio la dimensione…');try{await saveNow();}catch(e){}location.reload();};})();
 setHelp(showHelp);
 
 /* ---------- anteprima ripetuta sopra la timeline (copia dell'anteprima principale) ---------- */
