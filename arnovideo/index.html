@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<script>/* dimensione dell'interfaccia, solo su iPhone: 60% = più spazio di lavoro */
+<script>/* dimensione dell'interfaccia, solo su iPhone: 80% o 60% = più spazio di lavoro */
 (function(){try{var t=/iPhone|iPod/i.test(navigator.userAgent);
 var s=parseFloat(localStorage.getItem('arnovideo.uiScale'));
-if(t&&s>=0.5&&s<0.999){document.documentElement.classList.add('uis');
+if(t&&s>=0.5&&s<0.999){document.documentElement.classList.add(s<0.7?'uis':'uis8');
 document.querySelector('meta[name=viewport]').setAttribute('content','width=device-width, initial-scale='+s+', minimum-scale='+s+', maximum-scale='+s+', user-scalable=no, viewport-fit=cover');}}catch(e){}})();</script>
 <title>ARNOVIDEO</title>
 <meta name="theme-color" content="#0d0e10">
@@ -588,6 +588,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
       <label id="uisRow" hidden><span class="lbl">Dimensione dell'interfaccia</span>
         <select id="uisSel">
           <option value="1">100% (normale)</option>
+          <option value="0.8">80%</option>
           <option value="0.6">60% (più spazio di lavoro)</option>
         </select></label>
       <label><span class="lbl">Formato del fotogramma</span>
@@ -621,7 +622,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.30.0';
+const VERSION='1.30.1';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1020,7 +1021,7 @@ function setHelp(v){showHelp=v;document.body.classList.toggle('showhelp',v);$('h
   try{localStorage.setItem('arnovideo-aiuto',v?'1':'0');}catch(e){}}
 $('helpBtn').onclick=()=>setHelp(!showHelp);
 (function(){if(!/iPhone|iPod/i.test(navigator.userAgent)){try{localStorage.removeItem('arnovideo.uiScale');}catch(e){}return;}   // solo iPhone
-  let v=1;try{v=parseFloat(localStorage.getItem('arnovideo.uiScale'))||1;}catch(e){}$('uisRow').hidden=false;$('uisSel').value=v<0.999?'0.6':'1';
+  let v=1;try{v=parseFloat(localStorage.getItem('arnovideo.uiScale'))||1;}catch(e){}$('uisRow').hidden=false;$('uisSel').value=v<0.7?'0.6':v<0.999?'0.8':'1';
   $('uisSel').onchange=async()=>{try{localStorage.setItem('arnovideo.uiScale',$('uisSel').value);}catch(e){}setStatus('Cambio la dimensione…');try{await saveNow();}catch(e){}location.reload();};})();
 setHelp(showHelp);
 
