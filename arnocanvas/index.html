@@ -75,6 +75,8 @@ header.bar{padding-top:calc(env(safe-area-inset-top) + 6px);padding-left:max(8px
 #zoom{position:absolute;right:max(10px,env(safe-area-inset-right));bottom:calc(env(safe-area-inset-bottom) + 70px);display:flex;gap:4px;z-index:20}
 #zoom .hb{min-height:34px;font-size:13px;box-shadow:0 2px 10px #000}
 #zl{min-width:52px}
+body.mac #zoom{position:static;display:flex}body.mac #zoom .hb{box-shadow:none;min-height:36px;font-size:15px}body.mac #zoom #zM,body.mac #zoom #zP{min-width:40px;font-size:18px}
+#zfit{display:none}body.mac #zfit{display:inline-block}
 #zord{position:absolute;right:max(10px,env(safe-area-inset-right));bottom:calc(env(safe-area-inset-bottom) + 112px);display:none;gap:4px;z-index:20;align-items:center;background:rgba(4,22,29,.85);border:1px solid #1aa4d6;border-radius:12px;padding:4px}
 #zord.show{display:flex}
 #pad{position:absolute;left:max(10px,env(safe-area-inset-left));bottom:calc(env(safe-area-inset-bottom) + 104px);display:none;grid-template-columns:repeat(3,40px);grid-template-rows:repeat(3,40px);gap:3px;z-index:20;background:rgba(4,22,29,.85);border:1px solid #1aa4d6;border-radius:12px;padding:4px;touch-action:none}
@@ -153,7 +155,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
   </div>
   <div id="pad"><span></span><button class="hb" data-d="0,-1" aria-label="Su">▲</button><span></span><button class="hb" data-d="-1,0" aria-label="Sinistra">◀</button><button class="hb st" id="padSt" aria-label="Passo"></button><button class="hb" data-d="1,0" aria-label="Destra">▶</button><span></span><button class="hb" data-d="0,1" aria-label="Giù">▼</button><span></span></div>
   <div id="zord"><button class="hb" data-z="bot" title="In fondo">⤓</button><button class="hb" data-z="down" title="Porta sotto">↓</button><button class="hb" data-z="up" title="Porta sopra">↑</button><button class="hb" data-z="top" title="In primo piano">⤒</button><span id="zlv"></span></div>
-  <div id="zoom"><button class="hb" id="zM">−</button><button class="hb" id="zl">100%</button><button class="hb" id="zP">＋</button></div>
+  <div id="zoom"><button class="hb" id="zM" title="Rimpicciolisci (⌘−)">−</button><button class="hb" id="zl" title="Adatta alla finestra (⌘0)">100%</button><button class="hb" id="zP" title="Ingrandisci (⌘+)">＋</button><button class="hb" id="zfit" title="Adatta alla finestra (⌘0)">⤢ Adatta</button></div>
   <footer class="bar">
     <button class="hb" id="bNew"><b>＋</b>Nuovo</button>
     <button class="hb" id="bDup"><b>⧉</b>Duplica</button>
@@ -169,7 +171,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.5.2';
+var VER='0.5.3';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -204,7 +206,7 @@ var MOVED=[],MS=[],sel=null,cont=null,H=852,Z=1,PAD=14,hist=[],redo=[],drag=null
 try{IND=CSS.supports('translate','1px')&&CSS.supports('scale','1')}catch(e){}
 /* Mac (mouse o trackpad, niente schermo touch): comandi sempre visibili e zoom solo sul canvas */
 var MAC=false;try{MAC=navigator.maxTouchPoints===0&&matchMedia('(hover:hover) and (pointer:fine)').matches}catch(e){}
-if(MAC)document.body.classList.add('mac');
+if(MAC){document.body.classList.add('mac');var zb=document.getElementById('zoom'),mb=document.getElementById('multiB');mb.parentNode.insertBefore(zb,mb)}
 try{var gt=document.createElement('div');gt.style.cssText='display:flex;flex-direction:column;row-gap:1px;position:absolute';gt.innerHTML='<i></i><i></i>';document.body.appendChild(gt);if(gt.scrollHeight!==1)document.documentElement.classList.add('nogap');document.body.removeChild(gt)}catch(e){}
 
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
@@ -669,7 +671,7 @@ function updBar(){
   ['#bNew','#bDup','#bDel','#bProp','#bIn'].forEach(function(s){$(s).style.display=u?'none':''});
   $('#bMv').style.display=(!u&&S.lvl==='O')?'':'none';
   $('#useMsg').style.display=u?'block':'none';
-  $('#zoom').style.display=u?'none':'flex';
+  $('#zoom').style.display=u&&!MAC?'none':'flex';
   var has=!!(sel&&resolve(sel));
   $('#bDup').disabled=!has;$('#bMv').disabled=!has;$('#bDel').disabled=!has;$('#bProp').disabled=!has;
   var e=has?resolve(sel):null;
@@ -941,6 +943,7 @@ function zoomEvents(doc,isFrame){
   },true);
 }
 if(MAC)zoomEvents(document,false);
+$('#zfit').onclick=function(){$('#zl').onclick()};
 $('#zl').onclick=function(){S.zoom=0;saveSet();layoutStage();toast('Adattato alla larghezza')};
 window.addEventListener('resize',function(){if(!S.zoom)layoutStage()});
 
@@ -995,7 +998,7 @@ function showHelp(){
   '<span class="lbl">⇄ Riquadro</span><p class="hint">In ② Oggetti sposta l\'oggetto o il gruppo selezionato in un altro riquadro, o in uno nuovo: è l\'elemento vero, quindi le funzioni restano collegate. Un oggetto trascinato sopra un altro riquadro si può sempre ritoccare per selezionarlo.</p>'+
   '<span class="lbl">▶ Usa</span><p class="hint">Toglie il velo di modifica: puoi usare l\'app (caricare file, premere i pulsanti) e vedere come si comporta con le modifiche.</p>'+
   '<span class="lbl">Frecce ◀ ▲ ▶ ▼</span><p class="hint">Con un elemento selezionato compare a sinistra la croce di frecce: ogni tocco lo sposta di un passo della griglia; tenendo premuto continua e poi accelera. Il tasto al centro passa allo spostamento fine (1 punto) e ritorno. Sul Mac anche i tasti freccia (con ⇧ dieci passi); sul Mac la croce e i pulsanti dei livelli restano sempre visibili.</p>'+
-  '<span class="lbl">Zoom</span><p class="hint"><b>− 100% ＋</b> ingrandiscono solo il canvas con l\'interfaccia; 100% (il numero) la adatta alla larghezza. Sul Mac anche il pizzico sul trackpad, Ctrl+rotella e ⌘+ ⌘− ⌘0: i comandi restano sempre della stessa misura.</p>'+
+  '<span class="lbl">Zoom</span><p class="hint"><b>− 100% ＋</b> (sul Mac nella barra in alto) ingrandiscono solo il canvas con l\'interfaccia; 100% (il numero) la adatta alla larghezza. Sul Mac anche il pizzico sul trackpad, Ctrl+rotella e ⌘+ ⌘− ⌘0: i comandi restano sempre della stessa misura.</p>'+
   '<span class="lbl">Livelli (sopra / sotto)</span><p class="hint">Quando selezioni qualcosa compaiono i pulsanti <b>⤓ ↓ ↑ ⤒</b>: in fondo, sotto, sopra, in primo piano. Valgono per i riquadri e per gli oggetti dello stesso gruppo; li trovi anche in Aspetto. Sul Mac: ⌘] e ⌘[ (con ⇧ in cima o in fondo).</p>'+
   '<span class="lbl">Griglia ▦</span><p class="hint">Passo regolabile, aggancio acceso o movimento libero.</p>'+
   '<span class="lbl">Elementi nuovi e copie</span><p class="hint">Hanno l\'aspetto giusto ma nessuna funzione: sono segnati in rosa «da assegnare».</p>'+
