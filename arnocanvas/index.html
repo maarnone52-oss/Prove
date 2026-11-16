@@ -185,7 +185,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.7.6';
+var VER='0.7.7';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -882,6 +882,10 @@ function removeNew(id){
   while(changed){changed=false;M.N.forEach(function(n){var r='@'+n.id;if(gone.indexOf(r)>=0)return;
     if([n.par,n.of].some(function(x){return x&&gone.some(function(g){return x===g||x.indexOf(g+'/')===0})})){gone.push(r);changed=true}})}
   M.N=M.N.filter(function(n){return gone.indexOf('@'+n.id)<0});
+  // spostamenti verso o da il riquadro eliminato: gli oggetti tornano al loro posto
+  var inGone=function(x){return x&&gone.some(function(g){return x===g||x.indexOf(g+'/')===0})};
+  (M.MV||[]).forEach(function(m){if(inGone(m.to)||inGone(m.ref))gone.push('%'+m.id)});
+  M.MV=(M.MV||[]).filter(function(m){return gone.indexOf('%'+m.id)<0});
   M.N.forEach(function(n){if(n.aft==='@'+id)n.aft=n0?n0.aft:null});
   ['I','P'].forEach(function(t){Object.keys(M[t]).forEach(function(k){if(gone.some(function(g){return k===g||k.indexOf(g+'/')===0}))delete M[t][k]})});
 }

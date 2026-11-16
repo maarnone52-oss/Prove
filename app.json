@@ -7,7 +7,7 @@
  {
   "cartella": "arnovideo",
   "nome": "ARNOVIDEO",
-  "stato": "Uguale alla definitiva 1.37.0 — nessuna modifica in prova"
+  "stato": "Prova 1.37.1 — nuova impaginazione Mac da ARNOCANVAS (da confermare)"
  },
  {
   "cartella": "podpro",
@@ -22,6 +22,6 @@
  {
   "cartella": "arnocanvas",
   "nome": "ARNOCANVAS",
-  "stato": "Prototipo 0.7.6 — riquadri: oggetti agganciati o sganciati durante ritaglio e ridimensionamento"
+  "stato": "Prototipo 0.7.7 — riquadri: oggetti agganciati o sganciati; ritaglio e ridimensionamento lato per lato"
  }
 ]
