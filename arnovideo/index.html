@@ -2244,5 +2244,6 @@ if(/^https?:/.test(location.protocol)){let chk=0;const checkNew=async()=>{if(Dat
     if(m&&m[1]!==VERSION){setStatus('Arriva la versione '+m[1]+'…');await saveNow();setTimeout(()=>location.reload(),300);}}catch(e){}};
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkNew();});setTimeout(checkNew,3000);}
 </script>
+<script src="impaginazione-mac.js?v=1"></script>
 </body>
 </html>
