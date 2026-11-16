@@ -23,6 +23,7 @@ input,textarea,select{-webkit-user-select:text;user-select:text;font:inherit}
 header.bar{padding-top:calc(env(safe-area-inset-top) + 6px);padding-left:max(8px,env(safe-area-inset-left));padding-right:max(8px,env(safe-area-inset-right))}
 .wm{font-weight:900;font-size:12px;letter-spacing:.05em;padding:7px 8px;border-radius:8px;background:linear-gradient(180deg,#0a0403,#140806);
  box-shadow:inset 0 2px 5px rgba(0,0,0,.9),inset 0 0 0 1px #000;line-height:1;white-space:nowrap}
+.wm small{display:block;font-size:9px;font-weight:600;color:var(--dim);letter-spacing:.08em;margin-top:3px;text-align:center}
 .wm .a{color:var(--amb);text-shadow:0 0 10px rgba(255,178,30,.5)}.wm .b{color:var(--cy);text-shadow:0 0 10px rgba(53,208,255,.5)}
 .hb{min-height:36px;min-width:36px;padding:0 9px;border-radius:9px;border:1px solid #4b5058;border-bottom:2px solid #121316;
  background:linear-gradient(180deg,#41454d,#2b2e34);color:var(--tx);font:inherit;font-size:14px;font-weight:650;cursor:pointer;white-space:nowrap}
@@ -119,7 +120,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <body>
 <div id="app">
   <header class="bar">
-    <div class="wm"><span class="a">ARNO</span><span class="b">CANVAS</span></div>
+    <div class="wm"><span class="a">ARNO</span><span class="b">CANVAS</span><small id="verS"></small></div>
     <button class="hb" id="target">…</button>
     <button class="hb" id="undoB" disabled aria-label="Annulla">↶</button>
     <button class="hb" id="redoB" disabled aria-label="Ripeti">↷</button>
@@ -155,7 +156,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.3.0';
+var VER='0.3.1';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -910,6 +911,17 @@ function loadApp(){
 }
 clearInterval(poll);poll=setInterval(function(){if(!ready||drag||!D)return;var s=sig();if(s!==lastSig){lastSig=s;var n=PANELS.length;detectPanels();if(PANELS.length!==n||(M.frozen&&PANELS.some(function(p){return !M.P[p.ref]&&vis(p.el)}))){applyAll();return}sizeFrame();measure();render()}},800);
 
+$('#verS').textContent='versione '+VER;
+/* aggiornamento automatico: se sul sito c'è una versione più nuova, ricarica saltando la cache */
+function vnum(v){return String(v).split('.').reduce(function(a,x){return a*1000+(+x||0)},0)}
+function checkUpdate(){
+  try{fetch(location.pathname+'?nocache='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){
+    var m=t.match(/var VER='([0-9.]+)'/);
+    if(m&&vnum(m[1])>vnum(VER)){toast('Nuova versione '+m[1]+': aggiorno…');setTimeout(function(){location.replace(location.pathname+'?v='+m[1])},900)}
+  }).catch(function(){})}catch(e){}
+}
+checkUpdate();
+document.addEventListener('visibilitychange',function(){if(!document.hidden)checkUpdate()});
 updBar();loadApp();
 })();
 </script>
