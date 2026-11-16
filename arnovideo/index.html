@@ -660,7 +660,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.36.0';
+const VERSION='1.37.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1097,6 +1097,18 @@ if(nativeRender())document.documentElement.classList.add('macapp');
 // il riquadro delle impostazioni; lo si porta sopra agli altri
 setTimeout(()=>{try{if(document.getElementById('cvLayoutPill')&&!/originale ·/.test(document.getElementById('cvLayoutPill').textContent)){
   const sec=$('fmt').closest('section');if(sec&&getComputedStyle(sec).position==='absolute')sec.style.setProperty('z-index','60','important');}}catch(e){}},1200);
+/* ---------- Mac: la timeline vera e propria e il mixer diventano riquadri a sé ----------
+   (messi in fondo alla pagina, così le impaginazioni già fatte con ARNOCANVAS non si spostano) */
+(function(){
+  const isMac=navigator.maxTouchPoints===0&&window.innerWidth>=900&&!/iPhone|iPad|Android/i.test(navigator.userAgent);if(!isMac)return;
+  const tlSec=$('track')&&$('track').closest('section.rack'),foot=document.querySelector('main > footer');if(!tlSec||!foot)return;
+  const mk=(title,id)=>{const sec=document.createElement('section');sec.className='rack';sec.id=id;sec.dataset.split='1';
+    sec.innerHTML='<span class="lbl">'+title+'</span>';foot.parentNode.insertBefore(sec,foot);return sec;};
+  const t=mk('Timeline','tlRack');[document.querySelector('.tlbar'),$('track'),document.querySelector('.under')].forEach(el=>{if(el)t.appendChild(el);});
+  const m=mk('Mixer audio','mixRack');if($('mixer'))m.appendChild($('mixer'));
+  const l=tlSec.querySelector(':scope > .lbl');if(l)l.textContent='2 · Anteprima della timeline';
+  document.documentElement.classList.add('tlsplit');
+})();
 /* ---------- riquadri liberi (solo Mac): ogni riquadro si sposta e si ridimensiona; la disposizione resta salvata ---------- */
 (function(){
   const isMac=navigator.maxTouchPoints===0&&window.innerWidth>=900&&!/iPhone|iPad|Android/i.test(navigator.userAgent);if(!isMac)return;
@@ -1104,8 +1116,8 @@ setTimeout(()=>{try{if(document.getElementById('cvLayoutPill')&&!/originale ·/.
   const btn=document.createElement('button');btn.id='lyBtn';btn.type='button';btn.textContent='▦ Disposizione';document.body.appendChild(btn);
   const menu=document.createElement('div');menu.id='lyMenu';menu.hidden=true;document.body.appendChild(menu);
   const panels=()=>[...document.querySelectorAll('main > .brand, main > section.rack, main > footer')];
-  const keyOf=(el,i)=>'p'+i;
-  const nameOf=el=>el.classList.contains('brand')?'Intestazione':el.tagName==='FOOTER'?'Piè di pagina':((el.querySelector(':scope > .lbl')||{}).textContent||'Riquadro');
+  const keyOf=(el,i)=>el.id?el.id:el.tagName==='FOOTER'?'pf':'p'+i;
+  const nameOf=el=>el.id==='tlRack'?'Timeline':el.id==='mixRack'?'Mixer audio':el.classList.contains('brand')?'Intestazione':el.tagName==='FOOTER'?'Piè di pagina':((el.querySelector(':scope > .lbl')||{}).textContent||'Riquadro');
   let L={};try{L=JSON.parse(localStorage.getItem('arnovideo-disposizione')||'{}')||{};}catch(e){L={};}
   const save=()=>{try{localStorage.setItem('arnovideo-disposizione',JSON.stringify(L));}catch(e){}};
   const setMode=m=>{try{localStorage.setItem('arnovideo-disposizione-modo',m);}catch(e){}try{saveNow&&saveNow();}catch(e){}location.reload();};
@@ -1128,6 +1140,7 @@ setTimeout(()=>{try{if(document.getElementById('cvLayoutPill')&&!/originale ·/.
   // posizioni iniziali: quelle della pagina originale
   const mr=document.querySelector('main').getBoundingClientRect();
   ps.forEach((el,i)=>{const k=keyOf(el,i);if(!L[k]){const r=el.getBoundingClientRect();L[k]={x:Math.round(r.left-mr.left),y:Math.round(r.top-mr.top),w:Math.round(el.offsetWidth),s:1,z:i+1};}});
+  delete L.p6;   // vecchia chiave del piè di pagina
   ps.forEach((el,i)=>{el.classList.add('lyP');el.dataset.lyk=keyOf(el,i);
     const bar=document.createElement('div');bar.className='lyBar';bar.textContent='⠿ '+nameOf(el).trim();
     const sc=document.createElement('div');sc.className='lyS';sc.title='Ingrandisci / rimpicciolisci';
@@ -2342,6 +2355,14 @@ if(/^https?:/.test(location.protocol)){let chk=0;const checkNew=async()=>{if(Dat
 </script>
 <script>/* disposizione sul Mac: impaginazione ARNOCANVAS (predefinita), riquadri liberi, oppure pagina originale */
 (function(){var m='canvas';try{m=localStorage.getItem('arnovideo-disposizione-modo')||'canvas'}catch(e){}
-  if(m==='canvas'){var s=document.createElement('script');s.src='impaginazione-mac.js?v=3';document.body.appendChild(s);}})();</script>
+  if(m==='canvas'){var s=document.createElement('script');s.src='impaginazione-mac.js?v=3';document.body.appendChild(s);
+    // riquadri nuovi (Timeline, Mixer) non ancora disposti in ARNOCANVAS: si mettono sotto agli altri
+    setTimeout(function(){try{var pill=document.getElementById('cvLayoutPill');if(!pill||/originale ·/.test(pill.textContent))return;
+      var main=document.querySelector('main'),mr=main.getBoundingClientRect(),B=0;
+      Array.prototype.forEach.call(main.children,function(el){if(getComputedStyle(el).position==='absolute'){var r=el.getBoundingClientRect();B=Math.max(B,r.bottom-mr.top)}});
+      Array.prototype.forEach.call(document.querySelectorAll('main > section[data-split]'),function(el){if(getComputedStyle(el).position==='absolute')return;
+        el.style.setProperty('position','absolute','important');el.style.setProperty('left','16px','important');el.style.setProperty('top',(B+16)+'px','important');
+        el.style.setProperty('width',Math.min(1248,main.clientWidth-32)+'px','important');el.style.setProperty('margin','0','important');B+=el.offsetHeight+16});
+      main.style.setProperty('min-height',(B+40)+'px','important');try{fitCv();render();}catch(e){}}catch(e){}},1500);}})();</script>
 </body>
 </html>
