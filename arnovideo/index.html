@@ -601,6 +601,8 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
         <div id="cacheRes" hidden></div></label>
       <label id="macZoomRow" hidden><span class="lbl">Dimensione dell'interfaccia (Mac)</span>
         <select id="macZoomSel">
+          <option value="fit">Adatta alla finestra (tutto in vista)</option>
+          <option value="fitw">Adatta alla larghezza della finestra</option>
           <option value="1">100% (normale)</option>
           <option value="0.85">85%</option>
           <option value="0.75">75%</option>
@@ -643,7 +645,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.34.2';
+const VERSION='1.34.3';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1059,11 +1061,22 @@ $('helpBtn').onclick=()=>setHelp(!showHelp);
 (function(){if(!/iPhone|iPod/i.test(navigator.userAgent)){try{localStorage.removeItem('arnovideo.uiScale');}catch(e){}return;}   // solo iPhone
   let v=1;try{v=parseFloat(localStorage.getItem('arnovideo.uiScale'))||1;}catch(e){}$('uisRow').hidden=false;$('uisSel').value=v<0.7?'0.6':v<0.999?'0.8':'1';
   $('uisSel').onchange=async()=>{try{localStorage.setItem('arnovideo.uiScale',$('uisSel').value);}catch(e){}setStatus('Cambio la dimensione…');try{await saveNow();}catch(e){}location.reload();};})();
-(function(){const nr=nativeRender();if(!nr)return;   // app del Mac: la pagina si rimpicciolisce come con ⌘− in Safari
-  let z=1;try{z=parseFloat(localStorage.getItem('arnovideo-maczoom'))||1;}catch(e){}
-  $('macZoomRow').hidden=false;$('macZoomSel').value=String(z);if(z!==1)nr.postMessage({cmd:'zoom',value:z});
-  $('macZoomSel').onchange=()=>{const v=parseFloat($('macZoomSel').value);try{localStorage.setItem('arnovideo-maczoom',String(v));}catch(e){}
-    nr.postMessage({cmd:'zoom',value:v});setTimeout(()=>{fitCv&&fitCv();render();},300);};})();
+(function(){const nr=nativeRender();if(!nr)return;   // app del Mac: la pagina si rimpicciolisce/ingrandisce come con ⌘− / ⌘+ in Safari
+  let mode='1',cur=1;try{mode=localStorage.getItem('arnovideo-maczoom')||'1';}catch(e){}
+  const send=z=>{z=Math.max(0.3,Math.min(2,Math.round(z*1000)/1000));if(Math.abs(z-cur)<0.004)return;cur=z;nr.postMessage({cmd:'zoom',value:z});setTimeout(()=>{try{fitCv();render();}catch(e){}},300);};
+  // misura della pagina da far stare nella finestra: l'impaginazione Mac di ARNOCANVAS è disegnata per uno schermo 1280×800;
+  // senza impaginazione si usa la larghezza della colonna (1100) e l'altezza della pagina
+  const extent=()=>{const pill=document.getElementById('cvLayoutPill');
+    if(pill&&!/originale ·/.test(pill.textContent))return {R:1280,B:800};
+    return {R:1130,B:Math.max(800,document.documentElement.scrollHeight)};};
+  const fit=()=>{if(mode!=='fit'&&mode!=='fitw')return;const e=extent();if(!e.R)return;
+    const winW=window.innerWidth*cur,winH=window.innerHeight*cur;
+    send(mode==='fitw'?winW/e.R:Math.min(winW/e.R,winH/e.B));};
+  const apply=()=>{if(mode==='fit'||mode==='fitw'){fit();setTimeout(fit,700);}else send(parseFloat(mode)||1);};
+  $('macZoomRow').hidden=false;$('macZoomSel').value=mode;
+  setTimeout(apply,900);   // dopo l'impaginazione del Mac
+  let rt=null;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(fit,400);});
+  $('macZoomSel').onchange=()=>{mode=$('macZoomSel').value;try{localStorage.setItem('arnovideo-maczoom',mode);}catch(e){}apply();};})();
 if(nativeRender())document.documentElement.classList.add('macapp');
 setHelp(showHelp);
 
