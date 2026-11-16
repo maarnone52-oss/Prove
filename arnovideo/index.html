@@ -317,6 +317,7 @@ body.showhelp .help:not([hidden]){display:block!important}
 #helpBtn.on{background:linear-gradient(180deg,#5cff8e,#1fbf55);color:#06210f;border-color:#8affb0}
 /* anteprima ripetuta sopra la timeline */
 #mirrorBox{max-width:560px;margin:0 auto 12px}
+label[hidden]{display:none!important}   /* le voci nascoste delle impostazioni restano nascoste */
 /* app del Mac: la pagina usa tutta la larghezza della finestra (anche a schermo intero) */
 html.macapp main{max-width:none}
 html.macapp #mirrorBox{max-width:min(800px,50vw)}
@@ -645,7 +646,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.35.0';
+const VERSION='1.35.1';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -2261,6 +2262,6 @@ if(/^https?:/.test(location.protocol)){let chk=0;const checkNew=async()=>{if(Dat
     if(m&&m[1]!==VERSION){setStatus('Arriva la versione '+m[1]+'…');await saveNow();setTimeout(()=>location.reload(),300);}}catch(e){}};
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkNew();});setTimeout(checkNew,3000);}
 </script>
-<script src="impaginazione-mac.js?v=2"></script>
+<script src="impaginazione-mac.js?v=3"></script>
 </body>
 </html>
