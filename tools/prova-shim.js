@@ -26,7 +26,7 @@
   }catch(e){}
   try{if(navigator.serviceWorker)navigator.serviceWorker.register=function(){return Promise.reject(new Error('Versione di prova: niente copia offline'))}}catch(e){}
   function badge(){if(document.getElementById('provaBadge'))return;try{if(window.top!==window)return}catch(e){return}
-    var m=location.pathname.match(/\/Prove\/([^\/]+)\//i),app=m?m[1]:'',edit=app&&app.toLowerCase()!=='arnodesign';
+    var m=location.pathname.match(/\/Prove\/([^\/]+)\//i),app=m?m[1]:'',edit=app&&app.toLowerCase()!=='arnodesign'&&app.toLowerCase()!=='arnocanvas';
     var b=document.createElement(edit?'a':'div');b.id='provaBadge';b.textContent=edit?'PROVA · ✎ Modifica':'PROVA';
     if(edit){b.href=location.pathname.replace(/\/[^\/]+\/[^\/]*$/,'/')+'arnodesign/#importa-'+app;b.title='Apri questa app in ARNODESIGN per modificarne la grafica'}
     b.style.cssText='position:fixed;z-index:2147483647;left:50%;transform:translateX(-50%);top:env(safe-area-inset-top,0);margin-top:2px;background:#e0262b;color:#fff;font:700 11px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:1.5px;padding:5px 10px;border-radius:0 0 8px 8px;box-shadow:0 2px 6px #0008;opacity:.95;text-decoration:none;white-space:nowrap;'+(edit?'':'pointer-events:none;left:8px;right:auto;transform:none;top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 72px);border-radius:8px;');

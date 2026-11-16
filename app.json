@@ -18,5 +18,10 @@
   "cartella": "arnodesign",
   "nome": "ARNODESIGN",
   "stato": "Uguale alla definitiva 1.3.3 — nessuna modifica in prova"
+ },
+ {
+  "cartella": "arnocanvas",
+  "nome": "ARNOCANVAS",
+  "stato": "Prototipo 0.1.0 — editor delle interfacce di ARNOVIDEO, ARNOCLICK e ARNODESIGN"
  }
 ]

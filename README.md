@@ -11,6 +11,7 @@ provata sull'iPhone o sul Mac, e solo dopo la conferma passa all'app definitiva.
 | `arnovideo/` | ARNOVIDEO | /Prove/arnovideo/ |
 | `podpro/` | POD Pro Remote | /Prove/podpro/ |
 | `arnodesign/` | ARNODESIGN | /Prove/arnodesign/ |
+| `arnocanvas/` | ARNOCANVAS (prototipo, editor delle interfacce) | /Prove/arnocanvas/ |
 
 Al momento della pubblicazione `tools/prepara.py` marca ogni copia come **PROVA**:
 striscia rossa in alto, icona con la scritta PROVA, nome «… PROVA» sulla Home,
