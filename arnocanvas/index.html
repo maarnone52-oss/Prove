@@ -175,7 +175,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.7.0';
+var VER='0.7.1';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -1041,6 +1041,7 @@ function updTarget(){$('#target').innerHTML=esc(A().n)+' <small>'+DV().ic+' '+es
 $('#menuB').onclick=function(){
   var nd=Object.keys(M.I).filter(function(k){return M.I[k].hide}).length;
   var h='<button class="opt" data-m="claude"><span class="ic">📋</span><span>Invia le modifiche a Claude<small>Copia il riepilogo e incollalo nella chat</small></span></button>';
+  h+='<button class="opt" data-m="spread"><span class="ic">⇲</span><span>Separa tutto<small>'+(S.lvl==='O'&&cont?'Mette gli oggetti di «'+esc(cut(nameAt(cont),26))+'» uno accanto all\'altro, senza sovrapposizioni':'Mette tutti i riquadri uno accanto all\'altro, senza sovrapposizioni')+' · le altre modifiche restano</small></span></button>';
   h+='<button class="opt" data-m="deleted"><span class="ic">🗑</span><span>Elementi eliminati ('+nd+')<small>Rimettili al loro posto</small></span></button>';
   h+='<button class="opt" data-m="import"><span class="ic">⤒</span><span>Importa modifiche<small>Incolla un riepilogo ARNOCANVAS</small></span></button>';
   h+='<button class="opt" data-m="reset"><span class="ic">↺</span><span>Ripristina tutto<small>Torna all\'interfaccia originale di '+esc(A().n)+' · '+esc(DV().n)+'</small></span></button>';
@@ -1048,11 +1049,40 @@ $('#menuB').onclick=function(){
   h+='<button class="opt" data-m="help"><span class="ic">?</span><span>Come si usa</span></button>';
   h+='<p class="hint" style="text-align:center;margin-top:14px">ARNOCANVAS versione '+VER+'<br>© 2026 Maurizio Arnone · Tutti i diritti riservati</p>';
   openSheet('Menu',h,function(c){c.addEventListener('click',function(e){var b=e.target.closest('[data-m]');if(!b)return;var m=b.getAttribute('data-m');
+    if(m==='spread'){closeSheet();spreadAll();return}
     if(m==='claude')showClaude();else if(m==='deleted')showDeleted();else if(m==='import')showImport();else if(m==='help')showHelp();
     else if(m==='reload'){closeSheet();loadApp()}
     else if(m==='reset'){if(confirm('Ripristinare l\'interfaccia originale? (Si può annullare con ↶)')){closeSheet();sel=null;cont=null;change(function(){M=blank()});setLevel('P')}}
   })});
 };
+/* ---------- separa tutto: riquadri (o oggetti del riquadro aperto) in file ordinate, senza sovrapposizioni ---------- */
+function shelf(items,X0,Y0,maxW,gap){ // items: {w,h}; ritorna le posizioni in file da sinistra a destra, dall'alto in basso
+  var x=X0,y=Y0,rowH=0,out=[];
+  items.forEach(function(it){if(x>X0&&x+it.w>X0+maxW){x=X0;y+=rowH+gap;rowH=0}
+    out.push({x:x,y:y});x+=it.w+gap;rowH=Math.max(rowH,it.h)});
+  return out;
+}
+function spreadAll(){
+  if(!ready||!D)return;
+  if(S.lvl==='O'&&cont){
+    var c=resolve(cont);if(!c)return;var C=rectOf(c),gap=8;
+    var list=BOXES.filter(function(b){return b.el&&vis(b.el)}).map(function(b){var r=rectOf(b.el);return {ref:b.ref,el:b.el,r:r}});
+    if(list.length<2){toast('Niente da separare');return}
+    list.sort(function(a,b){return a.r.y-b.r.y||a.r.x-b.r.x});
+    var pos=shelf(list.map(function(x){return {w:x.r.w,h:x.r.h}}),C.x+gap,C.y+gap,Math.max(40,C.w-gap*2),gap);
+    change(function(){list.forEach(function(x,i){var it=M.I[x.ref]||(M.I[x.ref]={}),sc=it.s||1,K=x.el.offsetWidth?x.r.w/(x.el.offsetWidth*sc):1;if(!isFinite(K)||K<=0)K=1;
+      it.dx=r1((it.dx||0)+(sn(pos[i].x)-x.r.x)/K);it.dy=r1((it.dy||0)+(sn(pos[i].y)-x.r.y)/K);if(!it.dx)delete it.dx;if(!it.dy)delete it.dy})});
+    toast('Oggetti separati ('+list.length+') · ↶ per tornare indietro');return;
+  }
+  ensureFrozen();
+  var d=DV(),gap=16;
+  var ps=PANELS.filter(function(p){return vis(p.el)&&M.P[p.ref]}).map(function(p){return {ref:p.ref,r:rectP(p.ref,p.el)}});
+  if(!ps.length){toast('Niente da separare');return}
+  ps.sort(function(a,b){return a.r.y-b.r.y||a.r.x-b.r.x});
+  var pos=shelf(ps.map(function(x){return {w:x.r.w,h:x.r.h}}),gap,gap,Math.max(100,d.w-gap*2),gap);
+  change(function(){ps.forEach(function(x,i){var P=M.P[x.ref];P.x=r1(P.x+sn(pos[i].x)-x.r.x);P.y=r1(P.y+sn(pos[i].y)-x.r.y)})});
+  setLevel('P');toast('Riquadri separati ('+ps.length+') · ↶ per tornare indietro');
+}
 function showDeleted(){
   var ks=Object.keys(M.I).filter(function(k){return M.I[k].hide});
   var h=ks.length?'':'<p class="hint">Nessun elemento eliminato.</p>';
