@@ -175,7 +175,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.7.2';
+var VER='0.7.3';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -197,8 +197,8 @@ var KN={panel:'Riquadro nuovo',button:'Pulsante nuovo',text:'Scritta nuova',disp
 
 function lsGet(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
-var S=Object.assign({app:'arnovideo',dev:'iphone15',lvl:'P',grid:8,snap:true,showGrid:true,zoom:0},lsGet('arnocanvas:set',{}));
-function saveSet(){lsSet('arnocanvas:set',{app:S.app,dev:S.dev,lvl:S.lvl,grid:S.grid,snap:S.snap,showGrid:S.showGrid,zoom:S.zoom,fine:!!S.fine})}
+var S=Object.assign({app:'arnovideo',dev:'iphone15',lvl:'P',grid:8,snap:true,showGrid:true,zoom:0,ascroll:true},lsGet('arnocanvas:set',{}));
+function saveSet(){lsSet('arnocanvas:set',{app:S.app,dev:S.dev,lvl:S.lvl,grid:S.grid,snap:S.snap,showGrid:S.showGrid,zoom:S.zoom,fine:!!S.fine,ascroll:S.ascroll!==false})}
 function A(){for(var i=0;i<APPS.length;i++)if(APPS[i].k===S.app)return APPS[i];return APPS[0]}
 function DV(){for(var i=0;i<DEVS.length;i++)if(DEVS[i].k===S.dev)return DEVS[i];return DEVS[0]}
 function mkey(){return 'arnocanvas:m:'+S.app+':'+S.dev}
@@ -530,8 +530,27 @@ ov.addEventListener('pointerdown',function(e){
   }
   tap={x:e.clientX,y:e.clientY,p:p};
 });
+var AS={x:0,y:0,raf:0};
+function autoScroll(){
+  AS.raf=0;if(!drag||S.ascroll===false)return;
+  var r=wrap.getBoundingClientRect(),E=60,vx=0,vy=0;
+  if(AS.y<r.top+E)vy=AS.y-(r.top+E);else if(AS.y>r.bottom-E)vy=AS.y-(r.bottom-E);
+  if(AS.x<r.left+E)vx=AS.x-(r.left+E);else if(AS.x>r.right-E)vx=AS.x-(r.right-E);
+  if(!vx&&!vy)return;
+  function sp(v){return v?(v<0?-1:1)*Math.min(30,Math.ceil(Math.abs(v)/3)+2):0}
+  var dy=sp(vy),dx=sp(vx),t0=wrap.scrollTop,l0=wrap.scrollLeft;
+  if(dy>0&&wrap.scrollTop+wrap.clientHeight>=wrap.scrollHeight-2){H+=dy/Z;layoutStage()} // in fondo: allunga lo spazio
+  wrap.scrollTop+=dy;wrap.scrollLeft+=dx;
+  if(wrap.scrollTop!==t0||wrap.scrollLeft!==l0)moveDrag(pt({clientX:AS.x,clientY:AS.y}));
+  AS.raf=requestAnimationFrame(autoScroll);
+}
+function keepVisible(){ // con le frecce: l'elemento resta in vista
+  var el=sel&&resolve(sel);if(!el||S.ascroll===false)return;var r=rectOf(el),top=PAD+r.y*Z,bot=PAD+(r.y+r.h)*Z,m=40;
+  if(top<wrap.scrollTop+m)wrap.scrollTop=Math.max(0,top-m);
+  else if(bot>wrap.scrollTop+wrap.clientHeight-m&&bot-top<wrap.clientHeight-2*m)wrap.scrollTop=bot-wrap.clientHeight+m;
+}
 ov.addEventListener('pointermove',function(e){
-  if(drag){e.preventDefault();moveDrag(pt(e));return}
+  if(drag){e.preventDefault();AS.x=e.clientX;AS.y=e.clientY;moveDrag(pt(e));if(!AS.raf)AS.raf=requestAnimationFrame(autoScroll);return}
   if(tap&&Math.abs(e.clientX-tap.x)+Math.abs(e.clientY-tap.y)>10)tap=null;
 });
 ov.addEventListener('pointerup',function(){if(drag){endDrag();return}if(tap){var p=tap.p;tap=null;tapAt(p)}});
@@ -882,13 +901,13 @@ function moveTo(to,keep){ // keep: posizioni a schermo da mantenere (oggetti tra
 function stepVal(){return S.fine?1:(S.snap?S.grid:1)}
 function stepTxt(){return S.fine?'passo<br>1':(S.snap?'passo<br>'+S.grid:'passo<br>1')}
 function nudgeOnce(dir,st){
-  if(selList().length>1){if(!nud.items)nud.items=multiItems();nud.tx=(nud.tx||0)+dir[0]*st;nud.ty=(nud.ty||0)+dir[1]*st;multiShift(nud.items,nud.tx,nud.ty);remeasure();return}
+  if(selList().length>1){if(!nud.items)nud.items=multiItems();nud.tx=(nud.tx||0)+dir[0]*st;nud.ty=(nud.ty||0)+dir[1]*st;multiShift(nud.items,nud.tx,nud.ty);remeasure();keepVisible();return}
   if(S.lvl==='P'){var P=M.P[sel];if(!P)return;
     if(S.snap&&!S.fine){P.x=sn(P.x+dir[0]*st);P.y=sn(P.y+dir[1]*st)}else{P.x=r1(P.x+dir[0]*st);P.y=r1(P.y+dir[1]*st)}
     posP(sel)}
   else{var el=resolve(sel);if(!el)return;var it=M.I[sel]||(M.I[sel]={}),sc=it.s||1,r=el.getBoundingClientRect(),K=el.offsetWidth?r.width/(el.offsetWidth*sc):1;if(!isFinite(K)||K<=0)K=1;
     it.dx=r1((it.dx||0)+dir[0]*st/K);it.dy=r1((it.dy||0)+dir[1]*st/K);if(!it.dx)delete it.dx;if(!it.dy)delete it.dy;restoreOne(sel);applyItem(sel)}
-  remeasure();
+  remeasure();keepVisible();
 }
 var nud=null;
 function nudgeStart(dir,mult){
@@ -982,11 +1001,12 @@ function col(l,f,v,set){return '<label class="fld">'+l+'<span class="cl"><input 
 $('#gridB').onclick=function(){
   var h='<div class="sw"><span>Aggancio alla griglia<br><small class="hint">Spento = movimento libero, al punto</small></span><button class="hb'+(S.snap?' on':'')+'" id="gS">'+(S.snap?'Acceso':'Spento')+'</button></div>';
   h+='<div class="sw"><span>Mostra la griglia</span><button class="hb'+(S.showGrid?' on':'')+'" id="gV">'+(S.showGrid?'Sì':'No')+'</button></div>';
+  h+='<div class="sw"><span>Scorrimento automatico<br><small class="hint">Trascinando vicino al bordo la pagina scorre da sola</small></span><button class="hb'+(S.ascroll!==false?' on':'')+'" id="gA">'+(S.ascroll!==false?'Acceso':'Spento')+'</button></div>';
   h+='<span class="lbl">Passo della griglia (punti dello schermo)</span><div class="chips">';
   [2,4,5,8,10,12,16,20,24,32].forEach(function(g){h+='<button class="hb'+(S.grid===g?' on':'')+'" data-g="'+g+'">'+g+'</button>'});
   h+='</div><p class="hint" style="margin-top:12px">Con l\'aggancio acceso posizioni e misure si fermano sulle linee della griglia. Sul Mac le frecce spostano di un passo (con ⇧ di dieci).</p>';
   openSheet('Griglia',h,function(c){c.addEventListener('click',function(e){
-    if(e.target.id==='gS')S.snap=!S.snap;else if(e.target.id==='gV')S.showGrid=!S.showGrid;
+    if(e.target.id==='gS')S.snap=!S.snap;else if(e.target.id==='gV')S.showGrid=!S.showGrid;else if(e.target.id==='gA')S.ascroll=S.ascroll===false;
     else{var b=e.target.closest('[data-g]');if(!b)return;S.grid=+b.getAttribute('data-g')}
     saveSet();layoutStage();updBar();$('#gridB').onclick();
   })});
