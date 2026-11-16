@@ -56,9 +56,15 @@ header.bar{padding-top:calc(env(safe-area-inset-top) + 6px);padding-left:max(8px
 .bx.sel .tg{background:var(--cy);color:#04161d}
 .bx .na{position:absolute;right:0;bottom:0;background:var(--new);color:#2a0020;font:700 10px/1 -apple-system,Helvetica,Arial,sans-serif;padding:3px 5px;pointer-events:none;white-space:nowrap}
 .bx i{position:absolute;background:var(--cy);border:2px solid #04161d;touch-action:none;box-shadow:0 1px 4px #000}
-.bx i[data-h=r]{right:-8px;top:50%;width:16px;height:34px;margin-top:-17px;border-radius:6px;cursor:ew-resize}
-.bx i[data-h=b]{bottom:-8px;left:50%;width:34px;height:16px;margin-left:-17px;border-radius:6px;cursor:ns-resize}
-.bx i[data-h=c]{right:-13px;bottom:-13px;width:26px;height:26px;border-radius:50%;background:var(--amb);cursor:nwse-resize}
+.bx i[data-h=r],.bx i[data-h=l]{top:50%;width:16px;height:34px;margin-top:-17px;border-radius:6px;cursor:ew-resize}
+.bx i[data-h=r]{right:-8px}.bx i[data-h=l]{left:-8px}
+.bx i[data-h=t],.bx i[data-h=b]{left:50%;width:34px;height:16px;margin-left:-17px;border-radius:6px;cursor:ns-resize}
+.bx i[data-h=b]{bottom:-8px}.bx i[data-h=t]{top:-8px}
+.bx i.co{width:24px;height:24px;border-radius:50%;background:var(--amb);z-index:2}
+.bx i[data-h=br]{right:-12px;bottom:-12px;cursor:nwse-resize}.bx i[data-h=tl]{left:-12px;top:-12px;cursor:nwse-resize}
+.bx i[data-h=tr]{right:-12px;top:-12px;cursor:nesw-resize}.bx i[data-h=bl]{left:-12px;bottom:-12px;cursor:nesw-resize}
+.bx.small i[data-h=t],.bx.small i[data-h=b]{width:18px;margin-left:-9px}
+.bx.small i[data-h=l],.bx.small i[data-h=r]{height:18px;margin-top:-9px}
 .bx .dm{position:absolute;left:0;top:100%;margin-top:6px;background:#04161d;color:var(--cy);font:600 11px/1 Menlo,monospace;padding:4px 6px;border-radius:4px;white-space:nowrap;pointer-events:none}
 .ct{position:absolute;outline:2px dashed var(--amb);pointer-events:none;background:rgba(255,178,30,.05)}
 .scr{position:absolute;left:0;right:0;border-top:2px dashed rgba(255,69,48,.75);pointer-events:none;z-index:3}
@@ -149,7 +155,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.2.0';
+var VER='0.3.0';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -399,11 +405,11 @@ function render(){
   if(CONTR)h+='<div class="ct" style="left:'+CONTR.x*Z+'px;top:'+CONTR.y*Z+'px;width:'+CONTR.w*Z+'px;height:'+CONTR.h*Z+'px"></div>';
   BOXES.forEach(function(b){
     var s=b.ref===sel,r=b.r;
-    h+='<div class="bx'+(S.lvl==='P'?' pn':'')+(s?' sel':'')+(b.nw?' nw':'')+'" data-ref="'+esc(b.ref)+'" style="left:'+r.x*Z+'px;top:'+r.y*Z+'px;width:'+r.w*Z+'px;height:'+r.h*Z+'px">';
+    h+='<div class="bx'+(S.lvl==='P'?' pn':'')+(s?' sel':'')+(s&&(r.w*Z<90||r.h*Z<70)?' small':'')+(b.nw?' nw':'')+'" data-ref="'+esc(b.ref)+'" style="left:'+r.x*Z+'px;top:'+r.y*Z+'px;width:'+r.w*Z+'px;height:'+r.h*Z+'px">';
     if(S.lvl==='P')h+='<span class="tg"><b class="nm">'+b.num+'</b>'+esc(b.name)+'</span>';
     else if(s)h+='<span class="tg">'+esc(b.name)+'</span>';
     if(b.nw)h+='<span class="na">da assegnare</span>';
-    if(s){h+='<i data-h="r"></i><i data-h="b"></i><i data-h="c"></i><span class="dm">'+dimTxt(b)+'</span>'}
+    if(s){h+='<i data-h="t"></i><i data-h="r"></i><i data-h="b"></i><i data-h="l"></i><i class="co" data-h="tl"></i><i class="co" data-h="tr"></i><i class="co" data-h="br"></i><i class="co" data-h="bl"></i><span class="dm">'+dimTxt(b)+'</span>'}
     h+='</div>';
   });
   ov.innerHTML=h;
@@ -463,22 +469,57 @@ function startDrag(kind,p){
   else{var it=M.I[sel]||{},s=it.s||1;drag.I0=Object.assign({},it);drag.K=el.offsetWidth?r.w/(el.offsetWidth*s):1;if(!isFinite(drag.K)||drag.K<=0)drag.K=1}
 }
 function sn(v){var g=S.snap?S.grid:0;return g?Math.round(v/g)*g:Math.round(v)}
+function target(k,r0,dx,dy){ // rettangolo voluto (in punti dello schermo) per la maniglia k
+  var L=r0.x,T=r0.y,Rr=r0.x+r0.w,B=r0.y+r0.h,ratio=null,MIN=12;
+  if(k.length===2){ // angolo: scala in proporzione, fermo l'angolo opposto
+    var nw=k[1]==='r'?sn(Rr+dx)-L:Rr-sn(L+dx);nw=Math.max(MIN,nw);ratio=nw/r0.w;
+    var nh=r0.h*ratio;
+    if(k[1]==='l')L=Rr-nw;else Rr=L+nw;
+    if(k[0]==='t')T=B-nh;else B=T+nh;
+  }else{
+    if(k==='r')Rr=Math.max(L+MIN,sn(Rr+dx));
+    if(k==='l')L=Math.min(Rr-MIN,sn(L+dx));
+    if(k==='b')B=Math.max(T+MIN,sn(B+dy));
+    if(k==='t')T=Math.min(B-MIN,sn(T+dy));
+  }
+  return {L:L,T:T,R:Rr,B:B,ratio:ratio};
+}
 function moveDrag(p){
-  var dx=p.x-drag.p0.x,dy=p.y-drag.p0.y,r0=drag.r0;
+  var dx=p.x-drag.p0.x,dy=p.y-drag.p0.y,r0=drag.r0,k=drag.k;
   if(!drag.moved&&Math.abs(dx)+Math.abs(dy)<2)return;drag.moved=true;
   if(drag.isP){
     var P=M.P[sel],P0=drag.P0,s0=P0.s||1;
-    if(drag.k==='m'){P.x=sn(P0.x+dx);P.y=sn(P0.y+dy)}
-    else if(drag.k==='r'){P.w=Math.max(60,r1((sn(P0.x+r0.w+dx)-P0.x)/s0))}
-    else if(drag.k==='b'){P.mh=Math.max(30,r1((sn(P0.y+r0.h+dy)-P0.y)/s0))}
-    else if(drag.k==='c'){P.s=clamp(Math.round(s0*Math.max(30,sn(P0.x+r0.w+dx)-P0.x)/r0.w*1000)/1000,.2,4)}
+    if(k==='m'){P.x=sn(P0.x+dx);P.y=sn(P0.y+dy)}
+    else{
+      var t=target(k,r0,dx,dy);
+      if(t.ratio){P.s=clamp(Math.round(s0*t.ratio*1000)/1000,.2,4);var f=P.s/s0;
+        P.x=r1(k[1]==='l'?r0.x+r0.w-r0.w*f:r0.x);P.y=r1(k[0]==='t'?r0.y+r0.h-r0.h*f:r0.y)}
+      else{
+        if(k==='l'||k==='r'){P.x=r1(t.L);P.w=Math.max(40,r1((t.R-t.L)/s0))}
+        if(k==='t'||k==='b'){P.y=r1(t.T);P.mh=Math.max(20,r1((t.B-t.T)/s0))}
+      }
+    }
     posP(sel);
   }else{
-    var it=M.I[sel]||(M.I[sel]={}),I0=drag.I0,K=drag.K,s1=I0.s||1;
-    if(drag.k==='m'){var nx=r0.x-(I0.dx||0)*K,ny=r0.y-(I0.dy||0)*K;it.dx=r1((sn(r0.x+dx)-nx)/K);it.dy=r1((sn(r0.y+dy)-ny)/K)}
-    else if(drag.k==='r'){it.w=Math.max(6,Math.round((sn(r0.x+r0.w+dx)-r0.x)/(K*s1)))}
-    else if(drag.k==='b'){it.h=Math.max(6,Math.round((sn(r0.y+r0.h+dy)-r0.y)/(K*s1)))}
-    else if(drag.k==='c'){it.s=clamp(Math.round(s1*Math.max(8,sn(r0.x+r0.w+dx)-r0.x)/r0.w*1000)/1000,.2,5)}
+    var it=M.I[sel]||(M.I[sel]={}),I0=drag.I0,K=drag.K,s1=I0.s||1,el=resolve(sel);
+    if(k==='m'){var nx=r0.x-(I0.dx||0)*K,ny=r0.y-(I0.dy||0)*K;it.dx=r1((sn(r0.x+dx)-nx)/K);it.dy=r1((sn(r0.y+dy)-ny)/K)}
+    else{
+      var t=target(k,r0,dx,dy);
+      if(t.ratio)it.s=clamp(Math.round(s1*t.ratio*1000)/1000,.2,5);
+      else{
+        if(k==='l'||k==='r')it.w=Math.max(4,Math.round((t.R-t.L)/(K*s1)));
+        if(k==='t'||k==='b')it.h=Math.max(4,Math.round((t.B-t.T)/(K*s1)));
+      }
+      // corregge la posizione: il bordo (o l'angolo) opposto resta fermo
+      restoreOne(sel);applyItem(sel);
+      if(el){var r=rectOf(el);
+        var ax=(k==='l'||k[1]==='l')?(t.R-(r.x+r.w)):(t.L-r.x);
+        var ay=(k==='t'||k[0]==='t')?(t.B-(r.y+r.h)):(t.T-r.y);
+        if(k==='t'||k==='b')ax=r0.x-r.x;
+        if(k==='l'||k==='r')ay=r0.y-r.y;
+        it.dx=r1((it.dx||0)+ax/K);it.dy=r1((it.dy||0)+ay/K);
+        if(!it.dx)delete it.dx;if(!it.dy)delete it.dy;}
+    }
     restoreOne(sel);applyItem(sel);
   }
   remeasure();
@@ -746,8 +787,8 @@ function showDeleted(){
 }
 function showHelp(){
   openSheet('Come si usa','<p class="hint">ARNOCANVAS apre la <b>vera app</b> (versione di prova) dentro lo spazio dello schermo scelto. Le modifiche agiscono sugli elementi veri, che si portano dietro le loro funzioni.</p>'+
-  '<span class="lbl">① Riquadri</span><p class="hint">Tocca un riquadro per selezionarlo. Trascinalo per spostarlo. Maniglia <b>a destra</b>: larghezza (il contenuto si ridispone). Maniglia <b>in basso</b>: altezza minima. Pallino <b>arancione</b> nell\'angolo: ingrandisce o rimpicciolisce tutto il riquadro in proporzione. Doppio tocco: entra negli oggetti.</p>'+
-  '<span class="lbl">② Oggetti</span><p class="hint">Mostra gli oggetti del riquadro (o del gruppo) in cui sei entrato; il percorso in alto dice dove sei e ti fa risalire. Stesse maniglie: destra larghezza, basso altezza, angolo scala. Doppio tocco su un gruppo per entrarci.</p>'+
+  '<span class="lbl">① Riquadri</span><p class="hint">Tocca un riquadro per selezionarlo. Trascinalo per spostarlo. Maniglie <b>azzurre sui quattro lati</b>: allargano o stringono da quel lato (il contenuto si ridispone), il lato opposto resta fermo. Pallini <b>arancioni sui quattro angoli</b>: ingrandiscono o rimpiccioliscono tutto in proporzione, l\'angolo opposto resta fermo. Doppio tocco: entra negli oggetti.</p>'+
+  '<span class="lbl">② Oggetti</span><p class="hint">Mostra gli oggetti del riquadro (o del gruppo) in cui sei entrato; il percorso in alto dice dove sei e ti fa risalire. Stesse maniglie: lati per larghezza e altezza, angoli per la scala in proporzione. Doppio tocco su un gruppo per entrarci.</p>'+
   '<span class="lbl">▶ Usa</span><p class="hint">Toglie il velo di modifica: puoi usare l\'app (caricare file, premere i pulsanti) e vedere come si comporta con le modifiche.</p>'+
   '<span class="lbl">Livelli (sopra / sotto)</span><p class="hint">Quando selezioni qualcosa compaiono i pulsanti <b>⤓ ↓ ↑ ⤒</b>: in fondo, sotto, sopra, in primo piano. Valgono per i riquadri e per gli oggetti dello stesso gruppo; li trovi anche in Aspetto. Sul Mac: ⌘] e ⌘[ (con ⇧ in cima o in fondo).</p>'+
   '<span class="lbl">Griglia ▦</span><p class="hint">Passo regolabile, aggancio acceso o movimento libero.</p>'+
