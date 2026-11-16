@@ -66,6 +66,10 @@ header.bar{padding-top:calc(env(safe-area-inset-top) + 6px);padding-left:max(8px
 #zoom{position:absolute;right:max(10px,env(safe-area-inset-right));bottom:calc(env(safe-area-inset-bottom) + 70px);display:flex;gap:4px;z-index:20}
 #zoom .hb{min-height:34px;font-size:13px;box-shadow:0 2px 10px #000}
 #zl{min-width:52px}
+#zord{position:absolute;right:max(10px,env(safe-area-inset-right));bottom:calc(env(safe-area-inset-bottom) + 112px);display:none;gap:4px;z-index:20;align-items:center;background:rgba(4,22,29,.85);border:1px solid #1aa4d6;border-radius:12px;padding:4px}
+#zord.show{display:flex}
+#zord .hb{min-height:36px;min-width:40px;font-size:17px}
+#zlv{color:var(--cy);font:600 12px/1.1 -apple-system,Helvetica,Arial,sans-serif;padding:0 4px;text-align:center}
 footer.bar{border-top:1px solid var(--edge);border-bottom:0;padding-bottom:calc(env(safe-area-inset-bottom) + 6px);justify-content:space-between}
 footer .hb{flex:1;min-width:0;padding:0 4px;font-size:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:46px;line-height:1.1}
 footer .hb b{font-size:17px;font-weight:600}
@@ -101,7 +105,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 .sw{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #2c3038}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chips .hb{min-width:46px}
-#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 80px);transform:translateX(-50%);background:#04161d;color:var(--cy);border:1px solid #1aa4d6;
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 166px);transform:translateX(-50%);background:#04161d;color:var(--cy);border:1px solid #1aa4d6;
  padding:9px 14px;border-radius:10px;font-size:14px;z-index:200;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
 #toast.on{opacity:1}
 </style>
@@ -129,6 +133,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
     <div id="stage"><div id="fbox"><iframe id="F" title="App da modificare"></iframe></div><div id="ov"></div></div>
     <div id="load">Carico…</div>
   </div>
+  <div id="zord"><button class="hb" data-z="bot" title="In fondo">⤓</button><button class="hb" data-z="down" title="Porta sotto">↓</button><button class="hb" data-z="up" title="Porta sopra">↑</button><button class="hb" data-z="top" title="In primo piano">⤒</button><span id="zlv"></span></div>
   <div id="zoom"><button class="hb" id="zM">−</button><button class="hb" id="zl">100%</button><button class="hb" id="zP">＋</button></div>
   <footer class="bar">
     <button class="hb" id="bNew"><b>＋</b>Nuovo</button>
@@ -144,7 +149,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.1.0';
+var VER='0.2.0';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -262,6 +267,7 @@ function applyItem(ref){
   if(it.w!=null){imp(st,'box-sizing','border-box');imp(st,'width',it.w+'px');imp(st,'min-width',it.w+'px');imp(st,'max-width','none');imp(st,'flex','none')}
   if(it.h!=null){imp(st,'box-sizing','border-box');imp(st,'height',it.h+'px');imp(st,'min-height',it.h+'px');imp(st,'max-height','none')}
   if(it.hide)imp(st,'display','none');
+  if(it.z!=null){if(W.getComputedStyle(el).position==='static')imp(st,'position','relative');imp(st,'z-index',String(it.z))}
   if(it.bg)imp(st,'background',it.bg);
   if(it.fg)imp(st,'color',it.fg);
   if(it.rad!=null)imp(st,'border-radius',it.rad+'px');
@@ -401,6 +407,7 @@ function render(){
     h+='</div>';
   });
   ov.innerHTML=h;
+  if(sel&&$('#zord').classList.contains('show')){var lv=levelOf(sel);if(lv)$('#zlv').innerHTML='livello<br>'+lv.n+' di '+lv.of}
 }
 function dimTxt(b){
   var r=b.r,t=Math.round(r.x)+', '+Math.round(r.y)+' · '+Math.round(r.w)+'×'+Math.round(r.h);
@@ -413,7 +420,10 @@ var rafM=0;function remeasure(){if(rafM)return;rafM=requestAnimationFrame(functi
 /* ---------- tocchi e trascinamenti ---------- */
 function pt(e){var r=ov.getBoundingClientRect();return {x:(e.clientX-r.left)/Z,y:(e.clientY-r.top)/Z}}
 function inside(r,p){return r&&p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h}
-function hit(p){var best=null;BOXES.forEach(function(b){if(inside(b.r,p)&&(!best||b.r.w*b.r.h<best.r.w*best.r.h))best=b});return best}
+function hit(p){
+  try{var top=D.elementFromPoint(p.x-W.pageXOffset,p.y-W.pageYOffset);
+    for(var e=top;e;e=e.parentElement){for(var i=0;i<BOXES.length;i++)if(BOXES[i].el===e)return BOXES[i]}}catch(_){}
+  var best=null;BOXES.forEach(function(b){if(inside(b.r,p)&&(!best||b.r.w*b.r.h<best.r.w*best.r.h))best=b});return best}
 function panelAt(p){var best=null;PANELS.forEach(function(q){if(vis(q.el)){var r=rectOf(q.el);if(inside(r,p)&&(!best||r.w*r.h<best.a))best={ref:q.ref,a:r.w*r.h}}});return best}
 
 ov.addEventListener('pointerdown',function(e){
@@ -449,7 +459,7 @@ function startDrag(kind,p){
   if(isP){froze=ensureFrozen();el=resolve(sel);if(!el||!M.P[sel]){toast('Questo riquadro non si può spostare');return}}
   var r=rectOf(el);
   drag={k:kind,p0:p,r0:r,isP:isP,before:before,moved:froze};
-  if(isP){M.zTop=(M.zTop||0)+1;M.P[sel].z=M.zTop;posP(sel);drag.P0=Object.assign({},M.P[sel])}
+  if(isP)drag.P0=Object.assign({},M.P[sel]);
   else{var it=M.I[sel]||{},s=it.s||1;drag.I0=Object.assign({},it);drag.K=el.offsetWidth?r.w/(el.offsetWidth*s):1;if(!isFinite(drag.K)||drag.K<=0)drag.K=1}
 }
 function sn(v){var g=S.snap?S.grid:0;return g?Math.round(v/g)*g:Math.round(v)}
@@ -530,6 +540,7 @@ function updBar(){
   var e=has?resolve(sel):null;
   $('#bIn').disabled=!(has&&(S.lvl==='P'||hasKids(e)));
   $('#bNew').disabled=S.lvl==='O'&&!cont;
+  var lv=has&&!u?levelOf(sel):null;$('#zord').classList.toggle('show',!!lv&&lv.of>1);if(lv)$('#zlv').innerHTML='livello<br>'+lv.n+' di '+lv.of;
   $('#gridB').textContent='▦ '+(S.snap?S.grid+' 🧲':'libero');
   $('#gridB').classList.toggle('on',S.snap);
 }
@@ -603,6 +614,23 @@ $('#bDel').onclick=function(){
 };
 $('#bIn').onclick=function(){if(sel)enter(sel)};
 
+/* ---------- livelli (sopra / sotto) ---------- */
+function zOf(b){var it=M.I[b.ref];if(it&&it.z!=null)return it.z;var P=M.P[b.ref];return P&&P.z?P.z:0}
+function stackList(){ // dal più sotto al più sopra, come li disegna il browser
+  return BOXES.map(function(b,i){return {b:b,i:i,z:zOf(b)}}).sort(function(a,c){return a.z-c.z||a.i-c.i}).map(function(x){return x.b});
+}
+function levelOf(ref){var L=stackList();for(var i=0;i<L.length;i++)if(L[i].ref===ref)return {n:i+1,of:L.length};return null}
+function zMove(k){
+  if(!sel||S.lvl==='U')return;
+  var L=stackList(),i=-1;for(var j=0;j<L.length;j++)if(L[j].ref===sel)i=j;if(i<0)return;
+  var t=k==='top'?L.length-1:k==='bot'?0:k==='up'?Math.min(L.length-1,i+1):Math.max(0,i-1);
+  if(t===i){toast(k==='up'||k==='top'?'È già il più in alto':'È già il più in basso');return}
+  var it=L.splice(i,1)[0];L.splice(t,0,it);
+  change(function(){L.forEach(function(b,n){var o=M.I[b.ref]||(M.I[b.ref]={});o.z=n+1;if(M.P[b.ref])delete M.P[b.ref].z})});
+  var lv=levelOf(sel);if(lv)toast('Livello '+lv.n+' di '+lv.of+(lv.n===lv.of?' · in primo piano':lv.n===1?' · in fondo':''));
+}
+$$('#zord [data-z]').forEach(function(b){b.onclick=function(){zMove(b.getAttribute('data-z'))}});
+
 /* ---------- aspetto ---------- */
 function hex(c){var m=String(c||'').match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/);if(!m||m[4]==='0')return null;return '#'+[m[1],m[2],m[3]].map(function(v){return ('0'+(+v).toString(16)).slice(-2)}).join('')}
 $('#bProp').onclick=openProps;
@@ -621,6 +649,8 @@ function openProps(){
   }else{
     h+=num('Sposta X','dx',it.dx||0)+num('Sposta Y','dy',it.dy||0)+num('Larghezza','w',it.w!=null?it.w:'',Math.round(el.offsetWidth))+num('Altezza','h',it.h!=null?it.h:'',Math.round(el.offsetHeight))+num('Scala %','s',Math.round((it.s||1)*100));
   }
+  var lv=levelOf(sel);
+  if(lv&&lv.of>1)h+='</div><span class="lbl">Livello · '+lv.n+' di '+lv.of+' (1 = più sotto)</span><div class="chips"><button class="hb" data-zz="bot" type="button">⤓ In fondo</button><button class="hb" data-zz="down" type="button">↓ Sotto</button><button class="hb" data-zz="up" type="button">↑ Sopra</button><button class="hb" data-zz="top" type="button">⤒ In primo piano</button>';
   h+='</div><span class="lbl">Aspetto</span><div class="grid2">';
   h+=col('Sfondo','bg',it.bg||hex(cs.backgroundColor)||'#000000',!!it.bg)+col('Colore testo','fg',it.fg||hex(cs.color)||'#ffffff',!!it.fg);
   h+=num('Angoli (px)','rad',it.rad!=null?it.rad:'',parseFloat(cs.borderTopLeftRadius)||0)+num('Dim. testo (px)','fs',it.fs||'',parseFloat(cs.fontSize)||'');
@@ -640,6 +670,7 @@ function openProps(){
       });
     });
     c.addEventListener('click',function(e){
+      var zz=e.target.closest('[data-zz]');if(zz){zMove(zz.getAttribute('data-zz'));openProps();return}
       var r=e.target.closest('[data-rc]');
       if(r){var f=r.getAttribute('data-rc');change(function(){if(M.I[sel])delete M.I[sel][f]});openProps();return}
       if(e.target.id==='pReset'){change(function(){var t=M.I[sel];if(t)['bg','fg','rad','fs','op','txt'].forEach(function(k){delete t[k]});if(tRef&&M.I[tRef])delete M.I[tRef].txt});openProps()}
@@ -718,6 +749,7 @@ function showHelp(){
   '<span class="lbl">① Riquadri</span><p class="hint">Tocca un riquadro per selezionarlo. Trascinalo per spostarlo. Maniglia <b>a destra</b>: larghezza (il contenuto si ridispone). Maniglia <b>in basso</b>: altezza minima. Pallino <b>arancione</b> nell\'angolo: ingrandisce o rimpicciolisce tutto il riquadro in proporzione. Doppio tocco: entra negli oggetti.</p>'+
   '<span class="lbl">② Oggetti</span><p class="hint">Mostra gli oggetti del riquadro (o del gruppo) in cui sei entrato; il percorso in alto dice dove sei e ti fa risalire. Stesse maniglie: destra larghezza, basso altezza, angolo scala. Doppio tocco su un gruppo per entrarci.</p>'+
   '<span class="lbl">▶ Usa</span><p class="hint">Toglie il velo di modifica: puoi usare l\'app (caricare file, premere i pulsanti) e vedere come si comporta con le modifiche.</p>'+
+  '<span class="lbl">Livelli (sopra / sotto)</span><p class="hint">Quando selezioni qualcosa compaiono i pulsanti <b>⤓ ↓ ↑ ⤒</b>: in fondo, sotto, sopra, in primo piano. Valgono per i riquadri e per gli oggetti dello stesso gruppo; li trovi anche in Aspetto. Sul Mac: ⌘] e ⌘[ (con ⇧ in cima o in fondo).</p>'+
   '<span class="lbl">Griglia ▦</span><p class="hint">Passo regolabile, aggancio acceso o movimento libero.</p>'+
   '<span class="lbl">Elementi nuovi e copie</span><p class="hint">Hanno l\'aspetto giusto ma nessuna funzione: sono segnati in rosa «da assegnare».</p>'+
   '<span class="lbl">Quando hai finito</span><p class="hint">☰ › <b>Invia le modifiche a Claude</b>: copia e incolla in chat. Claude le applica alla versione di prova dell\'app.</p>');
@@ -756,10 +788,15 @@ function claudeText(note){
     if(c.length)pan.push(nm(r)+': '+c.join('; '))});
   Object.keys(M.I).forEach(function(r){if(r[0]==='@')return;var c=descI(M.I[r]);if(!c.length)return;var e=resolve(r),isP=e&&isPanelEl(e);
     (isP?pan:obj).push(nm(r)+(isP?'':where(r))+': '+c.join('; '))});
+  var zg={},zl=[];
+  Object.keys(M.I).forEach(function(r){if(M.I[r].z==null)return;var e=resolve(r);if(!e||!e.parentElement)return;var isP=isPanelEl(e),k=isP?'P':refOf(e.parentElement);(zg[k]||(zg[k]=[])).push({r:r,z:M.I[r].z,isP:isP})});
+  Object.keys(zg).forEach(function(k){var g=zg[k].sort(function(a,b){return a.z-b.z});if(g.length<2)return;
+    zl.push((k==='P'?'Riquadri':'Dentro '+nm(k))+', dal più sotto al più sopra: '+g.map(function(x){return x.isP?'«'+nameAt(x.r)+'»':nameAt(x.r)}).join(' → '))});
   var L=['Ciao Claude, ecco le modifiche fatte con ARNOCANVAS '+VER+'.','App: '+a.n+' ('+a.d+') · Schermo: '+d.n+' ('+d.w+'×'+d.h+')',''];
   var k=0;
   if(pan.length){L.push('RIQUADRI');pan.forEach(function(x){L.push((++k)+'. '+x)});L.push('')}
   if(obj.length){L.push('OGGETTI');obj.forEach(function(x){L.push((++k)+'. '+x)});L.push('')}
+  if(zl.length){L.push('LIVELLI (SOPRA / SOTTO)');zl.forEach(function(x){L.push((++k)+'. '+x)});L.push('')}
   if(nw.length){L.push('ELEMENTI NUOVI O COPIATI');nw.forEach(function(x){L.push((++k)+'. '+x)});L.push('')}
   if(!k)L.push('(Nessuna modifica)','');
   if(note)L.push('Nota mia: '+note,'');
@@ -802,6 +839,7 @@ document.addEventListener('keydown',function(e){
   if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();$('#bDup').onclick();return}
   if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();$('#bDel').onclick();return}
   if(e.key==='Enter'){e.preventDefault();enter(sel);return}
+  if(mod&&(e.key===']'||e.key==='[')){e.preventDefault();zMove(e.key===']'?(e.shiftKey?'top':'up'):(e.shiftKey?'bot':'down'));return}
   var dir={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
   if(!dir)return;e.preventDefault();
   var st=(S.snap?S.grid:1)*(e.shiftKey?10:1);
