@@ -69,6 +69,8 @@ header.bar{padding-top:calc(env(safe-area-inset-top) + 6px);padding-left:max(8px
 .bx.small i[data-h=t],.bx.small i[data-h=b]{width:18px;margin-left:-9px}
 .bx.small i[data-h=l],.bx.small i[data-h=r]{height:18px;margin-top:-9px}
 .bx .dm{position:absolute;left:0;top:100%;margin-top:6px;background:#04161d;color:var(--cy);font:600 11px/1 Menlo,monospace;padding:4px 6px;border-radius:4px;white-space:nowrap;pointer-events:none}
+.bx.gb{outline:2px solid var(--amb);background:rgba(255,178,30,.07);z-index:4;cursor:move}
+.bx.gb .tg{background:var(--amb);color:#1b1305;top:100%;left:auto;right:0;margin-top:6px;border-radius:6px;opacity:1}.bx.gb .dm{color:var(--amb);background:#1b1305}
 .ct{position:absolute;outline:2px dashed var(--amb);pointer-events:none;background:rgba(255,178,30,.05);box-shadow:0 0 0 99999px rgba(0,0,0,.42)}
 .ct b{position:absolute;left:-2px;bottom:100%;margin-bottom:2px;background:var(--amb);color:#1b1305;font:700 11px/1 -apple-system,Helvetica,Arial,sans-serif;padding:4px 7px;border-radius:6px 6px 0 0;white-space:nowrap}
 .ct b small{font-weight:500;opacity:.75;margin-left:6px;font-size:10px}
@@ -173,7 +175,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.6.3';
+var VER='0.7.0';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -463,15 +465,25 @@ function render(){
     var many=selList().length>1,s=isSel(b.ref),one=s&&!many&&b.ref===sel,r=b.r;
     h+='<div class="bx'+(S.lvl==='P'?' pn':'')+(s?' sel':'')+(s&&(r.w*Z<90||r.h*Z<70)?' small':'')+(b.nw?' nw':'')+'" data-ref="'+esc(b.ref)+'" style="left:'+r.x*Z+'px;top:'+r.y*Z+'px;width:'+r.w*Z+'px;height:'+r.h*Z+'px">';
     if(S.lvl==='P')h+='<span class="tg"><b class="nm">'+b.num+'</b>'+esc(b.name)+'</span>';
-    else if(s)h+='<span class="tg">'+(many?'✓ ':'')+esc(b.name)+'</span>';
+    else if(s&&!(many&&S.lvl==='O'))h+='<span class="tg">'+(many?'✓ ':'')+esc(b.name)+'</span>';
     if(b.nw)h+='<span class="na">da assegnare</span>';
     if(b.cut)h+='<span class="na cut">contenuto tagliato ↕</span>';
-    if(s&&many&&b.ref===sel)h+='<span class="dm">'+selList().length+' selezionati</span>';
+    if(s&&many&&b.ref===sel&&S.lvl!=='O')h+='<span class="dm">'+selList().length+' selezionati</span>';
     if(one){h+='<i data-h="t"></i><i data-h="r"></i><i data-h="b"></i><i data-h="l"></i><i class="co" data-h="tl"></i><i class="co" data-h="tr"></i><i class="co" data-h="br"></i><i class="co" data-h="bl"></i><span class="dm">'+dimTxt(b)+'</span>'}
     h+='</div>';
   });
+  var gr=groupRect();
+  if(gr){var n=selList().length;
+    var gp=6;h+='<div class="bx gb" data-gb="1" style="left:'+(gr.x*Z-gp)+'px;top:'+(gr.y*Z-gp)+'px;width:'+(gr.w*Z+gp*2)+'px;height:'+(gr.h*Z+gp*2)+'px"><span class="tg">Gruppo · '+n+' oggetti</span>'+
+      '<i data-h="t"></i><i data-h="r"></i><i data-h="b"></i><i data-h="l"></i><i class="co" data-h="tl"></i><i class="co" data-h="tr"></i><i class="co" data-h="br"></i><i class="co" data-h="bl"></i>'+
+      '<span class="dm">'+Math.round(gr.x)+', '+Math.round(gr.y)+' · '+Math.round(gr.w)+'×'+Math.round(gr.h)+'</span></div>'}
   ov.innerHTML=h;
   if(sel&&($('#zord').classList.contains('show')||MAC)){var lv=levelOf(sel),ns=selList().length;if(lv)$('#zlv').innerHTML=ns>1?ns+'<br>selez.':'livello<br>'+lv.n+' di '+lv.of}
+}
+function groupRect(){ // cornice arancione attorno agli oggetti selezionati insieme
+  if(S.lvl!=='O')return null;var refs=selList();if(refs.length<2)return null;var L=1e9,T=1e9,R=-1e9,B=-1e9,n=0;
+  BOXES.forEach(function(b){if(refs.indexOf(b.ref)<0)return;n++;L=Math.min(L,b.r.x);T=Math.min(T,b.r.y);R=Math.max(R,b.r.x+b.r.w);B=Math.max(B,b.r.y+b.r.h)});
+  return n>1?{x:L,y:T,w:R-L,h:B-T}:null;
 }
 function dimTxt(b){
   var r=b.r,t=Math.round(r.x)+', '+Math.round(r.y)+' · '+Math.round(r.w)+'×'+Math.round(r.h);
@@ -504,7 +516,8 @@ function panelAt(p){var best=null;PANELS.forEach(function(q){if(vis(q.el)){var r
 
 ov.addEventListener('pointerdown',function(e){
   if(S.lvl==='U'||!ready)return;
-  var hd=e.target.closest('[data-h]'),bx=e.target.closest('.bx'),p=pt(e);
+  var hd=e.target.closest('[data-h]'),gbx=e.target.closest('.gb'),bx=e.target.closest('.bx:not(.gb)'),p=pt(e);
+  if(gbx&&!e.shiftKey){e.preventDefault();startDrag(hd?hd.getAttribute('data-h'):'m',p);try{ov.setPointerCapture(e.pointerId)}catch(_){}return}
   if(!hd&&bx&&e.pointerType==='mouse'&&e.shiftKey){toggleMulti(bx.getAttribute('data-ref'));render();updBar();return}
   if(!hd&&bx&&e.pointerType==='mouse'&&!S.multi&&!isSel(bx.getAttribute('data-ref'))){sel=bx.getAttribute('data-ref');clearMulti();render();updBar()}
   if(sel&&(hd||(bx&&isSel(bx.getAttribute('data-ref'))))){
@@ -548,6 +561,8 @@ function liftPanels(refs){ // mentre si trascina, gli oggetti restano visibili s
 }
 function startDrag(kind,p){
   var el=resolve(sel);if(!el)return;
+  if(selList().length>1&&kind!=='m'&&S.lvl==='O'){var its=multiItems(),G=groupRect();if(!G)return;
+    drag={k:kind,multi:true,group:true,p0:p,isP:false,before:JSON.stringify(M),moved:false,items:its,G0:G};return}
   if(selList().length>1){if(kind!=='m')return;drag={k:'m',multi:true,p0:p,isP:S.lvl==='P',before:JSON.stringify(M),moved:false,items:null};if(S.lvl==='O')drag.lift=liftPanels(selList());return}
   var before=JSON.stringify(M),isP=S.lvl==='P',froze=false;
   if(isP&&M.frozen&&!M.P[sel]){toast('Questo riquadro non si può spostare');return}
@@ -576,6 +591,7 @@ function target(k,r0,dx,dy){ // rettangolo voluto (in punti dello schermo) per l
 function moveDrag(p){
   var dx=p.x-drag.p0.x,dy=p.y-drag.p0.y,r0=drag.r0,k=drag.k;
   if(!drag.moved&&Math.abs(dx)+Math.abs(dy)<2)return;drag.moved=true;
+  if(drag.group){groupResize(dx,dy);remeasure();return}
   if(drag.multi){multiMove(dx,dy);remeasure();return}
   if(drag.isP&&!drag.P0){ensureFrozen();if(!M.P[sel]){drag.isP=false;drag.k='none';return}drag.P0=Object.assign({},M.P[sel]);drag.P0.e=Object.assign({},M.P[sel].e||{});drag.r0=r0=rectP(sel,resolve(sel))}
   if(drag.k==='none')return;
@@ -633,6 +649,20 @@ function multiShift(items,tx,ty){
   items.forEach(function(x){
     if(x.P0){var P=M.P[x.r];P.x=r1(x.P0.x+tx);P.y=r1(x.P0.y+ty);posP(x.r)}
     else{var it=M.I[x.r]||(M.I[x.r]={});it.dx=r1((x.I0.dx||0)+tx/x.K);it.dy=r1((x.I0.dy||0)+ty/x.K);if(!it.dx)delete it.dx;if(!it.dy)delete it.dy;restoreOne(x.r);applyItem(x.r)}
+  });
+}
+function groupResize(dx,dy){ // ridimensiona il gruppo: angoli in proporzione, lati in una sola direzione
+  var k=drag.k,G=drag.G0,t=target(k,G,dx,dy);
+  drag.items.forEach(function(x){
+    var el=resolve(x.r);if(!el)return;var it=M.I[x.r]||(M.I[x.r]={}),I0=x.I0,r0=x.r0,K=x.K,s1=I0.s||1,want={x:r0.x,y:r0.y};
+    ['dx','dy','w','h','s'].forEach(function(q){if(I0[q]!=null)it[q]=I0[q];else delete it[q]});
+    if(t.ratio){var f=t.ratio,ax=k[1]==='l'?G.x+G.w:G.x,ay=k[0]==='t'?G.y+G.h:G.y;
+      want.x=ax+(r0.x-ax)*f;want.y=ay+(r0.y-ay)*f;it.s=clamp(Math.round(s1*f*1000)/1000,.2,5);if(it.s===1)delete it.s}
+    else if(k==='l'||k==='r'){var fx=(t.R-t.L)/G.w;want.x=t.L+(r0.x-G.x)*fx;it.w=Math.max(4,Math.round(r0.w*fx/(K*s1)))}
+    else{var fy=(t.B-t.T)/G.h;want.y=t.T+(r0.y-G.y)*fy;it.h=Math.max(4,Math.round(r0.h*fy/(K*s1)))}
+    restoreOne(x.r);applyItem(x.r);
+    var cur=rectOf(el);it.dx=r1((it.dx||0)+(want.x-cur.x)/K);it.dy=r1((it.dy||0)+(want.y-cur.y)/K);if(!it.dx)delete it.dx;if(!it.dy)delete it.dy;
+    restoreOne(x.r);applyItem(x.r);
   });
 }
 function multiMove(dx,dy){
@@ -1033,7 +1063,7 @@ function showHelp(){
   openSheet('Come si usa','<p class="hint">ARNOCANVAS apre la <b>vera app</b> (versione di prova) dentro lo spazio dello schermo scelto. Le modifiche agiscono sugli elementi veri, che si portano dietro le loro funzioni.</p>'+
   '<span class="lbl">① Riquadri</span><p class="hint">Tocca un riquadro per selezionarlo. Trascinalo per spostarlo. Maniglie <b>azzurre sui quattro lati</b>: ognuna sposta solo il proprio lato e <b>il contenuto resta fermo</b>. Verso l\'esterno aggiunge margine vuoto da quel lato; verso l\'interno <b>ritaglia</b> quel lato (si nasconde la parte che resta fuori). Riportando il lato indietro torna tutto com\'era. Pallini <b>arancioni sui quattro angoli</b>: ingrandiscono o rimpiccioliscono tutto in proporzione, l\'angolo opposto resta fermo. Doppio tocco: entra negli oggetti.</p>'+
   '<span class="lbl">② Oggetti</span><p class="hint">La <b>cornice arancione tratteggiata</b> non si seleziona: indica il riquadro (o il gruppo) dentro cui stai lavorando, e il resto si scurisce. Dentro, ogni oggetto ha un bordino azzurro: clic per selezionarlo. Clic su un altro riquadro per lavorare lì; Esc chiude la cornice e resti in ② Oggetti (da un gruppo risale al suo riquadro); ‹ Riquadri in alto torna a ①. Mostra gli oggetti del riquadro (o del gruppo) in cui sei entrato; il percorso in alto dice dove sei e ti fa risalire. Stesse maniglie: lati per larghezza e altezza, angoli per la scala in proporzione. Doppio tocco su un gruppo per entrarci.</p>'+
-  '<span class="lbl">☐ Multi · selezione multipla</span><p class="hint">Accendi <b>☐ Multi</b> e tocca gli elementi da aggiungere o togliere (stesso livello: tutti riquadri, oppure oggetti dello stesso riquadro). Poi puoi trascinarli insieme, usare le frecce, duplicare, eliminare, cambiare livello, spostarli con ⇄ Riquadro e cambiare i colori in Aspetto. Le maniglie si usano con un elemento solo. Sul Mac: ⇧+clic, ⌘A tutti, Esc nessuno.</p>'+
+  '<span class="lbl">☐ Multi · selezione multipla</span><p class="hint">Accendi <b>☐ Multi</b> e tocca gli elementi da aggiungere o togliere (stesso livello: tutti riquadri, oppure oggetti dello stesso riquadro). Poi puoi trascinarli insieme, usare le frecce, duplicare, eliminare, cambiare livello, spostarli con ⇄ Riquadro e cambiare i colori in Aspetto. Con più oggetti selezionati compare la <b>cornice arancione del gruppo</b>: trascinala per spostarli tutti; pallini arancioni sugli angoli = ingrandisci o rimpicciolisci tutto in proporzione (angolo opposto fermo); maniglie azzurre sui lati = allunga o accorcia il gruppo solo in larghezza o solo in altezza. Sul Mac: ⇧+clic, ⌘A tutti, Esc nessuno.</p>'+
   '<span class="lbl">⇄ Riquadro</span><p class="hint">In ② Oggetti sposta l\'oggetto o il gruppo selezionato in un altro riquadro, o in uno nuovo: è l\'elemento vero, quindi le funzioni restano collegate. Più semplice: <b>trascina l\'oggetto sopra un altro riquadro e lascialo</b>: entra in quel riquadro, con le funzioni, nel punto in cui l\'hai lasciato (si annulla con ↶). Mentre lo trascini resta sempre visibile sopra tutto.</p>'+
   '<span class="lbl">▶ Usa</span><p class="hint">Toglie il velo di modifica: puoi usare l\'app (caricare file, premere i pulsanti) e vedere come si comporta con le modifiche.</p>'+
   '<span class="lbl">Frecce ◀ ▲ ▶ ▼</span><p class="hint">Con un elemento selezionato compare a sinistra la croce di frecce: ogni tocco lo sposta di un passo della griglia; tenendo premuto continua e poi accelera. Il tasto al centro passa allo spostamento fine (1 punto) e ritorno. Sul Mac anche i tasti freccia (con ⇧ dieci passi); sul Mac la croce e i pulsanti dei livelli restano sempre visibili.</p>'+
