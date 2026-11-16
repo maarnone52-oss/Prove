@@ -645,7 +645,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.34.3';
+const VERSION='1.34.4';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1078,6 +1078,10 @@ $('helpBtn').onclick=()=>setHelp(!showHelp);
   let rt=null;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(fit,400);});
   $('macZoomSel').onchange=()=>{mode=$('macZoomSel').value;try{localStorage.setItem('arnovideo-maczoom',mode);}catch(e){}apply();};})();
 if(nativeRender())document.documentElement.classList.add('macapp');
+// impaginazione ARNOCANVAS sui Safari vecchi: le parti «tagliate» dei riquadri ricevono ancora i clic e possono coprire
+// il riquadro delle impostazioni; lo si porta sopra agli altri
+setTimeout(()=>{try{if(document.getElementById('cvLayoutPill')&&!/originale ·/.test(document.getElementById('cvLayoutPill').textContent)){
+  const sec=$('fmt').closest('section');if(sec&&getComputedStyle(sec).position==='absolute')sec.style.setProperty('z-index','60','important');}}catch(e){}},1200);
 setHelp(showHelp);
 
 /* ---------- anteprima ripetuta sopra la timeline (copia dell'anteprima principale) ---------- */
