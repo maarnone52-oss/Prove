@@ -77,6 +77,10 @@ header.bar{padding-top:calc(env(safe-area-inset-top) + 6px);padding-left:max(8px
 #zl{min-width:52px}
 #zord{position:absolute;right:max(10px,env(safe-area-inset-right));bottom:calc(env(safe-area-inset-bottom) + 112px);display:none;gap:4px;z-index:20;align-items:center;background:rgba(4,22,29,.85);border:1px solid #1aa4d6;border-radius:12px;padding:4px}
 #zord.show{display:flex}
+#pad{position:absolute;left:max(10px,env(safe-area-inset-left));bottom:calc(env(safe-area-inset-bottom) + 104px);display:none;grid-template-columns:repeat(3,40px);grid-template-rows:repeat(3,40px);gap:3px;z-index:20;background:rgba(4,22,29,.85);border:1px solid #1aa4d6;border-radius:12px;padding:4px;touch-action:none}
+#pad.show{display:grid}
+#pad .hb{min-height:40px;min-width:40px;padding:0;font-size:15px;touch-action:none}
+#pad .st{font-size:11px;line-height:1.05;color:var(--cy);background:#04161d;border-color:#1aa4d6}
 #zord .hb{min-height:36px;min-width:40px;font-size:17px}
 #zlv{color:var(--cy);font:600 12px/1.1 -apple-system,Helvetica,Arial,sans-serif;padding:0 4px;text-align:center}
 footer.bar{border-top:1px solid var(--edge);border-bottom:0;padding-bottom:calc(env(safe-area-inset-bottom) + 6px);justify-content:space-between}
@@ -142,6 +146,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
     <div id="stage"><div id="fbox"><iframe id="F" title="App da modificare"></iframe></div><div id="ov"></div></div>
     <div id="load">Carico…</div>
   </div>
+  <div id="pad"><span></span><button class="hb" data-d="0,-1" aria-label="Su">▲</button><span></span><button class="hb" data-d="-1,0" aria-label="Sinistra">◀</button><button class="hb st" id="padSt" aria-label="Passo"></button><button class="hb" data-d="1,0" aria-label="Destra">▶</button><span></span><button class="hb" data-d="0,1" aria-label="Giù">▼</button><span></span></div>
   <div id="zord"><button class="hb" data-z="bot" title="In fondo">⤓</button><button class="hb" data-z="down" title="Porta sotto">↓</button><button class="hb" data-z="up" title="Porta sopra">↑</button><button class="hb" data-z="top" title="In primo piano">⤒</button><span id="zlv"></span></div>
   <div id="zoom"><button class="hb" id="zM">−</button><button class="hb" id="zl">100%</button><button class="hb" id="zP">＋</button></div>
   <footer class="bar">
@@ -158,7 +163,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.3.2';
+var VER='0.3.3';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -181,7 +186,7 @@ var KN={panel:'Riquadro nuovo',button:'Pulsante nuovo',text:'Scritta nuova',disp
 function lsGet(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 var S=Object.assign({app:'arnovideo',dev:'iphone15',lvl:'P',grid:8,snap:true,showGrid:true,zoom:0},lsGet('arnocanvas:set',{}));
-function saveSet(){lsSet('arnocanvas:set',{app:S.app,dev:S.dev,lvl:S.lvl,grid:S.grid,snap:S.snap,showGrid:S.showGrid,zoom:S.zoom})}
+function saveSet(){lsSet('arnocanvas:set',{app:S.app,dev:S.dev,lvl:S.lvl,grid:S.grid,snap:S.snap,showGrid:S.showGrid,zoom:S.zoom,fine:!!S.fine})}
 function A(){for(var i=0;i<APPS.length;i++)if(APPS[i].k===S.app)return APPS[i];return APPS[0]}
 function DV(){for(var i=0;i<DEVS.length;i++)if(DEVS[i].k===S.dev)return DEVS[i];return DEVS[0]}
 function mkey(){return 'arnocanvas:m:'+S.app+':'+S.dev}
@@ -586,6 +591,7 @@ function updBar(){
   var e=has?resolve(sel):null;
   $('#bIn').disabled=!(has&&(S.lvl==='P'||hasKids(e)));
   $('#bNew').disabled=S.lvl==='O'&&!cont;
+  $('#pad').classList.toggle('show',has&&!u);$('#padSt').innerHTML=stepTxt();
   var lv=has&&!u?levelOf(sel):null;$('#zord').classList.toggle('show',!!lv&&lv.of>1);if(lv)$('#zlv').innerHTML='livello<br>'+lv.n+' di '+lv.of;
   $('#gridB').textContent='▦ '+(S.snap?S.grid+' 🧲':'libero');
   $('#gridB').classList.toggle('on',S.snap);
@@ -659,6 +665,34 @@ $('#bDel').onclick=function(){
   sel=null;render();updBar();toast('Eliminato · ↶ per annullare');
 };
 $('#bIn').onclick=function(){if(sel)enter(sel)};
+
+/* ---------- frecce di spostamento ---------- */
+function stepVal(){return S.fine?1:(S.snap?S.grid:1)}
+function stepTxt(){return S.fine?'passo<br>1':(S.snap?'passo<br>'+S.grid:'passo<br>1')}
+function nudgeOnce(dir,st){
+  if(S.lvl==='P'){var P=M.P[sel];if(!P)return;
+    if(S.snap&&!S.fine){P.x=sn(P.x+dir[0]*st);P.y=sn(P.y+dir[1]*st)}else{P.x=r1(P.x+dir[0]*st);P.y=r1(P.y+dir[1]*st)}
+    posP(sel)}
+  else{var el=resolve(sel);if(!el)return;var it=M.I[sel]||(M.I[sel]={}),sc=it.s||1,r=el.getBoundingClientRect(),K=el.offsetWidth?r.width/(el.offsetWidth*sc):1;if(!isFinite(K)||K<=0)K=1;
+    it.dx=r1((it.dx||0)+dir[0]*st/K);it.dy=r1((it.dy||0)+dir[1]*st/K);if(!it.dx)delete it.dx;if(!it.dy)delete it.dy;restoreOne(sel);applyItem(sel)}
+  remeasure();
+}
+var nud=null;
+function nudgeStart(dir,mult){
+  if(!sel||S.lvl==='U')return false;
+  var before=JSON.stringify(M);
+  if(S.lvl==='P'){ensureFrozen();if(!M.P[sel]){toast('Questo riquadro non si può spostare');return false}}
+  nud={before:before};nudgeOnce(dir,stepVal()*(mult||1));return true;
+}
+function nudgeEnd(){if(!nud)return;clearTimeout(nud.t);clearInterval(nud.i);hist.push(nud.before);if(hist.length>80)hist.shift();redo=[];nud=null;commit();sizeFrame();measure();render();updBar()}
+$$('#pad [data-d]').forEach(function(b){
+  var dir=b.getAttribute('data-d').split(',').map(Number);
+  b.addEventListener('pointerdown',function(e){e.preventDefault();if(nud)nudgeEnd();if(!nudgeStart(dir))return;
+    try{b.setPointerCapture(e.pointerId)}catch(_){}
+    var n=0;nud.t=setTimeout(function(){if(!nud)return;nud.i=setInterval(function(){n++;nudgeOnce(dir,stepVal()*(n>15?4:1))},70)},380)});
+  ['pointerup','pointercancel','lostpointercapture'].forEach(function(ev){b.addEventListener(ev,nudgeEnd)});
+});
+$('#padSt').onclick=function(){S.fine=!S.fine;saveSet();updBar();toast(S.fine?'Spostamento fine: 1 punto per tocco':'Passo della griglia: '+stepVal()+' punti per tocco')};
 
 /* ---------- livelli (sopra / sotto) ---------- */
 function zOf(b){var it=M.I[b.ref];if(it&&it.z!=null)return it.z;var P=M.P[b.ref];return P&&P.z?P.z:0}
@@ -795,6 +829,7 @@ function showHelp(){
   '<span class="lbl">① Riquadri</span><p class="hint">Tocca un riquadro per selezionarlo. Trascinalo per spostarlo. Maniglie <b>azzurre sui quattro lati</b>: ognuna sposta solo il proprio lato, verso l\'esterno (allarga) o verso l\'interno (stringe); il lato opposto resta fermo. Se un riquadro diventa più basso del suo contenuto, la parte in eccesso viene nascosta e compare «contenuto tagliato»; per tornare all\'altezza automatica svuota il campo Altezza in Aspetto. Pallini <b>arancioni sui quattro angoli</b>: ingrandiscono o rimpiccioliscono tutto in proporzione, l\'angolo opposto resta fermo. Doppio tocco: entra negli oggetti.</p>'+
   '<span class="lbl">② Oggetti</span><p class="hint">Mostra gli oggetti del riquadro (o del gruppo) in cui sei entrato; il percorso in alto dice dove sei e ti fa risalire. Stesse maniglie: lati per larghezza e altezza, angoli per la scala in proporzione. Doppio tocco su un gruppo per entrarci.</p>'+
   '<span class="lbl">▶ Usa</span><p class="hint">Toglie il velo di modifica: puoi usare l\'app (caricare file, premere i pulsanti) e vedere come si comporta con le modifiche.</p>'+
+  '<span class="lbl">Frecce ◀ ▲ ▶ ▼</span><p class="hint">Con un elemento selezionato compare a sinistra la croce di frecce: ogni tocco lo sposta di un passo della griglia; tenendo premuto continua e poi accelera. Il tasto al centro passa allo spostamento fine (1 punto) e ritorno. Sul Mac anche i tasti freccia (con ⇧ dieci passi).</p>'+
   '<span class="lbl">Livelli (sopra / sotto)</span><p class="hint">Quando selezioni qualcosa compaiono i pulsanti <b>⤓ ↓ ↑ ⤒</b>: in fondo, sotto, sopra, in primo piano. Valgono per i riquadri e per gli oggetti dello stesso gruppo; li trovi anche in Aspetto. Sul Mac: ⌘] e ⌘[ (con ⇧ in cima o in fondo).</p>'+
   '<span class="lbl">Griglia ▦</span><p class="hint">Passo regolabile, aggancio acceso o movimento libero.</p>'+
   '<span class="lbl">Elementi nuovi e copie</span><p class="hint">Hanno l\'aspetto giusto ma nessuna funzione: sono segnati in rosa «da assegnare».</p>'+
@@ -888,9 +923,7 @@ document.addEventListener('keydown',function(e){
   if(mod&&(e.key===']'||e.key==='[')){e.preventDefault();zMove(e.key===']'?(e.shiftKey?'top':'up'):(e.shiftKey?'bot':'down'));return}
   var dir={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
   if(!dir)return;e.preventDefault();
-  var st=(S.snap?S.grid:1)*(e.shiftKey?10:1);
-  if(S.lvl==='P'){ensureFrozen();if(!M.P[sel])return;change(function(){M.P[sel].x+=dir[0]*st;M.P[sel].y+=dir[1]*st})}
-  else change(function(){var t=M.I[sel]||(M.I[sel]={});t.dx=(t.dx||0)+dir[0]*st;t.dy=(t.dy||0)+dir[1]*st});
+  if(nudgeStart(dir,e.shiftKey?10:1))nudgeEnd();
 });
 
 /* ---------- caricamento dell'app ---------- */
