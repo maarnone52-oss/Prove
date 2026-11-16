@@ -1,0 +1,68 @@
+ARNOCANVAS PROVA per Mac
+========================
+
+ARNOCANVAS serve a modificare l'interfaccia vera delle tue app
+(ARNOCLICK, ARNOVIDEO, ARNODESIGN): riquadri e oggetti si spostano,
+si ridimensionano, si duplicano, si cancellano, si portano sopra o
+sotto. Alla fine prepara il messaggio da incollare nella chat con
+Claude.
+
+È la VERSIONE DI PROVA: lavora sulle copie di prova delle app, che
+stanno online, quindi serve internet. Si aggiorna da sola: ogni volta
+che Claude pubblica una nuova prova la trovi già nell'app.
+
+Ci sono due versioni:
+- ARNOCANVAS PROVA         -> macOS 10.15 Catalina e successivi
+- ARNOCANVAS PROVA Chrome  -> High Sierra e Mojave (serve Google Chrome)
+
+
+PRIMA DI TUTTO (solo Catalina)
+------------------------------
+L'app usa il motore di Safari installato sul Mac. Aggiorna Safari
+all'ultima versione disponibile (15.6.1) da Preferenze di Sistema >
+Aggiornamento Software.
+
+
+INSTALLAZIONE
+-------------
+.pkg: doppio clic e segui le istruzioni; l'app va da sola in
+      Applicazioni.
+.dmg: trascina l'icona sulla cartella "Applicazioni" che vedi accanto,
+      poi espelli il disco (clic destro sull'icona del disco > Espelli).
+Se il Mac chiede di sostituire una versione già presente, scegli
+"Sostituisci": le modifiche fatte restano.
+
+
+PRIMA APERTURA
+--------------
+L'app non viene dall'App Store, quindi la prima volta il Mac la blocca.
+Si sblocca una volta sola: apri la cartella Applicazioni, clic destro
+(o Ctrl+clic) sull'app > Apri > Apri.
+Su macOS Sequoia o più recente: doppio clic, chiudi l'avviso, poi
+Impostazioni di Sistema > Privacy e sicurezza > "Apri comunque".
+
+
+USO VELOCE
+----------
+- Mouse: clic per selezionare, trascina per spostare, maniglie azzurre
+  sui lati per allargare o stringere, pallini arancioni sugli angoli
+  per ingrandire in proporzione. Doppio clic: entra negli oggetti.
+- Maiusc+clic: aggiunge o toglie dalla selezione. Cmd+A tutti, Esc
+  nessuno.
+- Frecce: spostano di un passo della griglia (con Maiusc di dieci).
+- Cmd+Z annulla, Maiusc+Cmd+Z ripete, Cmd+D duplica, Backspace elimina,
+  Invio entra, Cmd+] e Cmd+[ sopra e sotto.
+- Cmd+1 Riquadri, Cmd+2 Oggetti, Cmd+3 Usa. Cmd+G griglia.
+- Cmd+O sceglie app e schermo (iPhone, iPad, Mac).
+- Cmd+E: Invia le modifiche a Claude (copia e incolla nella chat).
+Le modifiche si salvano da sole su questo Mac, separate da quelle
+fatte sull'iPhone. Per passarle da un dispositivo all'altro: Invia
+le modifiche a Claude, copia il testo e sull'altro usa Importa
+modifiche (Maiusc+Cmd+I).
+
+
+DISINSTALLARE
+-------------
+Trascina l'app dalla cartella Applicazioni nel Cestino.
+
+(c) 2026 Maurizio Arnone. Tutti i diritti riservati.

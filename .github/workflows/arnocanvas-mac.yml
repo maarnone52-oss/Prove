@@ -1,0 +1,96 @@
+# ARNOCANVAS PROVA per Mac: crea le app e i file di installazione (.pkg e .dmg) e li pubblica
+# nella pagina Releases «arnocanvas-mac» di questo repository.
+#  - ARNOCANVAS PROVA         -> Catalina e successivi (Intel e chip Apple), finestra propria
+#  - ARNOCANVAS PROVA Chrome  -> High Sierra e Mojave, apre la prova in una finestra di Chrome
+# Entrambe aprono la pagina https://maarnone52-oss.github.io/Prove/arnocanvas/ e quindi
+# si aggiornano da sole a ogni nuova prova: vanno ricompilate solo se cambia arnocanvas-mac/.
+name: ARNOCANVAS PROVA per Mac
+
+on:
+  push:
+    branches: [main]
+    paths: ['arnocanvas-mac/**', '.github/workflows/arnocanvas-mac.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Legge la versione di ARNOCANVAS
+        run: |
+          VER=$(sed -n "s/.*var VER='\([0-9.]*\)'.*/\1/p" arnocanvas/index.html | head -1)
+          test -n "$VER"
+          echo "VER=$VER" >> "$GITHUB_ENV"
+          echo "Versione $VER"
+
+      - name: Icona
+        run: iconutil -c icns arnocanvas-mac/AppIcon.iconset -o AppIcon.icns
+
+      - name: Compila l'app (Intel + chip Apple)
+        run: |
+          set -e
+          SRC=arnocanvas-mac/Mac
+          xcrun -sdk macosx swiftc -O -target x86_64-apple-macos10.15 $SRC/*.swift -o ArnoCanvas-x86_64
+          xcrun -sdk macosx swiftc -O -target arm64-apple-macos11 $SRC/*.swift -o ArnoCanvas-arm64
+          APP="ARNOCANVAS PROVA.app"
+          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+          lipo -create ArnoCanvas-x86_64 ArnoCanvas-arm64 -output "$APP/Contents/MacOS/ArnoCanvas"
+          sed "s/__VER__/$VER/g" $SRC/Info.plist > "$APP/Contents/Info.plist"
+          printf 'APPL????' > "$APP/Contents/PkgInfo"
+          cp AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+          plutil -lint "$APP/Contents/Info.plist"
+          lipo -archs "$APP/Contents/MacOS/ArnoCanvas"
+          otool -l "$APP/Contents/MacOS/ArnoCanvas" | grep -A4 -E "LC_BUILD_VERSION|LC_VERSION_MIN_MACOSX" | grep -E "minos|version" | head -4
+          codesign --force --deep --sign - "$APP"
+
+      - name: App Chrome (High Sierra e Mojave)
+        run: |
+          set -e
+          APP="ARNOCANVAS PROVA Chrome.app"
+          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+          cp arnocanvas-mac/MacChrome/Info.plist "$APP/Contents/Info.plist"
+          cp arnocanvas-mac/MacChrome/arnocanvas.sh "$APP/Contents/MacOS/ArnoCanvas"
+          chmod +x "$APP/Contents/MacOS/ArnoCanvas"
+          printf 'APPL????' > "$APP/Contents/PkgInfo"
+          cp AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+          plutil -lint "$APP/Contents/Info.plist"
+          codesign --force --deep --sign - "$APP"
+
+      - name: File di installazione (.dmg e .pkg)
+        run: |
+          set -e
+          LEGGIMI="arnocanvas-mac/LEGGIMI - Come installare.txt"
+          pacchetti() { # $1 app  $2 nome file  $3 identificativo  $4 versione
+            rm -rf dmg pkgroot comp.plist comp.pkg
+            mkdir -p dmg && cp -R "$1" dmg/ && ln -s /Applications dmg/Applicazioni && cp "$LEGGIMI" dmg/
+            hdiutil create -volname "${1%.app}" -srcfolder dmg -ov -format UDZO "$2.dmg"
+            mkdir -p pkgroot && cp -R "$1" pkgroot/
+            pkgbuild --analyze --root pkgroot comp.plist
+            plutil -replace 0.BundleIsRelocatable -bool NO comp.plist
+            pkgbuild --root pkgroot --component-plist comp.plist --identifier "$3" --version "$4" \
+              --install-location /Applications comp.pkg
+            productbuild --package comp.pkg "$2.pkg"
+          }
+          pacchetti "ARNOCANVAS PROVA.app" "ArnoCanvas-Prova-${VER}-Catalina" it.arnone.arnocanvas.prova.mac.pkg "$VER"
+          pacchetti "ARNOCANVAS PROVA Chrome.app" "ArnoCanvas-Prova-Chrome-HighSierra" it.arnone.arnocanvas.prova.chrome.pkg 1.0
+          ls -lh *.dmg *.pkg
+
+      - name: Pubblica nella pagina Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete arnocanvas-mac --yes --cleanup-tag >/dev/null 2>&1 || true
+          sleep 3
+          gh release create arnocanvas-mac --target main --prerelease \
+            --title "ARNOCANVAS PROVA per Mac ${VER}" \
+            --notes "Versione di prova di ARNOCANVAS per Mac. Apre la pagina delle prove (serve internet) e si aggiorna da sola.
+          - Catalina e successivi: ArnoCanvas-Prova-${VER}-Catalina.pkg (doppio clic) oppure .dmg (trascina in Applicazioni).
+          - High Sierra e Mojave: ArnoCanvas-Prova-Chrome-HighSierra.pkg oppure .dmg (serve Google Chrome).
+          La prima volta: clic destro sull'app > Apri." \
+            ArnoCanvas-Prova-${VER}-Catalina.dmg ArnoCanvas-Prova-${VER}-Catalina.pkg \
+            ArnoCanvas-Prova-Chrome-HighSierra.dmg ArnoCanvas-Prova-Chrome-HighSierra.pkg

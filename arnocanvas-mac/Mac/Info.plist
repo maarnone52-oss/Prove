@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDevelopmentRegion</key><string>it</string>
+  <key>CFBundleExecutable</key><string>ArnoCanvas</string>
+  <key>CFBundleIdentifier</key><string>it.arnone.arnocanvas.prova.mac</string>
+  <key>CFBundleName</key><string>ARNOCANVAS PROVA</string>
+  <key>CFBundleDisplayName</key><string>ARNOCANVAS PROVA</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>__VER__</string>
+  <key>CFBundleVersion</key><string>__VER__</string>
+  <key>LSMinimumSystemVersion</key><string>10.15</string>
+  <key>LSApplicationCategoryType</key><string>public.app-category.graphics-design</string>
+  <key>NSPrincipalClass</key><string>NSApplication</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSHumanReadableCopyright</key><string>© 2026 Maurizio Arnone. Tutti i diritti riservati.</string>
+</dict>
+</plist>
