@@ -1,6 +1,6 @@
 // ARNOVIDEO: tiene la pagina sul dispositivo per usarla anche senza internet.
 // Cambiare VERSIONE a ogni aggiornamento della pagina.
-const VERSIONE = 'arnovideo-1.35.1';
+const VERSIONE = 'arnovideo-1.36.0';
 const FILE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

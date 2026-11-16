@@ -317,7 +317,21 @@ body.showhelp .help:not([hidden]){display:block!important}
 #helpBtn.on{background:linear-gradient(180deg,#5cff8e,#1fbf55);color:#06210f;border-color:#8affb0}
 /* anteprima ripetuta sopra la timeline */
 #mirrorBox{max-width:560px;margin:0 auto 12px}
-label[hidden]{display:none!important}   /* le voci nascoste delle impostazioni restano nascoste */
+ label[hidden]{display:none!important}
+/* riquadri liberi (Mac) */
+#lyBtn{position:fixed;left:10px;bottom:10px;z-index:2147483645;background:#1b1d22;color:#ffb21e;border:1px solid #6b5a2a;border-radius:8px;font:700 12px Helvetica,Arial;padding:6px 10px;cursor:pointer;opacity:.92}
+#lyMenu{position:fixed;left:10px;bottom:44px;z-index:2147483645;background:#1b1d22;border:2px solid #ffb21e;border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;min-width:250px;box-shadow:0 12px 30px rgba(0,0,0,.7)}
+#lyMenu[hidden]{display:none}
+#lyMenu button{text-align:left;justify-content:flex-start}#lyMenu .on{outline:2px solid #46ff7a}
+#lyMenu .h{font:600 11px Helvetica,Arial;color:#9aa0aa;margin:2px 4px}
+html.lyfree main{max-width:none!important;position:relative}
+html.lyfree main>.lyP{position:absolute!important;margin:0!important;transform-origin:0 0;box-sizing:border-box}
+.lyBar,.lyS,.lyW{display:none}
+html.lyedit .lyBar{display:flex;position:absolute;left:0;right:0;top:0;height:22px;z-index:2147483600;align-items:center;gap:6px;padding:0 8px;background:rgba(255,178,30,.88);color:#1a1205;font:700 11px Helvetica,Arial;cursor:move;border-radius:12px 12px 0 0;user-select:none;-webkit-user-select:none;touch-action:none}
+html.lyedit .lyS{display:block;position:absolute;right:0;bottom:0;width:22px;height:22px;z-index:2147483601;cursor:nwse-resize;background:linear-gradient(135deg,transparent 45%,#ffb21e 45%,#ffb21e 60%,transparent 60%,transparent 70%,#ffb21e 70%);touch-action:none}
+html.lyedit .lyW{display:block;position:absolute;right:-4px;top:30px;bottom:30px;width:10px;z-index:2147483601;cursor:ew-resize;touch-action:none}
+html.lyedit .lyW::after{content:"";position:absolute;left:3px;top:50%;height:46px;margin-top:-23px;width:4px;border-radius:2px;background:#ffb21e}
+html.lyedit main>.lyP{outline:2px dashed rgba(255,178,30,.8);outline-offset:2px}   /* le voci nascoste delle impostazioni restano nascoste */
 /* app del Mac: la pagina usa tutta la larghezza della finestra (anche a schermo intero) */
 html.macapp main{max-width:none}
 html.macapp #mirrorBox{max-width:min(800px,50vw)}
@@ -646,7 +660,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.35.1';
+const VERSION='1.36.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1083,6 +1097,67 @@ if(nativeRender())document.documentElement.classList.add('macapp');
 // il riquadro delle impostazioni; lo si porta sopra agli altri
 setTimeout(()=>{try{if(document.getElementById('cvLayoutPill')&&!/originale ·/.test(document.getElementById('cvLayoutPill').textContent)){
   const sec=$('fmt').closest('section');if(sec&&getComputedStyle(sec).position==='absolute')sec.style.setProperty('z-index','60','important');}}catch(e){}},1200);
+/* ---------- riquadri liberi (solo Mac): ogni riquadro si sposta e si ridimensiona; la disposizione resta salvata ---------- */
+(function(){
+  const isMac=navigator.maxTouchPoints===0&&window.innerWidth>=900&&!/iPhone|iPad|Android/i.test(navigator.userAgent);if(!isMac)return;
+  let mode='canvas';try{mode=localStorage.getItem('arnovideo-disposizione-modo')||'canvas';}catch(e){}
+  const btn=document.createElement('button');btn.id='lyBtn';btn.type='button';btn.textContent='▦ Disposizione';document.body.appendChild(btn);
+  const menu=document.createElement('div');menu.id='lyMenu';menu.hidden=true;document.body.appendChild(menu);
+  const panels=()=>[...document.querySelectorAll('main > .brand, main > section.rack, main > footer')];
+  const keyOf=(el,i)=>'p'+i;
+  const nameOf=el=>el.classList.contains('brand')?'Intestazione':el.tagName==='FOOTER'?'Piè di pagina':((el.querySelector(':scope > .lbl')||{}).textContent||'Riquadro');
+  let L={};try{L=JSON.parse(localStorage.getItem('arnovideo-disposizione')||'{}')||{};}catch(e){L={};}
+  const save=()=>{try{localStorage.setItem('arnovideo-disposizione',JSON.stringify(L));}catch(e){}};
+  const setMode=m=>{try{localStorage.setItem('arnovideo-disposizione-modo',m);}catch(e){}try{saveNow&&saveNow();}catch(e){}location.reload();};
+  let edit=false;
+  function drawMenu(){menu.innerHTML='<div class="h">Disposizione dei riquadri</div>'+
+    '<button class="btn xs'+(mode==='canvas'?' on':'')+'" data-m="canvas">🎨 Impaginazione ARNOCANVAS</button>'+
+    '<button class="btn xs'+(mode==='free'?' on':'')+'" data-m="free">✋ Riquadri liberi (li sposti tu)</button>'+
+    '<button class="btn xs'+(mode==='orig'?' on':'')+'" data-m="orig">☰ Pagina originale</button>'+
+    (mode==='free'?'<div class="h">Riquadri liberi</div><button class="btn xs'+(edit?' on':'')+'" data-a="edit">'+(edit?'✔︎ Fine (blocca i riquadri)':'✥ Sposta e ridimensiona')+'</button>'+
+      '<button class="btn xs" data-a="order">⇲ Rimetti in ordine</button><button class="btn xs" data-a="reset">↺ Ricomincia dalla pagina originale</button>':'');}
+  btn.onclick=()=>{drawMenu();menu.hidden=!menu.hidden;};
+  menu.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+    if(b.dataset.m){if(b.dataset.m!==mode)setMode(b.dataset.m);else menu.hidden=true;return;}
+    if(b.dataset.a==='edit'){setEdit(!edit);menu.hidden=true;}
+    else if(b.dataset.a==='order'){order();drawMenu();}
+    else if(b.dataset.a==='reset'){if(confirm('Rimettere i riquadri come nella pagina originale?')){L={};save();location.reload();}}});
+  if(mode!=='free')return;
+  document.documentElement.classList.add('lyfree');btn.textContent='▦ Riquadri liberi';
+  const ps=panels();
+  // posizioni iniziali: quelle della pagina originale
+  const mr=document.querySelector('main').getBoundingClientRect();
+  ps.forEach((el,i)=>{const k=keyOf(el,i);if(!L[k]){const r=el.getBoundingClientRect();L[k]={x:Math.round(r.left-mr.left),y:Math.round(r.top-mr.top),w:Math.round(el.offsetWidth),s:1,z:i+1};}});
+  ps.forEach((el,i)=>{el.classList.add('lyP');el.dataset.lyk=keyOf(el,i);
+    const bar=document.createElement('div');bar.className='lyBar';bar.textContent='⠿ '+nameOf(el).trim();
+    const sc=document.createElement('div');sc.className='lyS';sc.title='Ingrandisci / rimpicciolisci';
+    const wd=document.createElement('div');wd.className='lyW';wd.title='Larghezza';
+    el.appendChild(bar);el.appendChild(sc);el.appendChild(wd);
+    [[bar,'move'],[sc,'scale'],[wd,'width']].forEach(([h,kind])=>h.addEventListener('pointerdown',e=>startDrag(e,el,kind)));});
+  function apply(){let B=0;ps.forEach(el=>{const P=L[el.dataset.lyk];if(!P)return;const st=el.style;
+      st.setProperty('left',P.x+'px','important');st.setProperty('top',P.y+'px','important');st.setProperty('width',P.w+'px','important');
+      st.setProperty('transform','scale('+P.s+')','important');st.setProperty('z-index',String(P.z||1),'important');
+      B=Math.max(B,P.y+el.offsetHeight*P.s);});
+    document.querySelector('main').style.minHeight=Math.ceil(B+40)+'px';try{fitCv();}catch(e){}}
+  function setEdit(v){edit=v;document.documentElement.classList.toggle('lyedit',v);if(!v){save();try{render();}catch(e){}}}
+  function order(){const list=ps.map(el=>({el,P:L[el.dataset.lyk]})).sort((a,b)=>a.P.y-b.P.y||a.P.x-b.P.x);
+    const W=Math.max(600,window.innerWidth-40);let x=0,y=0,rowH=0;
+    list.forEach(o=>{const w=o.P.w*o.P.s,h=o.el.offsetHeight*o.P.s;if(x>0&&x+w>W){x=0;y+=rowH+16;rowH=0;}o.P.x=x;o.P.y=y;x+=w+16;rowH=Math.max(rowH,h);});
+    apply();save();}
+  let dr=null,topZ=Math.max(...ps.map(el=>(L[el.dataset.lyk]||{}).z||1));
+  const sn=v=>Math.round(v/8)*8;
+  function startDrag(e,el,kind){e.preventDefault();e.stopPropagation();const P=L[el.dataset.lyk];P.z=++topZ;
+    dr={el,kind,P,sx:e.clientX,sy:e.clientY,P0:Object.assign({},P),pid:e.pointerId};try{e.target.setPointerCapture(e.pointerId);}catch(_){}apply();}
+  window.addEventListener('pointermove',e=>{if(!dr||e.pointerId!==dr.pid)return;const dx=e.clientX-dr.sx,dy=e.clientY-dr.sy,P=dr.P,P0=dr.P0;
+    if(dr.kind==='move'){P.x=sn(P0.x+dx);P.y=Math.max(0,sn(P0.y+dy));}
+    else if(dr.kind==='scale'){P.s=Math.max(0.3,Math.min(2.5,Math.round((P0.w*P0.s+dx)/P0.w*100)/100));}
+    else{P.w=Math.max(220,sn(P0.w+dx/P0.s));}
+    apply();});
+  const end=e=>{if(!dr||e.pointerId!==dr.pid)return;dr=null;save();try{render();}catch(_){}};
+  window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
+  window.addEventListener('keydown',e=>{if(e.key==='Escape'&&edit){setEdit(false);}});
+  apply();setTimeout(apply,600);
+})();
 setHelp(showHelp);
 
 /* ---------- anteprima ripetuta sopra la timeline (copia dell'anteprima principale) ---------- */
@@ -1403,6 +1478,9 @@ async function runFrames(){if(frameBusy)return;frameBusy=true;
 function revealHead(){if(!items.length||layout.length!==items.length)return;const tr=$('track'),x=tToX(playT);   // porta in vista il segno rosso
   if(x<tr.scrollLeft+20||x>tr.scrollLeft+tr.clientWidth-40)tr.scrollLeft=Math.max(0,x-tr.clientWidth*0.4);}
 /* etichetta del taglio: sempre sopra la timeline (il dito non la copre), allineata al dito ma dentro lo schermo */
+// scala a cui è disegnata la timeline (1 di solito; diversa se il riquadro è rimpicciolito/ingrandito dall'impaginazione):
+// serve per tradurre i punti dello schermo in punti della timeline
+function trK(){const tr=$('track');if(!tr||!tr.offsetWidth)return 1;const k=tr.getBoundingClientRect().width/tr.offsetWidth;return k>0.05&&isFinite(k)?k:1;}
 function placeTip(tip,cx){const r=$('track').getBoundingClientRect(),w=tip.offsetWidth||200,h=tip.offsetHeight||30,vw=window.innerWidth;
   tip.style.left=Math.max(6,Math.min(vw-w-6,cx-w/2))+'px';tip.style.top=Math.max(6,r.top-h-10)+'px';}
 /* ---------- anteprima rapida: tieni premuto 1 secondo un file dell'elenco ---------- */
@@ -1446,7 +1524,7 @@ document.addEventListener('pointerdown',e=>{if(!$('peek').hidden&&!e.target.clos
   window.addEventListener('pointermove',e=>{if(!mv||e.pointerId!==mv.pid)return;
     if(!mv.can){if(Math.hypot(e.clientX-mv.sx,e.clientY-mv.sy)>8)mv=null;return;}
     if(!mv.drag){if(Math.abs(e.clientX-mv.sx)<4)return;mv.drag=true;pushUndo(mv.side?'taglio della musica':'spostamento della musica');}
-    const q=v=>Math.round(v*FPS)/FPS,mc=mv.mc,dx=e.clientX-mv.sx,MIN=0.5;let tipTxt;
+    const q=v=>Math.round(v*FPS)/FPS,mc=mv.mc,dx=(e.clientX-mv.sx)/trK(),MIN=0.5;let tipTxt;
     if(mv.side==='l'){   // taglio in testa: la fine resta ferma
       const end=mv.start+mv.dur;let st=q(xToTe(snapX(Math.max(0,mv.x0+dx),true)));st=Math.max(mv.start-mv.tin,Math.min(end-MIN,Math.max(0,st)));
       mc.tin=mv.tin+(st-mv.start);mc.start=st;mc.dur=end-st;tipTxt='✂ inizio dal punto '+fmtT(mc.tin)+' del brano · parte da '+fmtT(st);}
@@ -1470,7 +1548,7 @@ document.addEventListener('pointerdown',e=>{if(!$('peek').hidden&&!e.target.clos
   al.addEventListener('pointermove',e=>{if(!at||e.pointerId!==at.pid)return;
     if(!at.moved){if(Math.abs(e.clientX-at.sx)<3)return;at.moved=true;pushUndo('taglio dell\'audio di «'+at.c.name+'»');}
     const c=at.c,L=layout[at.i];if(!L)return;const r=$('track').getBoundingClientRect(),tr=$('track');
-    const px=e.clientX-r.left+tr.scrollLeft,q=v=>Math.round(v*FPS)/FPS;let tip;
+    const px=(e.clientX-r.left)/trK()+tr.scrollLeft,q=v=>Math.round(v*FPS)/FPS;let tip;
     if(at.side==='l'){c.ain=Math.max(0,Math.min(c.dur-aOut(c)-0.1,q((px-L.x)/L.w*c.dur)));tip='🔇 audio da '+fmtT(c.ain)+' (muto all\'inizio)';}
     else{c.aout=Math.max(0,Math.min(c.dur-aIn(c)-0.1,q((L.x+L.w-px)/L.w*c.dur)));tip='🔇 audio fino a '+fmtT(c.dur-c.aout)+' (muto gli ultimi '+fmtT(c.aout)+')';}
     paintSoon();const t=$('trimTip');t.hidden=false;t.textContent=tip;placeTip(t,e.clientX);
@@ -1492,7 +1570,7 @@ function relayout(){   // aggiorna larghezze e tempi senza ricostruire la timeli
     selId=c.id;[...$('lane').children].forEach(x=>x.classList.toggle('sel',x===el));renderSel();
     unlockPv();await stopPlay();});
   window.addEventListener('pointermove',e=>{if(!tr||e.pointerId!==tr.pid)return;
-    const c=tr.c,d=(e.clientX-tr.sx)/pps,q=v=>Math.round(v*FPS)/FPS;        // passo di un fotogramma
+    const c=tr.c,d=(e.clientX-tr.sx)/trK()/pps,q=v=>Math.round(v*FPS)/FPS;        // passo di un fotogramma
     if(!tr.moved){if(Math.abs(e.clientX-tr.sx)<3)return;tr.moved=true;pushUndo('taglio di «'+c.name+'»');}
     const end=tr.tin+tr.dur;
     if(tr.side==='l'){
@@ -1607,7 +1685,7 @@ const goToItem=id=>{const i=items.findIndex(x=>x.id===id);if(i>=0&&!exporting){u
 
 /* ---------- trascinamento: dall'elenco alla timeline, e dentro la timeline ---------- */
 (function(){let d=null;
-  const trackX=e=>{const tr=$('track'),r=tr.getBoundingClientRect();return e.clientX-r.left+tr.scrollLeft;};
+  const trackX=e=>{const tr=$('track'),r=tr.getBoundingClientRect();return (e.clientX-r.left)/trK()+tr.scrollLeft;};
   const overTrack=e=>{const r=$('track').getBoundingClientRect();return e.clientX>=r.left-10&&e.clientX<=r.right+10&&e.clientY>=r.top-40&&e.clientY<=r.bottom+40;};
   function insIndex(x){for(let i=0;i<items.length;i++){if(d.from==='track'&&items[i].id===d.id)continue;const L=layout[i];if(x<L.x+L.w/2)return i;}return items.length;}
   function start(e,from,data,thumb,name){if(busy&&from==='track'){return;}
@@ -2262,6 +2340,8 @@ if(/^https?:/.test(location.protocol)){let chk=0;const checkNew=async()=>{if(Dat
     if(m&&m[1]!==VERSION){setStatus('Arriva la versione '+m[1]+'…');await saveNow();setTimeout(()=>location.reload(),300);}}catch(e){}};
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkNew();});setTimeout(checkNew,3000);}
 </script>
-<script src="impaginazione-mac.js?v=3"></script>
+<script>/* disposizione sul Mac: impaginazione ARNOCANVAS (predefinita), riquadri liberi, oppure pagina originale */
+(function(){var m='canvas';try{m=localStorage.getItem('arnovideo-disposizione-modo')||'canvas'}catch(e){}
+  if(m==='canvas'){var s=document.createElement('script');s.src='impaginazione-mac.js?v=3';document.body.appendChild(s);}})();</script>
 </body>
 </html>
