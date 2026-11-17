@@ -7,7 +7,7 @@
  {
   "cartella": "arnovideo",
   "nome": "ARNOCUT",
-  "stato": "Uguale alla definitiva 1.41.0 — nessuna modifica in prova"
+  "stato": "Prova 1.42.0 — impaginazione che segue la rotazione dell iPhone (orizzontale da disegnare in ARNOCANVAS)"
  },
  {
   "cartella": "podpro",
@@ -22,6 +22,6 @@
  {
   "cartella": "arnocanvas",
   "nome": "ARNOCANVAS",
-  "stato": "Prototipo 0.8.7 — copia le modifiche da un altro schermo (adattate); schermi iPhone 16e–17 Pro Max"
+  "stato": "Prototipo 0.8.8 — schermi iPhone 15 e 15 Plus girati (orizzontale)"
  }
 ]

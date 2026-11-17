@@ -1,22 +1,32 @@
-/* Impaginazione per iPhone fatta con ARNOCANVAS (schermi iPhone 15 393x852 e iPhone 15 Plus 430x932) — VERSIONE DI PROVA.
+/* Impaginazioni per iPhone fatte con ARNOCANVAS — VERSIONE DI PROVA.
+   Verticale: iPhone 15 (393x852) e iPhone 15 Plus (430x932). Orizzontale: iPhone 15 (852x393) e 15 Plus (932x430).
    Riapplica alla pagina vera di ARNOCUT le modifiche disegnate in ARNOCANVAS: gli elementi
-   sono quelli veri, quindi le funzioni restano collegate. Solo su iPhone.
+   sono quelli veri, quindi le funzioni restano collegate. Solo su iPhone. Girando il telefono
+   si passa da un'impaginazione all'altra; se quella orizzontale non è ancora disegnata, si vede la pagina originale.
    Per vedere l'originale: aggiungi ?impaginazione=0 all'indirizzo.
    © 2026 Maurizio Arnone. Tutti i diritti riservati. */
 (function(){
 'use strict';
 var M15={"v":1,"frozen":true,"P":{"body/main[0]/div[0]":{"x":64,"y":9,"w":365,"s":0.734,"x0":14,"y0":63,"w0":365,"h0":146,"mh":151.6},"body/main[0]/section[0]":{"x":44.4,"y":132.4,"w":467.6,"s":0.652,"x0":14,"y0":227,"w0":365,"h0":144,"mh":144},"body/main[0]/section[1]":{"x":15.1,"y":244.1,"w":616.8,"s":0.592,"x0":14,"y0":387.2,"w0":365,"h0":579,"mh":584},"body/main[0]/section[2]":{"x":14,"y":600,"w":365,"s":1,"x0":14,"y0":982.6,"w0":365,"h0":991,"mh":842.8},"body/main[0]/section[3]":{"x":16,"y":1736,"w":365,"s":1,"x0":14,"y0":1997.3,"w0":365,"h0":585},"body/main[0]/section[4]":{"x":14,"y":2216,"w":365,"s":1,"x0":14,"y0":2598.1,"w0":365,"h0":583},"body/main[0]/footer[0]":{"x":16,"y":2816,"w":365,"s":1,"x0":14,"y0":3201,"w0":365,"h0":18},"#mixRack":{"x":-88,"y":1456,"w":486,"s":0.954,"x0":64,"y0":3272,"w0":365,"e":{"b":-27.4,"l":-109},"mh":283.5}},"I":{"#mirrorBox":{"s":0.821,"dx":29.2,"dy":-11},"body/main[0]/section[2]/div[1]":{"s":0.715,"dx":46.7,"dy":-62},"body/main[0]/section[2]/span[0]":{"dy":-8},"body/main[0]/section[2]/div[2]":{"dy":-88,"h":40},"#cutBtn":{"dy":40,"dx":-135},"#snapBtn":{"s":0.715,"dx":19,"dy":5},"#track":{"dy":-96.2,"dx":-19,"h":258,"s":0.924,"w":390},"body/main[0]/section[2]/div[4]":{"dy":-83.6,"h":124},"#clearBtn":{"dy":-38.8,"s":0.924,"dx":2.7},"#selBar/span[3]":{"s":0.854,"dx":8.6,"dy":5.3,"w":363},"body/main[0]/section[2]/div[4]/div[1]":{"h":30,"dy":-23.9,"s":0.942,"dx":9.5},"#mixer":{"dy":-17.2,"s":0.927,"dx":168,"w":240},"#pvBox":{"h":372,"dy":-35.4,"w":303},"#pvScreen":{"s":0.694,"dx":69.2,"dy":-13.3,"h":181,"w":270},"#scrub":{"s":0.635,"dx":10.5,"dy":-41.8,"w":483},"#monRow":{"dy":-88,"dx":-8},"body/main[0]/section[3]/div[2]":{"dy":-247.8,"s":0.966,"dx":8,"h":26},"#pvDetach":{"hide":true},"#expBtn":{"s":1.061,"dx":-7.6,"dy":54.8,"h":68},"#pvBox/div[3]":{"s":0.786,"dx":105.2,"dy":17.4},"#clock":{"dx":-84.7,"dy":-130.2,"s":0.924},"body/main[0]/div[0]/div[0]":{"dy":12,"h":97},"body/main[0]/section[1]/div[0]":{"s":1.43,"dx":-86.4,"dy":-15.7,"w":400},"#addBtn":{"dx":-193.2,"dy":24},"#allBtn":{"dy":-14.4},"#pvBox/div[2]":{"h":51,"dy":18.8,"dx":10},"#frameBtn":{"dy":75.1,"h":38,"s":0.821,"dx":22.5},"#selBar":{"dy":-8.2},"body/main[0]/div[0]/div[1]":{"dy":9.1,"s":1.126,"dx":-8.6},"body/main[0]/div[0]/div[0]/span[0]":{"dx":-32.7},"body/main[0]/div[0]/div[0]/span[1]":{"dy":-43.6,"dx":10.9},"#status":{"dx":-317,"dy":74.1},"#mixRack":{"z":1},"#selBar/button[0]":{"s":0.871,"dx":9.6,"dy":2.2},"#selBar/button[1]":{"s":0.888,"dx":3.8,"dy":1.9},"#cv":{"h":254,"w":266,"dy":-48.5}},"N":[],"MV":[],"seq":1};   // iPhone 15 (393 punti)
 var MPL={"v":1,"frozen":true,"P":{"body/main[0]/div[0]":{"x":68.7,"y":9,"w":402,"s":0.734,"x0":14,"y0":63,"w0":402,"h0":146,"mh":151.6},"body/main[0]/section[0]":{"x":47.3,"y":132.4,"w":514.3,"s":0.652,"x0":14,"y0":227,"w0":402,"h0":144,"mh":144},"body/main[0]/section[1]":{"x":15.2,"y":244.1,"w":677.5,"s":0.592,"x0":14,"y0":387.2,"w0":402,"h0":579,"mh":584},"body/main[0]/section[2]":{"x":14,"y":600,"w":402,"s":1,"x0":14,"y0":982.6,"w0":402,"h0":788,"mh":842.8},"body/main[0]/section[3]":{"x":14,"y":1728,"w":402,"s":1,"x0":14,"y0":1794.1,"w0":402,"h0":578},"body/main[0]/section[4]":{"x":16,"y":2216,"w":400,"s":1,"x0":14,"y0":2387.9,"w0":402,"h0":568},"body/main[0]/footer[0]":{"x":14,"y":2816,"w":402,"s":1,"x0":14,"y0":3266.8,"w0":402,"h0":18},"#mixRack":{"x":-96.8,"y":1464,"w":534.4,"s":0.954,"x0":14,"y0":2971.4,"w0":402,"e":{"b":-27.4,"l":-119.3},"mh":283.5,"h0":275}},"I":{"#mirrorBox":{"s":0.821,"dx":31.9,"dy":-11},"body/main[0]/section[2]/div[1]":{"s":0.715,"dx":51.1,"dy":-62},"body/main[0]/section[2]/span[0]":{"dy":-8},"body/main[0]/section[2]/div[2]":{"dy":-88,"h":40},"#cutBtn":{"dy":40,"dx":-147.7},"#snapBtn":{"s":0.715,"dx":20.8,"dy":5},"#track":{"dy":-96.2,"dx":-15.8,"h":258,"s":0.924,"w":427},"body/main[0]/section[2]/div[4]":{"dy":-83.6,"h":124},"#clearBtn":{"dy":-38.8,"s":0.924,"dx":3},"#selBar/span[3]":{"s":0.854,"dx":9.4,"dy":5.3,"w":397},"body/main[0]/section[2]/div[4]/div[1]":{"h":30,"dy":-23.9,"s":0.942,"dx":10.4},"#mixer":{"dy":-17.2,"s":0.927,"dx":183.8,"w":263},"#pvBox":{"h":372,"dy":-35.4,"w":332},"#pvScreen":{"s":0.694,"dx":75.7,"dy":-13.3,"h":181,"w":295},"#scrub":{"s":0.635,"dx":11.5,"dy":-41.8,"w":528},"#monRow":{"dy":-88,"dx":-8.8},"body/main[0]/section[3]/div[2]":{"dy":-247.8,"s":0.966,"dx":8.8,"h":26},"#pvDetach":{"hide":true},"#expBtn":{"s":1.061,"dx":-8.3,"dy":54.8,"h":68},"#pvBox/div[3]":{"s":0.786,"dx":115.1,"dy":17.4},"#clock":{"dx":-92.7,"dy":-130.2,"s":0.924},"body/main[0]/div[0]/div[0]":{"dy":49.4,"h":97,"dx":12.3},"body/main[0]/section[1]/div[0]":{"s":1.43,"dx":-94.5,"dy":-15.7,"w":438},"#addBtn":{"dx":-211.4,"dy":24},"#allBtn":{"dy":-14.4},"#pvBox/div[2]":{"h":51,"dy":18.8,"dx":10.9},"#frameBtn":{"dy":75.1,"h":38,"s":0.821,"dx":24.6},"#selBar":{"dy":-8.2},"body/main[0]/div[0]/div[1]":{"dy":11.9,"s":1.126,"dx":-9.4},"body/main[0]/div[0]/div[0]/span[0]":{"dx":-35.8},"body/main[0]/div[0]/div[0]/span[1]":{"dy":-43.6,"dx":11.9},"#status":{"dx":-346.8,"dy":74.1},"#mixRack":{"z":1},"#selBar/button[0]":{"s":0.871,"dx":10.5,"dy":2.2},"#selBar/button[1]":{"s":0.888,"dx":4.2,"dy":1.9},"#cv":{"h":254,"w":291,"dy":-48.5},"#helpBtn":{"dy":9.8}},"N":[],"MV":[],"seq":1};   // iPhone 15 Plus (430 punti)
-// si sceglie l'impaginazione dello schermo più vicino: fino a 411 punti quella dell'iPhone 15, oltre quella del 15 Plus
-function BW(){var w=document.documentElement.clientWidth||window.innerWidth;return w>=412?430:393}
-var M=BW()===430?MPL:M15;
+var M15O=null;   // iPhone 15 girato (852 punti): da disegnare in ARNOCANVAS
+var MPLO=null;   // iPhone 15 Plus girato (932 punti): da disegnare in ARNOCANVAS
+function pick(){var w=document.documentElement.clientWidth||window.innerWidth,land=window.innerWidth>window.innerHeight;
+  if(land)return w>=892?{k:'iphone15pluso',m:MPLO,w:932}:{k:'iphone15o',m:M15O,w:852};
+  return w>=412?{k:'iphone15plus',m:MPL,w:430}:{k:'iphone15',m:M15,w:393}}
+var M=null,KEY='',BASEW=393;
 var q=location.search;
 if(/[?&]arnocanvas=/.test(q))return;                       // dentro ARNOCANVAS: ci pensa lui
 var off=/[?&]impaginazione=0/.test(q);
 var ip=false;try{ip=/iPhone|iPod/i.test(navigator.userAgent)}catch(e){}
 if(!ip)return;
 var D=document,W=window;
-function imp(st,k,v){st.setProperty(k,v,'important')}
+// ogni proprietà toccata viene ricordata col valore di prima, così alla rotazione si può tornare indietro e applicare l'altra impaginazione
+var REC=[];
+function rec(st,k){var ks=st.__cvk||(st.__cvk={});if(ks[k])return;ks[k]=1;REC.push({st:st,k:k,v:st.getPropertyValue(k),p:st.getPropertyPriority(k)})}
+function imp(st,k,v){rec(st,k);st.setProperty(k,v,'important')}
+function put(st,k,v){rec(st,k);if(v==='')st.removeProperty(k);else st.setProperty(k,v)}
+function resetAll(){for(var i=REC.length-1;i>=0;i--){var r=REC[i];if(r.v)r.st.setProperty(r.k,r.v,r.p);else r.st.removeProperty(r.k);delete r.st.__cvk}REC=[]}
 function isNew(el){return !!(el&&el.nodeType===1&&el.hasAttribute('data-cvn'))}
 function isMv(el){return !!(el&&el.nodeType===1&&el.hasAttribute('data-cvm'))}
 function skip(el){return isNew(el)||isMv(el)}
@@ -35,9 +45,9 @@ function resolve(ref){
   return el;
 }
 var IND=false;try{IND=CSS.supports('translate','1px')&&CSS.supports('scale','1')}catch(e){}
-function setTS(el,dx,dy,s){var st=el.style;dx=dx||0;dy=dy||0;s=s||1;if(s!==1)st.transformOrigin='0 0';
-  if(IND){st.translate=(dx||dy)?dx+'px '+dy+'px':'';st.scale=s!==1?String(s):''}
-  else{var t='';if(dx||dy)t+='translate('+dx+'px,'+dy+'px) ';if(s!==1)t+='scale('+s+')';if(t)st.transform=t}}
+function setTS(el,dx,dy,s){var st=el.style;dx=dx||0;dy=dy||0;s=s||1;if(s!==1)put(st,'transform-origin','0 0');
+  if(IND){put(st,'translate',(dx||dy)?dx+'px '+dy+'px':'');put(st,'scale',s!==1?String(s):'')}
+  else{var t='';if(dx||dy)t+='translate('+dx+'px,'+dy+'px) ';if(s!==1)t+='scale('+s+')';if(t)put(st,'transform',t)}}
 function applyItem(ref){
   var it=M.I[ref],el=resolve(ref);if(!it||!el)return;var st=el.style;
   if(it.dx||it.dy||(it.s&&it.s!==1))setTS(el,it.dx,it.dy,it.s);
@@ -71,7 +81,7 @@ function applyMove(mv){var el=resolve(mv.ref),to=resolve(mv.to);if(!el||!to||el=
   var aft=mv.aft?resolve(mv.aft):null;if(aft&&aft.parentNode===to)to.insertBefore(el,aft.nextSibling);else to.appendChild(el);return true}
 function vis(el){if(!el||!el.getClientRects().length)return false;var cs=W.getComputedStyle(el);return cs.display!=='none'&&cs.visibility!=='hidden'}
 // disegnata per iPhone 15 (393 punti di larghezza): su schermi più larghi (15 Plus, Pro Max…) tutto si centra
-function OX(){var w=D.documentElement.clientWidth||W.innerWidth;return Math.max(0,Math.round((w-(M===MPL?430:393))/2))}
+function OX(){var w=D.documentElement.clientWidth||W.innerWidth;return Math.max(0,Math.round((w-BASEW)/2))}
 function crops(P){var e=(P&&P.e)||{};return {t:Math.max(-(e.t||0),0),r:Math.max(-(e.r||0),0),b:Math.max(-(e.b||0),0),l:Math.max(-(e.l||0),0)}}
 function r1(v){return Math.round(v*10)/10}
 function posP(el,P,c){var st=el.style,s=P.s||1,e=P.e||{},ad={t:Math.max(e.t||0,0),r:Math.max(e.r||0,0),b:Math.max(e.b||0,0),l:Math.max(e.l||0,0)},cr=crops(P);
@@ -96,12 +106,18 @@ function applyAll(){
   var b=0;list.forEach(function(p){var r=p.el.getBoundingClientRect();b=Math.max(b,r.bottom+W.pageYOffset)});
   var m=D.querySelector('main')||D.body;imp(m.style,'min-height',Math.ceil(b+24)+'px');
 }
-function pill(){var a=D.createElement('a');a.id='cvLayoutPill';
-  a.textContent=off?'Impaginazione originale · mostra quella iPhone':'Impaginazione iPhone (ARNOCANVAS) · mostra originale';
-  a.href=location.pathname+(off?'':'?impaginazione=0');
+function pill(){var a=D.getElementById('cvLayoutPill');if(!a){a=D.createElement('a');a.id='cvLayoutPill';
   a.style.cssText='position:fixed;z-index:2147483646;right:10px;bottom:10px;background:#04161d;color:#35d0ff;border:1px solid #1aa4d6;font:600 11px/1 -apple-system,Helvetica,Arial,sans-serif;padding:6px 9px;border-radius:8px;text-decoration:none;opacity:.9';
   D.body.appendChild(a)}
-function go(){try{pill();lastW=D.documentElement.clientWidth;if(!off)applyAll()}catch(e){if(W.console)console.warn('Impaginazione ARNOCANVAS:',e)}}
-var lastW=0;W.addEventListener('resize',function(){var w=D.documentElement.clientWidth;if(off||!lastW||Math.abs(w-lastW)<2)return;lastW=w;try{applyAll()}catch(e){}});
+  a.textContent=off?'Impaginazione originale · mostra quella iPhone':M?'Impaginazione iPhone '+(KEY.slice(-1)==='o'?'orizzontale ':'')+'(ARNOCANVAS) · mostra originale':'Orizzontale: impaginazione non ancora disegnata';
+  a.href=location.pathname+(off?'':'?impaginazione=0');}
+// la scelta dipende da larghezza e orientamento; girando il telefono si passa all'altra impaginazione senza ricaricare
+function choose(){var p=pick();KEY=p.k;M=p.m;BASEW=p.w}
+function relayout(){resetAll();choose();pill();if(!off&&M)applyAll();
+  try{if(W.fitCv)W.fitCv();if(W.render)W.render()}catch(e){}}
+var lastW=0,lastL=null;
+function go(){try{lastW=D.documentElement.clientWidth;lastL=W.innerWidth>W.innerHeight;relayout()}catch(e){if(W.console)console.warn('Impaginazione ARNOCANVAS:',e)}}
+var rt=null;W.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){var w=D.documentElement.clientWidth,l=W.innerWidth>W.innerHeight;
+  if(!lastW||(Math.abs(w-lastW)<2&&l===lastL))return;lastW=w;lastL=l;try{relayout()}catch(e){}},250)});
 if(D.readyState==='complete')setTimeout(go,300);else W.addEventListener('load',function(){setTimeout(go,300)});
 })();

@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<script>/* dentro ARNOCANVAS con uno schermo di iPhone (anche girato): la pagina si comporta come su iPhone */
+var EMU_PHONE=/[?&]arnocanvas=/.test(location.search)&&/[?&]dev=iphone/.test(location.search);</script>
 <script>/* dimensione dell'interfaccia, solo su iPhone: 80% o 60% = più spazio di lavoro */
 (function(){try{var t=/iPhone|iPod/i.test(navigator.userAgent);
 var s=parseFloat(localStorage.getItem('arnovideo.uiScale'));
@@ -668,7 +670,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.41.0';
+const VERSION='1.42.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1078,7 +1080,7 @@ setTimeout(showSpace,1500);setInterval(()=>{if(!busy&&!document.hidden)showSpace
 
 /* ---------- aiuto ---------- */
 let showHelp=false;try{showHelp=localStorage.getItem('arnovideo-aiuto')==='1';}catch(e){}
-if(navigator.maxTouchPoints===0){showHelp=false;$('helpBtn').style.setProperty('display','none','important');}   // Mac: niente pulsante Aiuto né scritte d'aiuto
+if(navigator.maxTouchPoints===0&&!EMU_PHONE){showHelp=false;$('helpBtn').style.setProperty('display','none','important');}   // Mac: niente pulsante Aiuto né scritte d'aiuto
 function setHelp(v){showHelp=v;document.body.classList.toggle('showhelp',v);$('helpBtn').classList.toggle('on',v);$('helpBtn').textContent=v?'✓ Aiuto visibile':'？ Aiuto';
   try{localStorage.setItem('arnovideo-aiuto',v?'1':'0');}catch(e){}}
 $('helpBtn').onclick=()=>setHelp(!showHelp);
@@ -1109,7 +1111,7 @@ setTimeout(()=>{try{if(document.getElementById('cvLayoutPill')&&!/originale ·/.
 /* ---------- Mac: la timeline vera e propria e il mixer diventano riquadri a sé ----------
    (messi in fondo alla pagina, così le impaginazioni già fatte con ARNOCANVAS non si spostano) */
 (function(){
-  const isMac=navigator.maxTouchPoints===0&&window.innerWidth>=900&&!/iPhone|iPad|Android/i.test(navigator.userAgent);if(!isMac)return;
+  const isMac=navigator.maxTouchPoints===0&&window.innerWidth>=900&&!/iPhone|iPad|Android/i.test(navigator.userAgent)&&!EMU_PHONE;if(!isMac)return;
   const tlSec=$('track')&&$('track').closest('section.rack'),foot=document.querySelector('main > footer');if(!tlSec||!foot)return;
   const mk=(title,id)=>{const sec=document.createElement('section');sec.className='rack';sec.id=id;sec.dataset.split='1';
     sec.innerHTML='<span class="lbl">'+title+'</span>';foot.parentNode.insertBefore(sec,foot);return sec;};
@@ -1120,14 +1122,14 @@ setTimeout(()=>{try{if(document.getElementById('cvLayoutPill')&&!/originale ·/.
 })();
 /* ---------- altri apparecchi (iPhone…): il mixer diventa un riquadro a sé, in fondo alla pagina ---------- */
 (function(){
-  const isMac=navigator.maxTouchPoints===0&&window.innerWidth>=900&&!/iPhone|iPad|Android/i.test(navigator.userAgent);if(isMac)return;
+  const isMac=navigator.maxTouchPoints===0&&window.innerWidth>=900&&!/iPhone|iPad|Android/i.test(navigator.userAgent)&&!EMU_PHONE;if(isMac)return;
   const foot=document.querySelector('main > footer');if(!foot||!$('mixer'))return;
   const sec=document.createElement('section');sec.className='rack';sec.id='mixRack';sec.dataset.split='1';
   sec.innerHTML='<span class="lbl">Mixer audio</span>';foot.parentNode.insertBefore(sec,foot);sec.appendChild($('mixer'));
 })();
 /* ---------- riquadri liberi (solo Mac): ogni riquadro si sposta e si ridimensiona; la disposizione resta salvata ---------- */
 (function(){
-  const isMac=navigator.maxTouchPoints===0&&window.innerWidth>=900&&!/iPhone|iPad|Android/i.test(navigator.userAgent);if(!isMac)return;
+  const isMac=navigator.maxTouchPoints===0&&window.innerWidth>=900&&!/iPhone|iPad|Android/i.test(navigator.userAgent)&&!EMU_PHONE;if(!isMac)return;
   let mode='canvas';try{mode=localStorage.getItem('arnovideo-disposizione-modo')||'canvas';}catch(e){}
   const btn=document.createElement('button');btn.id='lyBtn';btn.type='button';btn.textContent='▦ Disposizione';document.body.appendChild(btn);
   const menu=document.createElement('div');menu.id='lyMenu';menu.hidden=true;document.body.appendChild(menu);
@@ -2390,12 +2392,12 @@ if(/^https?:/.test(location.protocol)){let chk=0;const checkNew=async()=>{if(Dat
 </script>
 <script>/* disposizione sul Mac: impaginazione ARNOCANVAS (predefinita), riquadri liberi, oppure pagina originale */
 (function(){var iph=/iPhone|iPod/i.test(navigator.userAgent),m='canvas';
-  if(iph){var si=document.createElement('script');si.src='impaginazione-iphone.js?v=9';document.body.appendChild(si);}   // iPhone: impaginazione ARNOCANVAS per iPhone
+  if(iph){var si=document.createElement('script');si.src='impaginazione-iphone.js?v=10';document.body.appendChild(si);}   // iPhone: impaginazione ARNOCANVAS per iPhone
   else{try{m=localStorage.getItem('arnovideo-disposizione-modo')||'canvas'}catch(e){}
   if(m==='canvas'){var s=document.createElement('script');s.src='impaginazione-mac.js?v=16';document.body.appendChild(s);}}
   if(iph||m==='canvas'){
     // riquadri nuovi (Timeline, Mixer) non ancora disposti in ARNOCANVAS: si mettono sotto agli altri
-    setTimeout(function(){try{var pill=document.getElementById('cvLayoutPill');if(!pill||/originale ·/.test(pill.textContent))return;
+    setTimeout(function(){try{var pill=document.getElementById('cvLayoutPill');if(!pill||!/· mostra originale/.test(pill.textContent))return;
       var main=document.querySelector('main'),mr=main.getBoundingClientRect(),B=0;
       Array.prototype.forEach.call(main.children,function(el){if(getComputedStyle(el).position==='absolute'){var r=el.getBoundingClientRect();B=Math.max(B,r.bottom-mr.top)}});
       Array.prototype.forEach.call(document.querySelectorAll('main > section[data-split]'),function(el){if(getComputedStyle(el).position==='absolute')return;

@@ -216,7 +216,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.8.7';
+var VER='0.8.8';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -231,6 +231,8 @@ var DEVS=[
  {k:'iphone16e',n:'iPhone 16e',w:390,h:844,ic:'📱',x:'anche iPhone 13 e 14'},
  {k:'iphone15',n:'iPhone 15',w:393,h:852,ic:'📱',x:'anche 15 Pro e iPhone 16'},
  {k:'iphone15plus',n:'iPhone 15 Plus',w:430,h:932,ic:'📱',x:'anche 15 Pro Max e 16 Plus'},
+ {k:'iphone15o',n:'iPhone 15 girato',w:852,h:393,ic:'📱',x:'in orizzontale · anche 15 Pro e iPhone 16'},
+ {k:'iphone15pluso',n:'iPhone 15 Plus girato',w:932,h:430,ic:'📱',x:'in orizzontale · anche 15 Pro Max e 16 Plus'},
  {k:'iphone17',n:'iPhone 17',w:402,h:874,ic:'📱',x:'anche 17 Pro e 16 Pro'},
  {k:'iphoneair',n:'iPhone Air',w:420,h:912,ic:'📱'},
  {k:'iphone17pm',n:'iPhone 17 Pro Max',w:440,h:956,ic:'📱',x:'anche 16 Pro Max'},
@@ -1530,7 +1532,7 @@ function loadApp(){
       wrap.scrollTop=0;
     },900);
   };
-  F.src=A().u+'?arnocanvas='+Date.now();
+  F.src=A().u+'?arnocanvas='+Date.now()+'&dev='+encodeURIComponent(S.dev);   // l'app sa quale schermo sta imitando (es. iPhone girato)
 }
 clearInterval(poll);poll=setInterval(function(){if(!ready||drag||!D)return;var s=sig();if(s!==lastSig){lastSig=s;var n=PANELS.length;detectPanels();if(PANELS.length!==n||(M.frozen&&PANELS.some(function(p){return !M.P[p.ref]&&vis(p.el)}))){applyAll();return}sizeFrame();measure();render()}},800);
 
