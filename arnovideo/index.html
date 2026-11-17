@@ -709,7 +709,7 @@ body.hasMenu{border-top:var(--mbh,34px) solid transparent;position:relative}
 
 <script>
 'use strict';
-const VERSION='1.43.0';
+const VERSION='1.44.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -897,6 +897,52 @@ async function toMP4(m,size,pre){size=size||'1920x1080';pre=pre||'';const nr=nat
   }catch(e){setStatus('Conversione in MP4 non riuscita: '+(e&&e.message||e),true);}
   finally{loading=false;loadUI(null);setBusy(false);render();}
   return ok;}
+/* ---------- copie leggere per la riproduzione (solo app Mac) ----------
+   i video pesanti (oltre Full HD, HEVC o oltre 25 Mbit/s) suonano da una copia 960×540 creata dal Mac in sottofondo;
+   l'esportazione usa sempre gli originali */
+let proxyOn=true;try{proxyOn=localStorage.getItem('arnovideo-copie')!=='0';}catch(e){}
+const pxQ=[];let pxRun=false;
+function pxKey(m){return m&&m.fkey?m.fkey+'-px':null;}
+function playUrl(it){const m=it&&(it.media||it);return proxyOn&&!exporting&&m&&m.purl?m.purl:it.url;}
+async function pxHeavy(m){if(!m||m.type!=='vid'||!m.file)return false;let inf=null;try{inf=await mediaInfo(m);}catch(e){}
+  const v=inf&&inf.v&&inf.v[0],px=(m.w||0)*(m.h||0),mbps=m.dur?((m.size||m.file.size)*8/m.dur/1e6):0;
+  return px>1920*1088||/HEVC/.test((v&&v.codec)||'')||mbps>25;}
+function pxQueue(m){if(!nativeRender()||!m||m.type!=='vid'||m.purl||m._pxState)return;m._pxState='coda';pxQ.push(m);pxNext();}
+async function pxNext(){if(pxRun)return;pxRun=true;
+  try{while(pxQ.length){const m=pxQ.shift();if(!media.includes(m)){m._pxState=null;continue;}
+    try{await pxMake(m);}catch(e){m._pxState='errore';setStatus('Copia leggera di «'+m.name+'» non riuscita: '+(e&&e.message||e)+'. Suona dall\'originale.',true);}}}
+  finally{pxRun=false;}}
+async function pxReadNative(url,onp){const nr=nativeRender();const parts=[];let off=0,tot=1;const CH=4*1048576;
+  while(off<tot){const r=await new Promise(ok=>{const rid='r'+(++thumbReq);arnoNative._wait[rid]=ok;nr.postMessage({cmd:'readconv',id:rid,url,offset:off,length:CH});
+      setTimeout(()=>{if(arnoNative._wait[rid]){delete arnoNative._wait[rid];ok(null);}},60000);});
+    if(!r||!r.data)throw new Error('non riesco a leggere la copia');
+    tot=r.size;const bin=atob(r.data),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+    parts.push(u);off+=u.length;if(onp)onp(off/tot);if(!u.length)break;}
+  return new Blob(parts,{type:'video/mp4'});}
+async function pxMake(m){const k=pxKey(m);
+  if(k){try{const f=await dbGet('files',k);if(f&&f.blob){m.purl=URL.createObjectURL(f.blob);m._pxState='pronta';return;}}catch(e){}}   // già pronta nel progetto
+  if(!(await pxHeavy(m))){m._pxState='non serve';return;}
+  while(busy)await sleep(1500);                    // non insieme a esportazioni e conversioni
+  if(!media.includes(m)){m._pxState=null;return;}
+  m._pxState='in corso';const nr=nativeRender();if(!(await nativeKnow(m)))throw new Error('il Mac non trova il file');
+  const id='v'+(++thumbReq),lbl='Preparo la copia leggera di «'+m.name+'» per una riproduzione fluida';
+  arnoNative._wait['p'+id]=p=>{if(!playing&&!busy)setStatus(lbl+' · '+Math.round(p*100)+'%');};
+  const res=await new Promise(r=>{arnoNative._wait[id]=r;nr.postMessage({cmd:'vconv',id,size:'960x540',key:m.name+'|'+((m.file&&m.file.size)||m.size||0),name:m.name.replace(/\.[^.]+$/,'')+'-copia-leggera'});});
+  delete arnoNative._wait['p'+id];
+  if(!res||res.error)throw new Error(res&&res.error||'nessuna risposta');
+  const blob=await pxReadNative(res.url);
+  try{nr.postMessage({cmd:'delconv',url:res.url});}catch(e){}   // sul disco del Mac non serve più: resta nell'archivio del progetto
+  if(blob.size<1000)throw new Error('copia vuota');
+  m.purl=URL.createObjectURL(blob);m._pxState='pronta';
+  if(k){try{await dbPut('files',{key:k,blob});}catch(e){}}
+  players.forEach(q=>{if(q&&q.v&&q.v.paused&&q.v.dataset.url===m.url){q.v.dataset.url='';}});   // i lettori fermi riprendono dalla copia
+  if(!playing&&!busy)setStatus('Copia leggera pronta: «'+m.name+'» ora suona più fluido.');}
+function pxCount(){const v=media.filter(m=>m.type==='vid');return {ready:v.filter(m=>m.purl).length,work:v.filter(m=>m._pxState==='coda'||m._pxState==='in corso').length};}
+function setProxy(v){proxyOn=v;try{localStorage.setItem('arnovideo-copie',v?'1':'0');}catch(e){}
+  players.forEach(q=>{if(q&&q.v&&q.v.paused)q.v.dataset.url='';});
+  setStatus(v?'Riproduzione con le copie leggere (l\'esportazione usa sempre gli originali).':'Riproduzione con i file originali.');
+  if(!playing&&!busy&&items.length)showFrame(playT);}
+
 // copia dei file nell'archivio del progetto, uno alla volta, senza bloccare il lavoro
 const copyQ=[];let copying=false;
 async function runCopies(){if(copying)return;copying=true;loading=true;
@@ -905,7 +951,7 @@ async function runCopies(){if(copying)return;copying=true;loading=true;
     loadUI(Math.round((n-1)/(n-1+copyQ.length+1)*100),'Copio nel progetto '+n+' di '+(n+copyQ.length)+' · '+it.name+' ('+mb(it.size||0)+') · puoi già lavorare');
     if(!media.includes(it)&&!undoSt.some(h=>h.media&&h.media.includes(it)))continue;
     try{await dbPut('files',{key:it.fkey,blob:it.file});}catch(e){it.fkey=null;setStatus('Spazio insufficiente: «'+it.name+'» non verrà conservato nel progetto.',true);}
-    scheduleSave();}
+    scheduleSave();pxQueue(it);}
   copying=false;loading=false;loadUI(100,'File pronti e salvati nel progetto.');queueStrips();
   setTimeout(()=>{if(!loading&&!stripRunning)loadUI(null);},1200);}
 async function loadAudio(it){
@@ -2004,7 +2050,7 @@ function player(i){
 }
 async function prepare(p,it){
   p.v.muted=!elAudio()&&(!actx||!p.src);          // senza motore audio non si può registrare il suono
-  if(p.v.dataset.url!==it.url){p.v.src=it.url;p.v.dataset.url=it.url;}
+  {const u=playUrl(it);if(p.v.dataset.url!==u){p.v.src=u;p.v.dataset.url=u;}}
   // Safari (iPhone e Mac) ignora lo spostamento se il video non ha ancora caricato le informazioni: prima si aspetta, poi si va al punto di taglio
   if(p.v.readyState<1){try{await once(p.v,'loadedmetadata',20000);}catch(e){}}
   const t0=it.tin||0;
@@ -2160,7 +2206,7 @@ async function drawAt(t){
   const cv=$('cv'),{w,h}=pvSize();if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;fitCv();}cvVer++;
   const x=cv.getContext('2d'),mode=$('fit').value;
   if(it.type==='img'){x.fillStyle='#000';x.fillRect(0,0,w,h);drawFit(x,it.el,it.w,it.h,w,h,mode);return;}
-  if(pv.dataset.url!==it.url){pv.src=it.url;pv.dataset.url=it.url;await once(pv,'loadedmetadata',15000);}
+  {const u=playUrl(it);if(pv.dataset.url!==u){pv.src=u;pv.dataset.url=u;await once(pv,'loadedmetadata',15000);}}
   const target=(it.tin||0)+Math.min(L.off,Math.max(0,it.dur-0.05));
   if(Math.abs(pv.currentTime-target)>0.01||pv.readyState<2){pv.currentTime=target;try{await once(pv,'seeked',4000);}catch(e){}}
   if(playing||exporting)return;      // nel frattempo è ripartita la riproduzione
@@ -2465,7 +2511,10 @@ document.addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey)return
       '-',
       {l:'Sgancia l’anteprima',run:()=>click('pvDetach'),on:()=>!!btn('pvDetach')},
       {l:'Riaggancia l’anteprima',run:()=>click('pvBack'),on:()=>!!btn('pvBack')},
-      {l:'Disposizione dei riquadri…',run:()=>click('lyBtn'),on:()=>!!btn('lyBtn')}]}];
+      {l:'Disposizione dei riquadri…',run:()=>click('lyBtn'),on:()=>!!btn('lyBtn')},
+      '-',
+      {l:'Riproduzione con copie leggere',chk:()=>proxyOn&&!!nativeRender(),run:()=>setProxy(!proxyOn),on:()=>!!nativeRender()&&!exporting},
+      {l:()=>{if(!nativeRender())return 'Copie leggere: solo nell\'app Mac';const c=pxCount();return 'Copie leggere pronte: '+c.ready+(c.work?' · in preparazione: '+c.work:'');},on:()=>false}]}];
   const val=v=>typeof v==='function'?v():v;
   M.forEach((m,mi)=>{const t=document.createElement('span');t.className='mt'+(m.t==='logo'?' logo':'');t.dataset.mi=mi;
     t.innerHTML=m.t==='logo'?'ARNO<i>CUT</i>':m.t;bar.appendChild(t);});
@@ -2525,7 +2574,7 @@ async function saveNow(){clearTimeout(saveTimer);saveTimer=null;if(!db||restorin
 }
 async function gcFiles(now){   // elimina i file che nessun progetto usa più
   try{const ps=await dbAll('projects'),used=new Set();ps.forEach(p=>(p.media||p.items||[]).forEach(i=>i.fkey&&used.add(i.fkey)));
-    media.forEach(i=>i.fkey&&used.add(i.fkey));
+    media.forEach(i=>i.fkey&&used.add(i.fkey));[...used].forEach(k=>used.add(k+'-px'));   // copie leggere dei file usati
     [...undoSt,...redoSt].forEach(h=>(h.media||[]).forEach(m=>m.fkey&&used.add(m.fkey)));
     let n=0,bytes=0;
     for(const k of await dbKeys('files')){const t=+String(k).slice(1).split('-')[0];
@@ -2555,6 +2604,7 @@ async function openProject(id){
   const st=rec.settings||{};['fmt','fit','defDur','quality'].forEach(k=>{if(st[k]!=null)$(k).value=st[k];});
   curProj={id:rec.id,name:rec.name,created:rec.created};showProj();playT=rec.playT||0;resetHistory();
   restoring=false;render();localStorage.setItem('arnovideo-last',rec.id);
+  media.filter(m=>m.type==='vid').forEach(pxQueue);   // copie leggere già pronte o da preparare
   (async()=>{const old=media.filter(i=>i.thumbV!==2);let n=0;   // miniature vecchie: rifatte col primo fotogramma
     for(const it of old){if(it.type==='vid'){it.thumb='';it.strip=null;it.thumbV=2;}else if(it.el){it.thumb=thumbOf(it.el,it.w,it.h);it.thumbV=2;}n++;}queueStrips();
     if(n&&!busy){render();}})();
