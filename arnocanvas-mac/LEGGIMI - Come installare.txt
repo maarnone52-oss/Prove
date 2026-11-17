@@ -2,7 +2,7 @@ ARNOCANVAS PROVA per Mac
 ========================
 
 ARNOCANVAS serve a modificare l'interfaccia vera delle tue app
-(ARNOCLICK, ARNOVIDEO, ARNODESIGN): riquadri e oggetti si spostano,
+(ARNOCLICK, ARNOCUT, ARNODESIGN): riquadri e oggetti si spostano,
 si ridimensionano, si duplicano, si cancellano, si portano sopra o
 sotto. Alla fine prepara il messaggio da incollare nella chat con
 Claude.

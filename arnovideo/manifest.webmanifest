@@ -1,6 +1,6 @@
 {
-  "name": "ARNOVIDEO",
-  "short_name": "ArnoVideo",
+  "name": "ARNOCUT",
+  "short_name": "ArnoCut",
   "description": "Video e foto in sequenza in un unico MP4",
   "start_url": "./",
   "scope": "./",

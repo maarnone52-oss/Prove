@@ -1,5 +1,5 @@
 /* Impaginazione per iPhone fatta con ARNOCANVAS (schermi iPhone 15 393x852 e iPhone 15 Plus 430x932) — VERSIONE DI PROVA.
-   Riapplica alla pagina vera di ARNOVIDEO le modifiche disegnate in ARNOCANVAS: gli elementi
+   Riapplica alla pagina vera di ARNOCUT le modifiche disegnate in ARNOCANVAS: gli elementi
    sono quelli veri, quindi le funzioni restano collegate. Solo su iPhone.
    Per vedere l'originale: aggiungi ?impaginazione=0 all'indirizzo.
    © 2026 Maurizio Arnone. Tutti i diritti riservati. */

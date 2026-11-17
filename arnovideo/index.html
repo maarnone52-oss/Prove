@@ -8,11 +8,11 @@
 var s=parseFloat(localStorage.getItem('arnovideo.uiScale'));
 if(t&&s>=0.5&&s<0.999){document.documentElement.classList.add(s<0.7?'uis':'uis8');
 document.querySelector('meta[name=viewport]').setAttribute('content','width=device-width, initial-scale='+s+', minimum-scale='+s+', maximum-scale='+s+', user-scalable=no, viewport-fit=cover');}}catch(e){}})();</script>
-<title>ARNOVIDEO</title>
+<title>ARNOCUT</title>
 <meta name="theme-color" content="#0d0e10">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="ArnoVideo">
+<meta name="apple-mobile-web-app-title" content="ArnoCut">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
@@ -482,7 +482,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 <body>
 <main>
   <div class="brand">
-    <div class="wordmark"><span class="a">ARNO</span><span class="b">VIDEO</span></div>
+    <div class="wordmark"><span class="a">ARNO</span><span class="b">CUT</span></div>
     <div class="ver">versione <b id="ver"></b></div>
     <button class="btn sm" id="helpBtn">？ Aiuto</button>
     <div class="tag">Video e foto in sequenza → un unico MP4</div>
@@ -668,7 +668,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.40.7';
+const VERSION='1.41.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -2029,7 +2029,7 @@ function deleteSelected(){if(busy)return false;
   selId=items[Math.min(i,items.length-1)]?items[Math.min(i,items.length-1)].id:null;render();return true;}
 function markCur(i){[...$('lane').children].forEach((c,k)=>c.classList.toggle('cur',k===i));}
 function blank(){const cv=$('cv');cv.width=1280;cv.height=720;fitCv();const x=cv.getContext('2d');x.fillStyle='#000';x.fillRect(0,0,1280,720);
-  x.fillStyle='#3a3f47';x.font='bold 40px Helvetica, Arial';x.textAlign='center';x.fillText('ARNOVIDEO',640,370);markCur(-1);}
+  x.fillStyle='#3a3f47';x.font='bold 40px Helvetica, Arial';x.textAlign='center';x.fillText('ARNOCUT',640,370);markCur(-1);}
 const pv=makeVideo();pv.muted=true;           // lettore muto solo per mostrare i fotogrammi
 let pvUnlocked=false;
 function unlockPv(){if(pvUnlocked)return;pvUnlocked=true;try{const r=pv.play();if(r&&r.then)r.then(()=>pv.pause()).catch(()=>{});}catch(e){}}
@@ -2138,7 +2138,7 @@ async function exportNative(nr){
         sent+=Math.min(CH,f.size-i*CH);setStatus('Passo i file al Mac… '+Math.round(sent/total*100)+'%');await sleep(0);}}
     if(stopReq)throw new Error('annullata');
     const d=new Date(),p2=n=>String(n).padStart(2,'0');
-    const name='ARNOVIDEO-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'-'+p2(d.getHours())+p2(d.getMinutes())+'.mp4';
+    const name='ARNOCUT-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'-'+p2(d.getHours())+p2(d.getMinutes())+'.mp4';
     setStatus('Il Mac sta creando il video… 0%');
     const res=await new Promise(r=>{arnoNative._wait.done=r;
       nr.postMessage({cmd:'render',w,h,fit:$('fit').value,name,items:items.map(it=>({type:it.type,key:key(it),dur:it.dur,tin:it.tin||0,vol:clipGain(it)*mixLevel('c'),fin:it.type==='vid'?fIn(it):0,fout:it.type==='vid'?fOut(it):0,ain:it.type==='vid'?aIn(it):0,aout:it.type==='vid'?aOut(it):0})),
@@ -2171,7 +2171,7 @@ $('expBtn').onclick=async()=>{if(exporting){$('stopBtn').onclick();return;}await
       const type=(rec.mimeType||mime||'video/mp4').split(';')[0],isMp4=/mp4/.test(type);
       lastBlob=new Blob(chunks,{type});
       const d=new Date(),p2=n=>String(n).padStart(2,'0');
-      lastName='ARNOVIDEO-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'-'+p2(d.getHours())+p2(d.getMinutes())+(isMp4?'.mp4':'.webm');
+      lastName='ARNOCUT-'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'-'+p2(d.getHours())+p2(d.getMinutes())+(isMp4?'.mp4':'.webm');
       $('resInfo').textContent=lastName+' · '+(lastBlob.size/1048576).toFixed(1)+' MB · '+w+'×'+h;
       $('result').hidden=false;
       setStatus(isMp4?'Video pronto. Tocca «Salva il video».':'Pronto, ma questo browser registra solo in WebM, non MP4.',!isMp4);
@@ -2223,7 +2223,7 @@ $('frameBtn').onclick=async()=>{
     if(v){v.removeAttribute('src');v.load();v.remove();}
     const base=c.name.replace(/\.[^.]+$/,'').replace(/[^\w\-À-ÿ ]+/g,'_').slice(0,40);
     const f=Math.floor(t*FPS+1e-6),mm=Math.floor(t/60),ss=Math.floor(t%60),p2=n=>String(n).padStart(2,'0');
-    const name='ARNOVIDEO-'+base+(c.type==='vid'?'-'+p2(mm)+'m'+p2(ss)+'s-f'+p2(f%FPS):'')+(png?'.png':'.jpg');
+    const name='ARNOCUT-'+base+(c.type==='vid'?'-'+p2(mm)+'m'+p2(ss)+'s-f'+p2(f%FPS):'')+(png?'.png':'.jpg');
     await saveBlob(blob,name);
     setStatus('Fotogramma '+cv.width+'×'+cv.height+(c.type==='vid'?' di «'+c.name+'» a '+fmtT(t)+' (fotogramma '+(f%FPS)+')':'')+' esportato.');
   }catch(e){setStatus('Fotogramma non esportato: '+(e&&e.message||e),true);}

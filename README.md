@@ -8,7 +8,7 @@ provata sull'iPhone o sul Mac, e solo dopo la conferma passa all'app definitiva.
 | Cartella | App | Indirizzo della prova |
 |---|---|---|
 | `arnoclick/` | ARNOCLICK (pagina offuscata, come la pubblica) | /Prove/arnoclick/ |
-| `arnovideo/` | ARNOVIDEO | /Prove/arnovideo/ |
+| `arnovideo/` | ARNOCUT (ex ARNOVIDEO) | /Prove/arnovideo/ |
 | `podpro/` | POD Pro Remote | /Prove/podpro/ |
 | `arnodesign/` | ARNODESIGN | /Prove/arnodesign/ |
 | `arnocanvas/` | ARNOCANVAS (prototipo, editor delle interfacce) | /Prove/arnocanvas/ |

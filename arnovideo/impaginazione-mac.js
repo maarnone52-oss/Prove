@@ -1,5 +1,5 @@
 /* Impaginazione per Mac fatta con ARNOCANVAS 0.7.7 (schermo mac13 1280x800) — VERSIONE DI PROVA.
-   Riapplica alla pagina vera di ARNOVIDEO le modifiche disegnate in ARNOCANVAS: gli elementi
+   Riapplica alla pagina vera di ARNOCUT le modifiche disegnate in ARNOCANVAS: gli elementi
    sono quelli veri, quindi le funzioni restano collegate. Solo su Mac (niente schermo touch,
    finestra larga almeno 900 punti). Per vedere l'originale: aggiungi ?impaginazione=0 all'indirizzo.
    © 2026 Maurizio Arnone. Tutti i diritti riservati. */
