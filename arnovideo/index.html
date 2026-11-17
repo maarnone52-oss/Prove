@@ -559,7 +559,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
     <span class="lbl">Esportazioni</span>
     <div id="pvPlace" class="pvplace" hidden>L'anteprima è in una finestra a parte. <button class="btn sm" id="pvBack">⇲ Riaggancia qui</button></div>
     <div id="pvBox" class="pvbox">
-    <div class="pvhead"><span class="lbl">Anteprima</span><button class="btn xs" id="pvDetach" style="padding:0 10px">⧉ Sgancia</button></div>
+    <div class="pvhead"><span class="lbl" hidden>Anteprima</span><button class="btn xs" id="pvDetach" style="padding:0 10px">⧉ Sgancia</button></div>
     <div class="screen" id="pvScreen"><canvas id="cv" width="1280" height="720"></canvas></div>
     <input type="range" id="scrub" min="0" max="0" step="0.05" value="0" disabled aria-label="Posizione">
     <div class="row" style="justify-content:space-between"><span class="note" id="status" style="margin:0">Pronto.</span><span class="lcd" id="clock" style="font-size:18px">0:00.0 / 0:00.0</span></div>
@@ -667,7 +667,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.39.1';
+const VERSION='1.40.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1116,6 +1116,13 @@ setTimeout(()=>{try{if(document.getElementById('cvLayoutPill')&&!/originale ·/.
   const m=mk('Mixer audio','mixRack');if($('mixer'))m.appendChild($('mixer'));
   const l=tlSec.querySelector(':scope > .lbl');if(l)l.textContent='2 · Anteprima della timeline';
   document.documentElement.classList.add('tlsplit');
+})();
+/* ---------- altri apparecchi (iPhone…): il mixer diventa un riquadro a sé, in fondo alla pagina ---------- */
+(function(){
+  const isMac=navigator.maxTouchPoints===0&&window.innerWidth>=900&&!/iPhone|iPad|Android/i.test(navigator.userAgent);if(isMac)return;
+  const foot=document.querySelector('main > footer');if(!foot||!$('mixer'))return;
+  const sec=document.createElement('section');sec.className='rack';sec.id='mixRack';sec.dataset.split='1';
+  sec.innerHTML='<span class="lbl">Mixer audio</span>';foot.parentNode.insertBefore(sec,foot);sec.appendChild($('mixer'));
 })();
 /* ---------- riquadri liberi (solo Mac): ogni riquadro si sposta e si ridimensiona; la disposizione resta salvata ---------- */
 (function(){
@@ -2375,9 +2382,11 @@ if(/^https?:/.test(location.protocol)){let chk=0;const checkNew=async()=>{if(Dat
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkNew();});setTimeout(checkNew,3000);}
 </script>
 <script>/* disposizione sul Mac: impaginazione ARNOCANVAS (predefinita), riquadri liberi, oppure pagina originale */
-(function(){if(/iPhone|iPod/i.test(navigator.userAgent)){var si=document.createElement('script');si.src='impaginazione-iphone.js?v=1';document.body.appendChild(si);return;}   // iPhone: impaginazione ARNOCANVAS per iPhone
-  var m='canvas';try{m=localStorage.getItem('arnovideo-disposizione-modo')||'canvas'}catch(e){}
-  if(m==='canvas'){var s=document.createElement('script');s.src='impaginazione-mac.js?v=16';document.body.appendChild(s);
+(function(){var iph=/iPhone|iPod/i.test(navigator.userAgent),m='canvas';
+  if(iph){var si=document.createElement('script');si.src='impaginazione-iphone.js?v=3';document.body.appendChild(si);}   // iPhone: impaginazione ARNOCANVAS per iPhone
+  else{try{m=localStorage.getItem('arnovideo-disposizione-modo')||'canvas'}catch(e){}
+  if(m==='canvas'){var s=document.createElement('script');s.src='impaginazione-mac.js?v=16';document.body.appendChild(s);}}
+  if(iph||m==='canvas'){
     // riquadri nuovi (Timeline, Mixer) non ancora disposti in ARNOCANVAS: si mettono sotto agli altri
     setTimeout(function(){try{var pill=document.getElementById('cvLayoutPill');if(!pill||/originale ·/.test(pill.textContent))return;
       var main=document.querySelector('main'),mr=main.getBoundingClientRect(),B=0;
