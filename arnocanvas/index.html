@@ -136,6 +136,16 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 .sw{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #2c3038}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chips .hb{min-width:46px}
+/* elenco elementi */
+.li{display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid #2c3038}
+.li.sub{padding-left:26px}
+.li .nm{flex:1;min-width:0;font-size:14px;line-height:1.25;cursor:pointer}
+.li .nm small{display:block;color:var(--dim);font-size:11.5px}
+.li .nm small.w{color:var(--amb)}.li .nm small.x{color:var(--red)}
+.li .nm b.n{display:inline-block;background:var(--amb);color:#1b1305;border-radius:4px;padding:0 5px;margin-right:5px;font-size:11px}
+.li.off .nm{opacity:.5}
+.li .hb{min-height:34px;min-width:34px;padding:0 7px;font-size:13px}
+.li .ey.on{background:linear-gradient(180deg,#7fe3ff,#1aa4d6);color:#04161d}
 #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 166px);transform:translateX(-50%);background:#04161d;color:var(--cy);border:1px solid #1aa4d6;
  padding:9px 14px;border-radius:10px;font-size:14px;z-index:200;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
 #toast.on{opacity:1}
@@ -150,6 +160,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
     <button class="hb" id="target">…</button>
     <button class="hb" id="undoB" disabled aria-label="Annulla">↶</button>
     <button class="hb" id="redoB" disabled aria-label="Ripeti">↷</button>
+    <button class="hb" id="listB" aria-label="Elenco elementi" title="Elenco elementi">▤</button>
     <button class="hb" id="menuB" aria-label="Menu">☰</button>
   </header>
   <div class="bar">
@@ -185,7 +196,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.7.7';
+var VER='0.8.0';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -1117,6 +1128,7 @@ $('#menuB').onclick=function(){
   var nd=Object.keys(M.I).filter(function(k){return M.I[k].hide}).length;
   var h='<button class="opt" data-m="claude"><span class="ic">📋</span><span>Invia le modifiche a Claude<small>Copia il riepilogo e incollalo nella chat</small></span></button>';
   h+='<button class="opt" data-m="spread"><span class="ic">⇲</span><span>Separa tutto<small>'+(S.lvl==='O'&&cont?'Mette gli oggetti di «'+esc(cut(nameAt(cont),26))+'» uno accanto all\'altro, senza sovrapposizioni':'Mette tutti i riquadri uno accanto all\'altro, senza sovrapposizioni')+' · le altre modifiche restano</small></span></button>';
+  h+='<button class="opt" data-m="list"><span class="ic">▤</span><span>Elenco elementi<small>Accendi, spegni e ritrova riquadri e oggetti</small></span></button>';
   h+='<button class="opt" data-m="deleted"><span class="ic">🗑</span><span>Elementi eliminati ('+nd+')<small>Rimettili al loro posto</small></span></button>';
   h+='<button class="opt" data-m="import"><span class="ic">⤒</span><span>Importa modifiche<small>Incolla un riepilogo ARNOCANVAS</small></span></button>';
   h+='<button class="opt" data-m="reset"><span class="ic">↺</span><span>Ripristina tutto<small>Torna all\'interfaccia originale di '+esc(A().n)+' · '+esc(DV().n)+'</small></span></button>';
@@ -1125,7 +1137,7 @@ $('#menuB').onclick=function(){
   h+='<p class="hint" style="text-align:center;margin-top:14px">ARNOCANVAS versione '+VER+'<br>© 2026 Maurizio Arnone · Tutti i diritti riservati</p>';
   openSheet('Menu',h,function(c){c.addEventListener('click',function(e){var b=e.target.closest('[data-m]');if(!b)return;var m=b.getAttribute('data-m');
     if(m==='spread'){closeSheet();spreadAll();return}
-    if(m==='claude')showClaude();else if(m==='deleted')showDeleted();else if(m==='import')showImport();else if(m==='help')showHelp();
+    if(m==='claude')showClaude();else if(m==='list')showList();else if(m==='deleted')showDeleted();else if(m==='import')showImport();else if(m==='help')showHelp();
     else if(m==='reload'){closeSheet();loadApp()}
     else if(m==='reset'){if(confirm('Ripristinare l\'interfaccia originale? (Si può annullare con ↶)')){closeSheet();sel=null;cont=null;change(function(){M=blank()});setLevel('P')}}
   })});
@@ -1158,6 +1170,73 @@ function spreadAll(){
   change(function(){ps.forEach(function(x,i){var P=M.P[x.ref];P.x=r1(P.x+sn(pos[i].x)-x.r.x);P.y=r1(P.y+sn(pos[i].y)-x.r.y)})});
   setLevel('P');toast('Riquadri separati ('+ps.length+') · ↶ per tornare indietro');
 }
+/* ---------- elenco elementi: accendi/spegni, trova, riporta in vista ---------- */
+var LOPEN={};
+function topZ(){var z=0;Object.keys(M.I).forEach(function(k){if(M.I[k].z>z)z=M.I[k].z});Object.keys(M.P).forEach(function(k){if(M.P[k].z>z)z=M.P[k].z});return z}
+function stateOf(ref,el,isP){
+  var it=M.I[ref]||{},P=M.P[ref],d=DV(),t=[];
+  if(it.hide)return {c:'',t:'spento'};
+  if(!vis(el))return {c:'w',t:isP?'non visibile ora: lo nasconde l\'app (es. finché non carichi un file)':'nascosto dall\'app'};
+  var r=isP?rectP(ref,el):rectOf(el);
+  if(r.x+r.w<4||r.x>d.w-4||r.y+r.h<4||r.y>H-4)t.push('fuori dallo schermo');
+  else if(r.x<-2||r.x+r.w>d.w+2)t.push('esce in parte dallo schermo');
+  if(r.w<24||r.h<12)t.push('piccolissimo ('+Math.round(r.w)+'×'+Math.round(r.h)+')');
+  if(isP&&P&&P.s&&P.s<.35)t.push('scala '+Math.round(P.s*100)+'%');
+  if(isP&&P&&P.e){var c=crops(P);if(c.t+c.b+c.l+c.r>0)t.push('ritagliato')}
+  if(!t.length&&isP){try{var cx=clamp(r.x+r.w/2,1,d.w-1),cy=clamp(r.y+Math.min(r.h/2,30),1,H-1),top=D.elementFromPoint(cx-W.pageXOffset,cy-W.pageYOffset);
+    if(top&&!el.contains(top)){var o=panelOf(top);t.push('coperto'+(o?' da «'+panelName(o)+'»':''))}}catch(e){}}
+  return {c:t.length?'x':'',t:t.length?t.join(' · '):'visibile'};
+}
+function kidList(el){var a=[];for(var c=el.firstElementChild;c;c=c.nextElementSibling){if(/^(SCRIPT|STYLE|TEMPLATE)$/.test(c.tagName)||c.hasAttribute('data-cvph'))continue;var r=refOf(c);if(vis(c)||(M.I[r]&&M.I[r].hide))a.push(c)}return a}
+function rowHTML(ref,el,isP,num){
+  var it=M.I[ref]||{},st=stateOf(ref,el,isP),off=!!it.hide,kids=isP?kidList(el):[];
+  var h='<div class="li'+(isP?'':' sub')+(off?' off':'')+'">';
+  h+='<button class="hb ey'+(off?'':' on')+'" data-eye="'+esc(ref)+'" title="'+(off?'Accendi':'Spegni')+'">'+(off?'○':'●')+'</button>';
+  h+='<span class="nm" data-go="'+esc(ref)+'">'+(isP?'<b class="n">'+num+'</b>':'')+esc(isP?panelName(el):objName(el))+'<small class="'+st.c+'">'+esc(st.t)+'</small></span>';
+  h+='<button class="hb" data-back="'+esc(ref)+'" title="Riporta qui, in vista">↧</button>';
+  h+='<button class="hb" data-orig="'+esc(ref)+'" title="Misure e posizione originali">↺</button>';
+  if(isP&&kids.length)h+='<button class="hb" data-exp="'+esc(ref)+'">'+(LOPEN[ref]?'▾':'▸')+'</button>';
+  h+='</div>';
+  if(isP&&LOPEN[ref])kids.forEach(function(c){h+=rowHTML(refOf(c),c,false)});
+  return h;
+}
+function showList(){
+  if(!ready){toast('Attendi che l\'app sia caricata');return}
+  var h='<p class="hint">Tutti i riquadri di '+esc(A().n)+' ('+esc(DV().n)+'). <b>●/○</b> accende o spegne; tocca il <b>nome</b> per andarci; <b>↧</b> lo riporta qui, nella parte di schermo che stai guardando, e lo mette davanti; <b>↺</b> gli ridà misure e posizione originali; <b>▸</b> mostra gli oggetti che contiene.</p>';
+  var n=0;PANELS.forEach(function(p){n++;h+=rowHTML(p.ref,p.el,true,n)});
+  if(!n)h+='<p class="hint">Nessun riquadro trovato.</p>';
+  openSheet('Elenco elementi',h,function(c){c.addEventListener('click',function(e){
+    var b=e.target.closest('[data-eye],[data-go],[data-back],[data-orig],[data-exp]');if(!b)return;
+    var k,isP;
+    if((k=b.getAttribute('data-exp'))){LOPEN[k]=!LOPEN[k];showList();return}
+    if((k=b.getAttribute('data-eye'))){change(function(){var t=M.I[k]||(M.I[k]={});if(t.hide)delete t.hide;else t.hide=true});showList();return}
+    k=b.getAttribute('data-go')||b.getAttribute('data-back')||b.getAttribute('data-orig');
+    var el=resolve(k);if(!el)return;isP=isPanelEl(el);
+    if(b.hasAttribute('data-back')){
+      change(function(){var t=M.I[k]||(M.I[k]={});delete t.hide;
+        if(isP){if(!M.frozen){M.frozen=true;PANELS.forEach(function(p){if(!vis(p.el)&&p.ref!==k)return;var r=rectOf(p.el),w=p.el.offsetWidth;M.P[p.ref]=M.P[p.ref]||{x:r1(r.x),y:r1(r.y),w:w,s:1,x0:r1(r.x),y0:r1(r.y),w0:w,h0:p.el.offsetHeight}})}
+          var P=M.P[k];if(!P){var w0=el.offsetWidth||300;P=M.P[k]={x:0,y:0,w:w0,s:1,x0:0,y0:0,w0:w0}}
+          var vx=Math.max(0,(wrap.scrollLeft-PAD)/Z),vy=Math.max(0,(wrap.scrollTop-PAD)/Z);
+          P.x=sn(vx+16);P.y=sn(vy+16);t.z=topZ()+1;delete P.z}
+        else{delete t.dx;delete t.dy}});
+      toast(isP?'Riportato qui e messo davanti':'Rimesso al suo posto nel riquadro');
+    }else if(b.hasAttribute('data-orig')){
+      change(function(){var t=M.I[k];
+        if(isP){var P=M.P[k];if(P){P.s=1;delete P.e;delete P.mh;delete P.det;if(P.w0)P.w=P.w0}if(t)delete t.hide}
+        else if(t){['dx','dy','w','h','s','hide'].forEach(function(q){delete t[q]})}});
+      toast('Misure originali');
+    }else{ // vai: accende se spento e lo seleziona
+      if(M.I[k]&&M.I[k].hide)change(function(){delete M.I[k].hide});
+    }
+    closeSheet();el=resolve(k);if(!el)return;
+    if(isP){sel=k;MS=[];setLevel('P')}else{var pe=el.parentElement;cont=refOf(pe);sel=k;MS=[];setLevel('O')}
+    measure();render();updBar();if(typeof updCrumb==='function')updCrumb();
+    if(vis(el)){var r=isP?rectP(k,el):rectOf(el);wrap.scrollTop=Math.max(0,PAD+r.y*Z-60);wrap.scrollLeft=Math.max(0,PAD+r.x*Z-40)}
+    else toast('In questo momento l\'app lo tiene nascosto');
+  })});
+}
+$('#listB').onclick=showList;
+
 function showDeleted(){
   var ks=Object.keys(M.I).filter(function(k){return M.I[k].hide});
   var h=ks.length?'':'<p class="hint">Nessun elemento eliminato.</p>';
