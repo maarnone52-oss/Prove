@@ -495,9 +495,32 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 .pvbox:not(.float) #playBtn{margin:-8px 0 0 10px}
 .rack .row.c:has(#expBtn){margin-top:22px!important}
 }
+
+/* ---------- barra dei menu a tendina ---------- */
+#menuBar{position:fixed;top:0;left:0;right:0;z-index:2147483640;display:flex;align-items:center;gap:2px;flex-wrap:nowrap;overflow-x:auto;overflow-y:visible;
+ padding:calc(env(safe-area-inset-top,0px) + 3px) 8px 3px;background:#1b1d22;border-bottom:1px solid #2c2f36;font:500 13px -apple-system,Helvetica,sans-serif;color:#e9e9e9;
+ -webkit-user-select:none;user-select:none;scrollbar-width:none}
+#menuBar::-webkit-scrollbar{display:none}
+body.hasMenu{border-top:var(--mbh,34px) solid transparent;position:relative}
+#menuBar .mt{padding:5px 10px;border-radius:6px;cursor:default;white-space:nowrap;flex:none}
+#menuBar .mt.logo{color:#ffb21e;font-weight:800;letter-spacing:.3px}
+#menuBar .mt.logo i{font-style:normal;color:#e9e9e9}
+#menuBar .mt:hover,#menuBar .mt.on{background:#ffb21e;color:#1a1205}
+#menuBar .mt.logo.on i,#menuBar .mt.logo:hover i{color:#1a1205}
+#menuDrop{position:fixed;z-index:2147483641;min-width:250px;max-width:calc(100vw - 16px);padding:5px;border-radius:9px;background:#24272e;border:1px solid #3a3e47;
+ box-shadow:0 10px 30px rgba(0,0,0,.55);font:400 13px -apple-system,Helvetica,sans-serif;color:#e9e9e9}
+#menuDrop[hidden]{display:none}
+#menuDrop .mi{display:flex;justify-content:space-between;gap:22px;padding:6px 10px;border-radius:5px;cursor:default;white-space:nowrap}
+#menuDrop .mi:hover{background:#ffb21e;color:#1a1205}
+#menuDrop .mi.off{opacity:.38;pointer-events:none}
+#menuDrop .mi .k{opacity:.6;font-size:12px}
+#menuDrop .mi.chk::before{content:"✓ ";}
+#menuDrop .ms{height:1px;margin:4px 6px;background:#3a3e47}
+@media (pointer:coarse){#menuDrop .mi{padding:10px 12px;font-size:15px}#menuBar .mt{padding:7px 11px;font-size:14px}}
 </style>
 </head>
 <body>
+<nav id="menuBar" aria-label="Menu"></nav><div id="menuDrop" hidden></div>
 <main>
   <div class="brand">
     <div class="wordmark"><span class="a">ARNO</span><span class="b">CUT</span></div>
@@ -686,7 +709,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.42.8';
+const VERSION='1.43.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -2370,6 +2393,101 @@ document.addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey)return
   else if(e.key==='ArrowLeft'&&tag!=='INPUT'){e.preventDefault();arnoMenu('rew');}
   else if(e.key==='ArrowRight'&&tag!=='INPUT'){e.preventDefault();arnoMenu('ffw');}
   else if((e.key==='Backspace'||e.key==='Delete')&&tag!=='INPUT'){if(deleteSelected())e.preventDefault();}});
+
+/* ---------- barra dei menu a tendina (richiama gli stessi comandi dei pulsanti) ---------- */
+(function(){
+  const bar=$('menuBar'),drop=$('menuDrop');if(!bar)return;
+  if(/[?&]arnocanvas=/.test(location.search)){bar.remove();drop.remove();return;}   // nell'editor ARNOCANVAS la barra non serve
+  const fitBar=()=>{document.documentElement.style.setProperty('--mbh',bar.offsetHeight+'px');document.body.classList.add('hasMenu');};
+  window.addEventListener('resize',()=>requestAnimationFrame(fitBar));setTimeout(fitBar,0);
+  const IS_MAC=/Mac/.test(navigator.platform||'')&&!/iPhone|iPad/.test(navigator.userAgent);
+  const K=(mac,other)=>IS_MAC?mac:(other||'');
+  const btn=id=>{const b=$(id);return b&&!b.disabled&&!b.hidden&&b.offsetParent!==null?b:null;};
+  const click=id=>{const b=btn(id);if(b)b.click();};
+  const sel=()=>items.find(c=>c.id===selId)||null;
+  const clipAct=a=>{const b=document.querySelector('#selBar button[data-s="'+a+'"]');if(b&&!b.disabled)b.click();};
+  const canClip=a=>{const b=document.querySelector('#selBar button[data-s="'+a+'"]');return !!(sel()&&b&&!b.disabled&&!busy);};
+  const setXf=v=>{const c=sel();if(!c||busy)return;const i=items.indexOf(c);if(i<1)return;pushUndo('dissolvenza di «'+c.name+'»');c.xf=v;render();scheduleSave();};
+  const has=()=>items.length>0&&!exporting;
+  const M=[
+    {t:'logo',items:[
+      {l:'Guida di ARNOCUT',run:()=>click('helpBtn'),on:()=>!!btn('helpBtn')},
+      {l:()=>'Versione '+VERSION,on:()=>false}]},
+    {t:'Progetto',items:[
+      {l:'Nuovo progetto',run:()=>arnoMenu('new'),on:()=>!busy},
+      {l:'Progetti recenti e configurazioni…',run:()=>{arnoMenu('recent');const r=$('recent');if(r&&!r.hidden)r.scrollIntoView({block:'nearest'});},on:()=>!!btn('recentBtn')},
+      '-',
+      {l:'Aggiungi file multimediali…',run:()=>arnoMenu('open'),on:()=>!!btn('addBtn')},
+      {l:'Tutti nella timeline',run:()=>click('allBtn'),on:()=>!!btn('allBtn')},
+      '-',
+      {l:'Salva il video esportato',run:()=>click('saveBtn'),on:()=>!!btn('saveBtn')}]},
+    {t:'Modifica',items:[
+      {l:()=>'Annulla'+(undoSt.length?' '+undoSt[undoSt.length-1].label:''),k:K('⌘Z','Ctrl+Z'),run:()=>undo(),on:()=>undoSt.length>0&&!busy},
+      {l:'Ripeti',k:K('⇧⌘Z','Ctrl+Maiusc+Z'),run:()=>redo(),on:()=>redoSt.length>0&&!busy},
+      '-',
+      {l:'Taglia alla testina',run:()=>click('cutBtn'),on:()=>!!btn('cutBtn')},
+      {l:'Duplica la clip',run:()=>clipAct('dup'),on:()=>canClip('dup')},
+      {l:'Togli la clip',k:K('⌫'),run:()=>clipAct('del'),on:()=>canClip('del')},
+      '-',
+      {l:'Aggancio',chk:()=>{const b=$('snapBtn');return !!(b&&(b.classList.contains('on')||b.getAttribute('aria-pressed')==='true'));},run:()=>click('snapBtn'),on:()=>!!btn('snapBtn')},
+      {l:'Svuota la timeline',run:()=>click('clearBtn'),on:()=>!!btn('clearBtn')}]},
+    {t:'Clip',items:[
+      {l:'Sposta a sinistra',run:()=>clipAct('left'),on:()=>canClip('left')},
+      {l:'Sposta a destra',run:()=>clipAct('right'),on:()=>canClip('right')},
+      {l:'Rimetti la clip intera',run:()=>clipAct('untrim'),on:()=>canClip('untrim')},
+      '-',
+      {l:'Dissolvenza di 0,5 s con la precedente',run:()=>setXf(0.5),on:()=>{const c=sel();return !!c&&items.indexOf(c)>0&&!busy;}},
+      {l:'Dissolvenza di 1 s con la precedente',run:()=>setXf(1),on:()=>{const c=sel();return !!c&&items.indexOf(c)>0&&!busy;}},
+      {l:'Togli la dissolvenza',run:()=>setXf(0),on:()=>{const c=sel();return !!c&&(c.xf||0)>0&&!busy;}},
+      '-',
+      {l:'Dissolvenza audio in entrata +0,25 s',run:()=>clipAct('fin+'),on:()=>canClip('fin+')},
+      {l:'Dissolvenza audio in uscita +0,25 s',run:()=>clipAct('fout+'),on:()=>canClip('fout+')}]},
+    {t:'Riproduzione',items:[
+      {l:'Riproduci / pausa',k:K('spazio','spazio'),run:()=>arnoMenu('play'),on:()=>items.length>0&&!exporting},
+      '-',
+      {l:'Indietro di 5 s',k:'←',run:()=>arnoMenu('rew'),on:has},
+      {l:'Avanti di 5 s',k:'→',run:()=>arnoMenu('ffw'),on:has},
+      {l:'Un fotogramma indietro',run:()=>{const b=btn('frBack');if(b){b.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));b.dispatchEvent(new PointerEvent('pointerup',{bubbles:true}));}},on:()=>!!btn('frBack')&&has()},
+      {l:'Un fotogramma avanti',run:()=>{const b=btn('frFwd');if(b){b.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));b.dispatchEvent(new PointerEvent('pointerup',{bubbles:true}));}},on:()=>!!btn('frFwd')&&has()},
+      '-',
+      {l:'Clip precedente',run:()=>arnoMenu('prevItem'),on:has},
+      {l:'Clip successiva',run:()=>arnoMenu('nextItem'),on:has},
+      {l:'Vai all’inizio',run:()=>arnoMenu('start'),on:has}]},
+    {t:'Esporta',items:[
+      {l:()=>exporting?'Ferma l’esportazione':'Esporta MP4',run:()=>click('expBtn'),on:()=>!!btn('expBtn')},
+      {l:'Esporta il fotogramma',run:()=>click('frameBtn'),on:()=>!!btn('frameBtn')},
+      '-',
+      {l:'Formato del video…',run:()=>{const f=$('fmt');if(f){f.scrollIntoView({block:'center'});f.focus();}},on:()=>!!$('fmt')}]},
+    {t:'Vista',items:[
+      {l:'Adatta la timeline',run:()=>click('zFit'),on:()=>!!btn('zFit')},
+      {l:'Ingrandisci la timeline',run:()=>zoomTo(pps*1.5),on:()=>items.length>0},
+      {l:'Rimpicciolisci la timeline',run:()=>zoomTo(pps/1.5),on:()=>items.length>0},
+      '-',
+      {l:'Sgancia l’anteprima',run:()=>click('pvDetach'),on:()=>!!btn('pvDetach')},
+      {l:'Riaggancia l’anteprima',run:()=>click('pvBack'),on:()=>!!btn('pvBack')},
+      {l:'Disposizione dei riquadri…',run:()=>click('lyBtn'),on:()=>!!btn('lyBtn')}]}];
+  const val=v=>typeof v==='function'?v():v;
+  M.forEach((m,mi)=>{const t=document.createElement('span');t.className='mt'+(m.t==='logo'?' logo':'');t.dataset.mi=mi;
+    t.innerHTML=m.t==='logo'?'ARNO<i>CUT</i>':m.t;bar.appendChild(t);});
+  fitBar();
+  let open=-1;
+  function close(){open=-1;drop.hidden=true;bar.querySelectorAll('.mt').forEach(x=>x.classList.remove('on'));}
+  function show(mi){const m=M[mi],t=bar.querySelector('[data-mi="'+mi+'"]');open=mi;
+    bar.querySelectorAll('.mt').forEach(x=>x.classList.toggle('on',x===t));
+    drop.innerHTML='';m.items.forEach(it=>{if(it==='-'){const d=document.createElement('div');d.className='ms';drop.appendChild(d);return;}
+      const d=document.createElement('div');let ok=false;try{ok=!it.on||!!it.on();}catch(e){}
+      d.className='mi'+(ok?'':' off')+(it.chk&&it.chk()?' chk':'');
+      d.innerHTML='<span></span><span class="k"></span>';d.firstChild.textContent=val(it.l);d.lastChild.textContent=it.k||'';
+      d.addEventListener('click',e=>{e.stopPropagation();close();if(ok&&it.run)setTimeout(()=>{try{it.run();}catch(err){setStatus('Comando non riuscito: '+err.message,true);}},0);});
+      drop.appendChild(d);});
+    drop.hidden=false;const r=t.getBoundingClientRect();
+    drop.style.top=Math.round(r.bottom+2)+'px';drop.style.left=Math.round(Math.max(8,Math.min(r.left,innerWidth-drop.offsetWidth-8)))+'px';}
+  bar.addEventListener('click',e=>{const t=e.target.closest('.mt');if(!t)return;e.stopPropagation();const mi=+t.dataset.mi;if(open===mi)close();else show(mi);});
+  bar.addEventListener('mouseover',e=>{const t=e.target.closest('.mt');if(t&&open>=0&&+t.dataset.mi!==open)show(+t.dataset.mi);});   // come sul Mac: con un menu aperto si passa agli altri scorrendo
+  document.addEventListener('pointerdown',e=>{if(open>=0&&!e.target.closest('#menuDrop')&&!e.target.closest('#menuBar'))close();},true);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&open>=0)close();});
+  bar.addEventListener('scroll',close,{passive:true});window.addEventListener('resize',close);
+})();
 // niente menu del tasto destro (con «Ricarica»), tranne nei campi di testo dove serve per copiare e incollare
 document.addEventListener('contextmenu',e=>{if(!e.target.closest('input[type=text],input:not([type]),textarea'))e.preventDefault();});
 ['dragover','drop'].forEach(ev=>document.addEventListener(ev,e=>{if(!e.dataTransfer||![...e.dataTransfer.types].includes('Files'))return;
@@ -2510,7 +2628,7 @@ if(/^https?:/.test(location.protocol)){let chk=0;const checkNew=async()=>{if(Dat
 </script>
 <script>/* disposizione sul Mac: impaginazione ARNOCANVAS (predefinita), riquadri liberi, oppure pagina originale */
 (function(){var iph=/iPhone|iPod/i.test(navigator.userAgent),m='free';
-  if(iph){var si=document.createElement('script');si.src='impaginazione-iphone.js?v=13';document.body.appendChild(si);}   // iPhone: impaginazione ARNOCANVAS per iPhone
+  if(iph){var si=document.createElement('script');si.src='impaginazione-iphone.js?v=14';document.body.appendChild(si);}   // iPhone: impaginazione ARNOCANVAS per iPhone
   else{try{m=localStorage.getItem('arnovideo-disposizione-modo')||'free'}catch(e){}if(m==='canvas')m='free';
   if(m==='canvas'){var s=document.createElement('script');s.src='impaginazione-mac.js?v=16';document.body.appendChild(s);}}
   if(iph||m==='canvas'){

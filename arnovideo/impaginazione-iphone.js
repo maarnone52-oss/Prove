@@ -81,11 +81,12 @@ function applyMove(mv){var el=resolve(mv.ref),to=resolve(mv.to);if(!el||!to||el=
   var aft=mv.aft?resolve(mv.aft):null;if(aft&&aft.parentNode===to)to.insertBefore(el,aft.nextSibling);else to.appendChild(el);return true}
 function vis(el){if(!el||!el.getClientRects().length)return false;var cs=W.getComputedStyle(el);return cs.display!=='none'&&cs.visibility!=='hidden'}
 // disegnata per iPhone 15 (393 punti di larghezza): su schermi più larghi (15 Plus, Pro Max…) tutto si centra
+function OY(){var b=D.body;if(!b||!b.classList.contains('hasMenu'))return 0;return parseFloat(W.getComputedStyle(D.documentElement).getPropertyValue('--mbh'))||0}   // barra dei menu in alto
 function OX(){var w=D.documentElement.clientWidth||W.innerWidth;return Math.max(0,Math.round((w-BASEW)/2))}
 function crops(P){var e=(P&&P.e)||{};return {t:Math.max(-(e.t||0),0),r:Math.max(-(e.r||0),0),b:Math.max(-(e.b||0),0),l:Math.max(-(e.l||0),0)}}
 function r1(v){return Math.round(v*10)/10}
 function posP(el,P,c){var st=el.style,s=P.s||1,e=P.e||{},ad={t:Math.max(e.t||0,0),r:Math.max(e.r||0,0),b:Math.max(e.b||0,0),l:Math.max(e.l||0,0)},cr=crops(P);
-  imp(st,'left',r1(P.x+OX()-ad.l*s-c.x)+'px');imp(st,'top',r1(P.y-ad.t*s-c.y)+'px');imp(st,'width',r1(P.w+ad.l+ad.r)+'px');
+  imp(st,'left',r1(P.x+OX()-ad.l*s-c.x)+'px');imp(st,'top',r1(P.y+OY()-ad.t*s-c.y)+'px');imp(st,'width',r1(P.w+ad.l+ad.r)+'px');
   if(P.e)['t','r','b','l'].forEach(function(k){imp(st,'padding-'+{t:'top',r:'right',b:'bottom',l:'left'}[k],r1(c.pad[k]+ad[k])+'px')});
   if(cr.t||cr.r||cr.b||cr.l){var cp='inset('+r1(cr.t)+'px '+r1(cr.r)+'px '+r1(cr.b)+'px '+r1(cr.l)+'px)';imp(st,'clip-path',cp);imp(st,'-webkit-clip-path',cp)}
   if(P.mh){imp(st,'height',r1(P.mh)+'px');imp(st,'min-height','0px');imp(st,'max-height','none');imp(st,'overflow','hidden')}
