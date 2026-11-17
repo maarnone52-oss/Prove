@@ -66,10 +66,12 @@ function applyMove(mv){var el=resolve(mv.ref),to=resolve(mv.to);if(!el||!to||el=
   el.parentNode.replaceChild(ph,el);el.setAttribute('data-cvm',mv.id);
   var aft=mv.aft?resolve(mv.aft):null;if(aft&&aft.parentNode===to)to.insertBefore(el,aft.nextSibling);else to.appendChild(el);return true}
 function vis(el){if(!el||!el.getClientRects().length)return false;var cs=W.getComputedStyle(el);return cs.display!=='none'&&cs.visibility!=='hidden'}
+// disegnata per iPhone 15 (393 punti di larghezza): su schermi più larghi (15 Plus, Pro Max…) tutto si centra
+function OX(){var w=D.documentElement.clientWidth||W.innerWidth;return Math.max(0,Math.round((w-393)/2))}
 function crops(P){var e=(P&&P.e)||{};return {t:Math.max(-(e.t||0),0),r:Math.max(-(e.r||0),0),b:Math.max(-(e.b||0),0),l:Math.max(-(e.l||0),0)}}
 function r1(v){return Math.round(v*10)/10}
 function posP(el,P,c){var st=el.style,s=P.s||1,e=P.e||{},ad={t:Math.max(e.t||0,0),r:Math.max(e.r||0,0),b:Math.max(e.b||0,0),l:Math.max(e.l||0,0)},cr=crops(P);
-  imp(st,'left',r1(P.x-ad.l*s-c.x)+'px');imp(st,'top',r1(P.y-ad.t*s-c.y)+'px');imp(st,'width',r1(P.w+ad.l+ad.r)+'px');
+  imp(st,'left',r1(P.x+OX()-ad.l*s-c.x)+'px');imp(st,'top',r1(P.y-ad.t*s-c.y)+'px');imp(st,'width',r1(P.w+ad.l+ad.r)+'px');
   if(P.e)['t','r','b','l'].forEach(function(k){imp(st,'padding-'+{t:'top',r:'right',b:'bottom',l:'left'}[k],r1(c.pad[k]+ad[k])+'px')});
   if(cr.t||cr.r||cr.b||cr.l){var cp='inset('+r1(cr.t)+'px '+r1(cr.r)+'px '+r1(cr.b)+'px '+r1(cr.l)+'px)';imp(st,'clip-path',cp);imp(st,'-webkit-clip-path',cp)}
   if(P.mh){imp(st,'height',r1(P.mh)+'px');imp(st,'min-height','0px');imp(st,'max-height','none');imp(st,'overflow','hidden')}
@@ -95,6 +97,7 @@ function pill(){var a=D.createElement('a');a.id='cvLayoutPill';
   a.href=location.pathname+(off?'':'?impaginazione=0');
   a.style.cssText='position:fixed;z-index:2147483646;right:10px;bottom:10px;background:#04161d;color:#35d0ff;border:1px solid #1aa4d6;font:600 11px/1 -apple-system,Helvetica,Arial,sans-serif;padding:6px 9px;border-radius:8px;text-decoration:none;opacity:.9';
   D.body.appendChild(a)}
-function go(){try{pill();if(!off)applyAll()}catch(e){if(W.console)console.warn('Impaginazione ARNOCANVAS:',e)}}
+function go(){try{pill();lastW=D.documentElement.clientWidth;if(!off)applyAll()}catch(e){if(W.console)console.warn('Impaginazione ARNOCANVAS:',e)}}
+var lastW=0;W.addEventListener('resize',function(){var w=D.documentElement.clientWidth;if(off||!lastW||Math.abs(w-lastW)<2)return;lastW=w;try{applyAll()}catch(e){}});
 if(D.readyState==='complete')setTimeout(go,300);else W.addEventListener('load',function(){setTimeout(go,300)});
 })();
