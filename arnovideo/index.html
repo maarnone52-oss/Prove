@@ -363,7 +363,7 @@ html.macapp #cv{max-height:70vh}
 /* anteprima rapida: tenendo premuto 1 s un file dell'elenco (si chiude alzando il dito) */
 #lib .clip .hold{position:absolute;left:0;bottom:0;height:3px;width:0;background:#46ff7a;pointer-events:none}
 #lib .clip.holding .hold{width:100%;transition:width .75s linear}
-#peek{position:fixed;z-index:96;pointer-events:none;width:240px;background:#0a0403;border:2px solid #46ff7a;border-radius:10px;padding:6px;box-shadow:0 12px 34px rgba(0,0,0,.75);box-sizing:border-box}
+#peek{position:fixed;z-index:2147483600;pointer-events:none;width:240px;background:#0a0403;border:2px solid #46ff7a;border-radius:10px;padding:6px;box-shadow:0 12px 34px rgba(0,0,0,.75);box-sizing:border-box}
 #peek[hidden]{display:none}
 #peek .ph{display:flex;align-items:center;gap:6px;margin-bottom:5px;font:600 12px Helvetica,Arial;color:#cfd3da}
 #peek .ph span{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
@@ -667,7 +667,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.40.0';
+const VERSION='1.40.1';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1524,8 +1524,14 @@ function peekOpen(m,row){peekClose();const pk=$('peek'),pb=pk.querySelector('.pb
   if(m.type==='aud')pb.innerHTML='<div class="pa">♪</div>';pb.appendChild(el);pk.hidden=false;
   const pi=pk.querySelector('.pi');pi.innerHTML=infoHTML(m,m._info||{size:m.size,ext:''});
   mediaInfo(m).then(inf=>{if(!pk.hidden&&pk.querySelector('.ph span').textContent===m.name){pi.innerHTML=infoHTML(m,inf);place();}});
-  const place=()=>{const cur=document.querySelector('#lib .clip[data-mid="'+m.mid+'"]')||row,r=cur.getBoundingClientRect(),w=pk.offsetWidth,h=pk.offsetHeight,vw=window.innerWidth;   // a destra e sopra la riga del file
-    pk.style.left=Math.max(6,Math.min(vw-w-6,r.right-w))+'px';pk.style.top=Math.max(6,r.top-h-6)+'px';};
+  // sempre tutta visibile: sopra la riga del file se c'è posto, altrimenti sotto, altrimenti dove ci sta; se è troppo alta si rimpicciolisce il video
+  const place=()=>{const cur=document.querySelector('#lib .clip[data-mid="'+m.mid+'"]')||row,r=cur.getBoundingClientRect(),vv=window.visualViewport,
+      vw=vv?vv.width:window.innerWidth,vh=vv?vv.height:window.innerHeight,M=6;
+    const md=pk.querySelector('video,img');if(md)md.style.maxHeight='';
+    let w=pk.offsetWidth,h=pk.offsetHeight;
+    if(h>vh-2*M&&md){md.style.maxHeight=Math.max(60,md.offsetHeight-(h-(vh-2*M)))+'px';h=pk.offsetHeight;}
+    let top=r.top-h-M;if(top<M){top=r.bottom+M<=vh-h-M?r.bottom+M:Math.max(M,vh-h-M);}
+    pk.style.left=Math.max(M,Math.min(vw-w-M,r.right-w))+'px';pk.style.top=Math.max(M,Math.min(vh-h-M,top))+'px';};
   place();el.addEventListener(m.type==='img'?'load':'loadedmetadata',place,{once:true});return el;}
 document.addEventListener('pointerdown',e=>{if(!$('peek').hidden&&!e.target.closest('#peek')&&!e.target.closest('#lib .clip'))peekClose();},true);
 (function(){let h=null;
