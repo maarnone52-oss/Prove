@@ -303,6 +303,10 @@ select{width:100%;min-height:46px;font-size:16px;background:#111317;color:var(--
  background:radial-gradient(circle at 35% 35%,#ffe2a0,#e89a00 70%);box-shadow:0 2px 6px rgba(0,0,0,.7)}
 #scrub::-moz-range-thumb{width:28px;height:28px;border-radius:50%;border:1px solid #ffcf6b;background:#e89a00}
 #scrub:disabled{opacity:.4}
+body.exporting #scrub:disabled{opacity:1}   /* durante l'esportazione la barra col pallino si vede bene */
+/* riquadro Esportazioni: al posto dei comandi di riproduzione, avanti/indietro di un fotogramma (per esportare fotogrammi) */
+#pvBox .transport #prevItem,#pvBox .transport #rew,#pvBox .transport #playBtn,#pvBox .transport #ffw,#pvBox .transport #nextItem{display:none!important}
+#pvBox .transport .frs{min-width:96px;padding:0 14px;font-size:15px}
 .transport{margin-top:10px;gap:8px}
 .transport .btn{min-width:58px;font-size:22px;padding:0 12px;touch-action:none;-webkit-user-select:none;user-select:none}
 .transport .btn.big{min-width:80px;font-size:24px}
@@ -551,7 +555,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
   </section>
 
   <section class="rack">
-    <span class="lbl">3 · Anteprima ed esportazione</span>
+    <span class="lbl">Esportazioni</span>
     <div id="pvPlace" class="pvplace" hidden>L'anteprima è in una finestra a parte. <button class="btn sm" id="pvBack">⇲ Riaggancia qui</button></div>
     <div id="pvBox" class="pvbox">
     <div class="pvhead"><span class="lbl">Anteprima</span><button class="btn xs" id="pvDetach" style="padding:0 10px">⧉ Sgancia</button></div>
@@ -564,12 +568,14 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
       <button class="btn play big tpb" id="playBtn" disabled aria-label="Riproduci">▶</button>
       <button class="btn tpb" id="ffw" disabled aria-label="Avanti veloce">⏩︎</button>
       <button class="btn tpb" id="nextItem" disabled aria-label="Elemento successivo">⏭︎</button>
+      <button class="btn tpb frs" id="frBack" disabled aria-label="Indietro di un fotogramma" title="Indietro di un fotogramma (tieni premuto per continuare)">◀︎ 1 fot.</button>
+      <button class="btn tpb frs" id="frFwd" disabled aria-label="Avanti di un fotogramma" title="Avanti di un fotogramma (tieni premuto per continuare)">1 fot. ▶︎</button>
       <span id="speed"></span>
       <span class="volrow mon" id="monRow" title="Volume di ascolto (non cambia il video esportato)"><span class="vi" id="monIcon">🎧</span><span class="fader" id="monFader"></span><span class="vv" id="monVal"></span></span>
     </div>
     <div class="pvgrip" id="pvGrip" aria-label="Ridimensiona"></div>
     </div>
-    <p class="note help" style="text-align:center">⏪︎ ⏩︎ un tocco: salta di 5 secondi · tenendo premuto: scorre veloce mostrando le immagini (più a lungo tieni, più accelera). ⏮︎ ⏭︎ inizio dell'elemento precedente o successivo. Puoi anche trascinare la barra.</p>
+    <p class="note help" style="text-align:center">◀︎ 1 fot. e 1 fot. ▶︎ spostano il segno rosso di un fotogramma (tenendo premuto continuano): servono per scegliere il fotogramma da esportare con «📷 Esporta fotogramma». Per riprodurre usa i comandi sotto l\'anteprima della timeline.</p>
     <div class="row c" style="margin-top:12px">
       <button class="btn rec" id="expBtn" disabled>● Esporta MP4</button>
       <button class="btn" id="frameBtn" disabled>📷 Esporta fotogramma</button>
@@ -660,7 +666,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.38.0';
+const VERSION='1.39.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1975,7 +1981,7 @@ function pickMime(){
   for(const m of list){try{if(MediaRecorder.isTypeSupported(m))return m;}catch(e){}}
   return '';
 }
-function setBusy(b,exp){busy=b;exporting=!!(b&&exp);$('stopBtn').hidden=!exporting;$('addBtn').disabled=b;render();}
+function setBusy(b,exp){busy=b;exporting=!!(b&&exp);document.body.classList.toggle('exporting',exporting);$('stopBtn').hidden=!exporting;$('addBtn').disabled=b;render();}
 $('stopBtn').onclick=()=>{stopReq=true;const nr=nativeRender();if(nr)nr.postMessage({cmd:'cancel'});};
 
 /* ---------- posizione, fotogramma e comandi di trasporto ---------- */
@@ -2047,6 +2053,18 @@ $('prevItem').onclick=()=>{unlockPv();if(!items.length)return;const L=locate(pla
 $('nextItem').onclick=()=>{unlockPv();if(!items.length)return;const L=locate(playT);
   jumpTo(L.i<items.length-1?startOf(L.i+1):totalDur());};
 
+// riquadro Esportazioni: avanti/indietro di un fotogramma (tenendo premuto continua, ~8 fotogrammi al secondo)
+(function(){let rep=null;
+  const step=d=>{if(!items.length||exporting)return;showFrame(Math.round(playT*FPS)/FPS+d/FPS);revealHead();};
+  const stop=()=>{if(rep){clearTimeout(rep.t);clearInterval(rep.i);rep=null;}};
+  [['frBack',-1],['frFwd',1]].forEach(([id,d])=>{const b=$(id);
+    b.addEventListener('pointerdown',async e=>{e.preventDefault();if(!items.length||exporting)return;unlockPv();stop();
+      try{b.setPointerCapture(e.pointerId);}catch(_){}await stopPlay();step(d);
+      rep={t:setTimeout(()=>{if(rep)rep.i=setInterval(()=>step(d),125);},450)};});
+    ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,stop));
+    b.addEventListener('contextmenu',e=>e.preventDefault());});
+})();
+
 // ⏪ ⏩: tocco = salto di 5 s; tenendo premuto = scorrimento veloce con le immagini
 (function(){let hold=null;
   const begin=async(e,dir)=>{e.preventDefault();if(!items.length||exporting||hold)return;unlockPv();
@@ -2083,7 +2101,7 @@ $('nextItem').onclick=()=>{unlockPv();if(!items.length)return;const L=locate(pla
 function nativeRender(){try{return window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.render;}catch(e){return null;}}
 window.arnoNative={_wait:{},
   reply(id,data){const f=this._wait[id];if(f){delete this._wait[id];f(data);}},
-  progress(p){setStatus('Il Mac sta creando il video… '+Math.round(p*100)+'%');const sc=$('scrub');sc.style.setProperty('--p',(p*100)+'%');},
+  progress(p){setStatus('Il Mac sta creando il video… '+Math.round(p*100)+'%');const sc=$('scrub');sc.style.setProperty('--p',(p*100)+'%');sc.value=p*(+sc.max||0);},
   done(ok,msg){const f=this._wait.done;if(f){delete this._wait.done;f({ok,msg});}},
   vprog(id,p){const f=this._wait['p'+id];if(f)f(p);}};
 async function exportNative(nr){
