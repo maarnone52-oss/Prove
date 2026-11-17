@@ -95,6 +95,7 @@ body.mac #zoom{position:static;display:flex}body.mac #zoom .hb{box-shadow:none;m
 #zord.show{display:flex}
 #pad{position:absolute;left:max(10px,env(safe-area-inset-left));bottom:calc(env(safe-area-inset-bottom) + 104px);display:none;grid-template-columns:repeat(3,40px);grid-template-rows:repeat(3,40px);gap:3px;z-index:20;background:rgba(4,22,29,.85);border:1px solid #1aa4d6;border-radius:12px;padding:4px;touch-action:none}
 #pad.show{display:grid}
+#pad .zm{color:var(--amb);font-size:19px;font-weight:800}
 #pad .hb{min-height:40px;min-width:40px;padding:0;font-size:15px;touch-action:none}
 #pad .st{font-size:11px;line-height:1.05;color:var(--cy);background:#04161d;border-color:#1aa4d6}
 #zord .hb{min-height:36px;min-width:40px;font-size:17px}
@@ -182,7 +183,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
     <div id="stage"><div id="fbox"><iframe id="F" title="App da modificare"></iframe></div><div id="ov"></div></div>
     <div id="load">Carico…</div>
   </div>
-  <div id="pad"><span></span><button class="hb" data-d="0,-1" aria-label="Su">▲</button><span></span><button class="hb" data-d="-1,0" aria-label="Sinistra">◀</button><button class="hb st" id="padSt" aria-label="Passo"></button><button class="hb" data-d="1,0" aria-label="Destra">▶</button><span></span><button class="hb" data-d="0,1" aria-label="Giù">▼</button><span></span></div>
+  <div id="pad"><span></span><button class="hb" data-d="0,-1" aria-label="Su">▲</button><span></span><button class="hb" data-d="-1,0" aria-label="Sinistra">◀</button><button class="hb st" id="padSt" aria-label="Passo"></button><button class="hb" data-d="1,0" aria-label="Destra">▶</button><button class="hb zm" data-zs="-1" aria-label="Rimpicciolisci" title="Rimpicciolisci in proporzione">−</button><button class="hb" data-d="0,1" aria-label="Giù">▼</button><button class="hb zm" data-zs="1" aria-label="Ingrandisci" title="Ingrandisci in proporzione">＋</button></div>
   <div id="zord"><button class="hb" data-z="bot" title="In fondo">⤓</button><button class="hb" data-z="down" title="Porta sotto">↓</button><button class="hb" data-z="up" title="Porta sopra">↑</button><button class="hb" data-z="top" title="In primo piano">⤒</button><span id="zlv"></span></div>
   <div id="zoom"><button class="hb" id="zM" title="Rimpicciolisci (⌘−)">−</button><button class="hb" id="zl" title="Adatta alla finestra (⌘0)">100%</button><button class="hb" id="zP" title="Ingrandisci (⌘+)">＋</button><button class="hb" id="zfit" title="Adatta alla finestra (⌘0)">⤢ Adatta</button></div>
   <footer class="bar">
@@ -200,7 +201,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.8.1';
+var VER='0.8.2';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -840,7 +841,7 @@ function updBar(){
   document.body.classList.toggle('use',u);
   $('#pad').classList.toggle('show',has&&!u);$('#padSt').innerHTML=stepTxt();
   var lv=has&&!u?levelOf(sel):null;$('#zord').classList.toggle('show',!!lv&&lv.of>1);if(lv)$('#zlv').innerHTML=nsel>1?nsel+'<br>selez.':'livello<br>'+lv.n+' di '+lv.of;
-  if(MAC){$$('#pad [data-d]').forEach(function(b){b.disabled=!has});$$('#zord [data-z]').forEach(function(b){b.disabled=!(lv&&lv.of>1)});if(!lv||lv.of<2)$('#zlv').innerHTML=has?'livello<br>unico':'nessuna<br>selez.'}$('#multiB').classList.toggle('on',!!S.multi);$('#multiB').innerHTML=(S.multi?'☑':'☐')+(nsel>1?' '+nsel:'<small style="font-size:11px"> multi</small>');$('#multiB').style.display=u?'none':'';
+  if(MAC){$$('#pad [data-d],#pad [data-zs]').forEach(function(b){b.disabled=!has});$$('#zord [data-z]').forEach(function(b){b.disabled=!(lv&&lv.of>1)});if(!lv||lv.of<2)$('#zlv').innerHTML=has?'livello<br>unico':'nessuna<br>selez.'}$('#multiB').classList.toggle('on',!!S.multi);$('#multiB').innerHTML=(S.multi?'☑':'☐')+(nsel>1?' '+nsel:'<small style="font-size:11px"> multi</small>');$('#multiB').style.display=u?'none':'';
   $('#bIn').disabled=$('#bIn').disabled||nsel>1;
   $('#gridB').textContent='▦'+(S.snap?S.grid+'🧲':' libero');
   $('#gridB').classList.toggle('on',S.snap);
@@ -993,6 +994,30 @@ function nudgeStart(dir,mult){
   nud={before:before};nudgeOnce(dir,stepVal()*(mult||1));return true;
 }
 function nudgeEnd(){if(!nud)return;clearTimeout(nud.t);clearInterval(nud.i);hist.push(nud.before);if(hist.length>80)hist.shift();redo=[];nud=null;commit();sizeFrame();measure();render();updBar()}
+/* ---------- ＋ / − : ingrandisce o rimpicciolisce in proporzione la selezione, il centro resta fermo ---------- */
+function zoomOnce(f){
+  var refs=selList();if(!refs.length)return;
+  var g=selRect();if(!g)return;var gx=g.x+g.w/2,gy=g.y+g.h/2;
+  refs.forEach(function(r){var el=resolve(r);if(!el||!vis(el))return;
+    if(S.lvl==='P'&&M.P[r]){var P=M.P[r],s0=P.s||1,ns=clamp(Math.round(s0*f*1000)/1000,.1,5),k=ns/s0;if(k===1)return;
+      P.s=ns;P.x=r1(gx-(gx-P.x)*k);P.y=r1(gy-(gy-P.y)*k);posP(r)}
+    else if(S.lvl!=='P'){var it=M.I[r]||(M.I[r]={}),s0b=it.s||1,nsb=clamp(Math.round(s0b*f*1000)/1000,.1,5),kb=nsb/s0b;if(kb===1)return;
+      var q=rectOf(el),cx=q.x+q.w/2,cy=q.y+q.h/2,tx=gx+(cx-gx)*kb,ty=gy+(cy-gy)*kb,K=el.offsetWidth?q.w/(el.offsetWidth*s0b):1;if(!isFinite(K)||K<=0)K=1;
+      it.s=nsb;if(it.s===1)delete it.s;restoreOne(r);applyItem(r);
+      var q2=rectOf(el);it.dx=r1((it.dx||0)+(tx-(q2.x+q2.w/2))/K);it.dy=r1((it.dy||0)+(ty-(q2.y+q2.h/2))/K);if(!it.dx)delete it.dx;if(!it.dy)delete it.dy;restoreOne(r);applyItem(r)}
+  });
+  remeasure();keepVisible();
+}
+function zoomStep(){return S.fine?1.01:1.02}
+$$('#pad [data-zs]').forEach(function(b){
+  var sgn=+b.getAttribute('data-zs');
+  b.addEventListener('pointerdown',function(e){e.preventDefault();if(nud)nudgeEnd();if(!sel||S.lvl==='U')return;
+    var before=JSON.stringify(M);if(S.lvl==='P'){ensureFrozen();if(selList().length<2&&!M.P[sel]){toast('Questo riquadro non si può ridimensionare');return}}
+    nud={before:before};var f=sgn>0?zoomStep():1/zoomStep();zoomOnce(f);
+    try{b.setPointerCapture(e.pointerId)}catch(_){}
+    var n=0;nud.t=setTimeout(function(){if(!nud)return;nud.i=setInterval(function(){n++;zoomOnce(n>15?f*f:f)},70)},380)});
+  ['pointerup','pointercancel','lostpointercapture'].forEach(function(ev){b.addEventListener(ev,nudgeEnd)});
+});
 $$('#pad [data-d]').forEach(function(b){
   var dir=b.getAttribute('data-d').split(',').map(Number);
   b.addEventListener('pointerdown',function(e){e.preventDefault();if(nud)nudgeEnd();if(!nudgeStart(dir))return;
@@ -1268,7 +1293,7 @@ function showHelp(){
   '<span class="lbl">☐ Multi · selezione multipla</span><p class="hint">Accendi <b>☐ Multi</b> e tocca gli elementi da aggiungere o togliere (stesso livello: tutti riquadri, oppure oggetti dello stesso riquadro). Poi puoi trascinarli insieme, usare le frecce, duplicare, eliminare, cambiare livello, spostarli con ⇄ Riquadro e cambiare i colori in Aspetto. Con più oggetti selezionati compare la <b>cornice arancione del gruppo</b>: trascinala per spostarli tutti; pallini arancioni sugli angoli = ingrandisci o rimpicciolisci tutto in proporzione (angolo opposto fermo); maniglie azzurre sui lati = allunga o accorcia il gruppo solo in larghezza o solo in altezza. Sul Mac: ⇧+clic, ⌘A tutti, Esc nessuno.</p>'+
   '<span class="lbl">⇄ Riquadro</span><p class="hint">In ② Oggetti sposta l\'oggetto o il gruppo selezionato in un altro riquadro, o in uno nuovo: è l\'elemento vero, quindi le funzioni restano collegate. Più semplice: <b>trascina l\'oggetto sopra un altro riquadro e lascialo</b>: entra in quel riquadro, con le funzioni, nel punto in cui l\'hai lasciato (si annulla con ↶). Mentre lo trascini resta sempre visibile sopra tutto.</p>'+
   '<span class="lbl">▶ Usa</span><p class="hint">Toglie il velo di modifica: puoi usare l\'app (caricare file, premere i pulsanti) e vedere come si comporta con le modifiche.</p>'+
-  '<span class="lbl">Frecce ◀ ▲ ▶ ▼</span><p class="hint">Con un elemento selezionato compare a sinistra la croce di frecce: ogni tocco lo sposta di un passo della griglia; tenendo premuto continua e poi accelera. Il tasto al centro passa allo spostamento fine (1 punto) e ritorno. Sul Mac anche i tasti freccia (con ⇧ dieci passi); sul Mac la croce e i pulsanti dei livelli restano sempre visibili.</p>'+
+  '<span class="lbl">Frecce ◀ ▲ ▶ ▼</span><p class="hint">Con un elemento selezionato compare a sinistra la croce di frecce: ogni tocco lo sposta di un passo della griglia; tenendo premuto continua e poi accelera. I tasti arancioni <b>− ＋</b> ai lati di ▼ rimpiccioliscono o ingrandiscono in proporzione gli elementi selezionati (2% per tocco, 1% in modo fine; tenendo premuto continua), con il centro che resta fermo; con più elementi si scala tutto il gruppo. Il tasto al centro passa allo spostamento fine (1 punto) e ritorno. Sul Mac anche i tasti freccia (con ⇧ dieci passi); sul Mac la croce e i pulsanti dei livelli restano sempre visibili.</p>'+
   '<span class="lbl">Zoom</span><p class="hint"><b>− 100% ＋</b> (sul Mac nella barra in alto) ingrandiscono solo il canvas con l\'interfaccia; 100% (il numero) la adatta alla larghezza. Sul Mac anche il pizzico sul trackpad, Ctrl+rotella e ⌘+ ⌘− ⌘0: i comandi restano sempre della stessa misura.</p>'+
   '<span class="lbl">Livelli (sopra / sotto)</span><p class="hint">Quando selezioni qualcosa compaiono i pulsanti <b>⤓ ↓ ↑ ⤒</b>: in fondo, sotto, sopra, in primo piano. Valgono per i riquadri e per gli oggetti dello stesso gruppo; li trovi anche in Aspetto. Sul Mac: ⌘] e ⌘[ (con ⇧ in cima o in fondo).</p>'+
   '<span class="lbl">Griglia ▦</span><p class="hint">Passo regolabile, aggancio acceso o movimento libero.</p>'+
