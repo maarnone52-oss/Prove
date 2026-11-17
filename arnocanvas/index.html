@@ -137,6 +137,10 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chips .hb{min-width:46px}
 /* elenco elementi */
+.cg{position:absolute;top:0;bottom:0;width:0;border-left:1px dashed rgba(255,95,210,.9);pointer-events:none;z-index:7}
+.cg.ok{border-left:2px solid #3dff8a;box-shadow:0 0 6px #3dff8a}
+.cg span{position:absolute;left:5px;background:#2a0020;color:#ff9fe6;border:1px solid #ff5fd2;font:700 11px/1 -apple-system,Helvetica,Arial,sans-serif;padding:4px 6px;border-radius:6px;white-space:nowrap}
+.cg.ok span{background:#03240f;color:#7dffb0;border-color:#3dff8a}
 .li{display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid #2c3038}
 .li.sub{padding-left:26px}
 .li .nm{flex:1;min-width:0;font-size:14px;line-height:1.25;cursor:pointer}
@@ -196,7 +200,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.8.0';
+var VER='0.8.1';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -219,7 +223,7 @@ var KN={panel:'Riquadro nuovo',button:'Pulsante nuovo',text:'Scritta nuova',disp
 function lsGet(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 var S=Object.assign({app:'arnovideo',dev:'iphone15',lvl:'P',grid:8,snap:true,showGrid:true,zoom:0,ascroll:true},lsGet('arnocanvas:set',{}));
-function saveSet(){lsSet('arnocanvas:set',{app:S.app,dev:S.dev,lvl:S.lvl,grid:S.grid,snap:S.snap,showGrid:S.showGrid,zoom:S.zoom,fine:!!S.fine,ascroll:S.ascroll!==false})}
+function saveSet(){lsSet('arnocanvas:set',{app:S.app,dev:S.dev,lvl:S.lvl,grid:S.grid,snap:S.snap,showGrid:S.showGrid,zoom:S.zoom,fine:!!S.fine,ascroll:S.ascroll!==false,cguide:S.cguide!==false})}
 function A(){for(var i=0;i<APPS.length;i++)if(APPS[i].k===S.app)return APPS[i];return APPS[0]}
 function DV(){for(var i=0;i<DEVS.length;i++)if(DEVS[i].k===S.dev)return DEVS[i];return DEVS[0]}
 function mkey(){return 'arnocanvas:m:'+S.app+':'+S.dev}
@@ -505,9 +509,17 @@ function render(){
     var gp=6;h+='<div class="bx gb" data-gb="1" style="left:'+(gr.x*Z-gp)+'px;top:'+(gr.y*Z-gp)+'px;width:'+(gr.w*Z+gp*2)+'px;height:'+(gr.h*Z+gp*2)+'px"><span class="tg">Gruppo · '+n+' oggetti</span>'+
       '<i data-h="t"></i><i data-h="r"></i><i data-h="b"></i><i data-h="l"></i><i class="co" data-h="tl"></i><i class="co" data-h="tr"></i><i class="co" data-h="br"></i><i class="co" data-h="bl"></i>'+
       '<span class="dm">'+Math.round(gr.x)+', '+Math.round(gr.y)+' · '+Math.round(gr.w)+'×'+Math.round(gr.h)+'</span></div>'}
+  if(S.cguide!==false&&(drag||nud)&&sel&&S.lvl!=='U'){var cr=selRect();if(cr){var mid=DV().w/2,dd=cr.x+cr.w/2-mid,ok=Math.abs(dd)<0.75;
+    h+='<div class="cg'+(ok?' ok':'')+'" style="left:'+(mid*Z)+'px"><span style="top:'+Math.max(4,cr.y*Z-28)+'px">'+(ok?'✓ centrato':(dd>0?'centro ← '+Math.round(dd):'centro → '+Math.round(-dd)))+'</span></div>'}}
   ov.innerHTML=h;
   if(sel&&($('#zord').classList.contains('show')||MAC)){var lv=levelOf(sel),ns=selList().length;if(lv)$('#zlv').innerHTML=ns>1?ns+'<br>selez.':'livello<br>'+lv.n+' di '+lv.of}
 }
+function selRect(){ // rettangolo di ciò che si sta spostando (uno o più elementi)
+  var refs=selList();if(!refs.length)return null;var L=1e9,T=1e9,Rr=-1e9,B=-1e9,n=0;
+  refs.forEach(function(r){var e=resolve(r);if(!e||!vis(e))return;var q=isPanelEl(e)?rectP(r,e):rectOf(e);n++;L=Math.min(L,q.x);T=Math.min(T,q.y);Rr=Math.max(Rr,q.x+q.w);B=Math.max(B,q.y+q.h)});
+  return n?{x:L,y:T,w:Rr-L,h:B-T}:null;
+}
+var CMAG=6; // calamita del centro (punti)
 function groupRect(){ // cornice arancione attorno agli oggetti selezionati insieme
   if(S.lvl!=='O')return null;var refs=selList();if(refs.length<2)return null;var L=1e9,T=1e9,R=-1e9,B=-1e9,n=0;
   BOXES.forEach(function(b){if(refs.indexOf(b.ref)<0)return;n++;L=Math.min(L,b.r.x);T=Math.min(T,b.r.y);R=Math.max(R,b.r.x+b.r.w);B=Math.max(B,b.r.y+b.r.h)});
@@ -675,7 +687,7 @@ function moveDrag(p){
   }
   if(drag.isP){
     var P=M.P[sel],P0=drag.P0,s0=P0.s||1;
-    if(k==='m'){P.x=sn(P0.x+dx);P.y=sn(P0.y+dy)}
+    if(k==='m'){P.x=sn(P0.x+dx);P.y=sn(P0.y+dy);if(S.cguide!==false){var cc=r0.x+(P.x-P0.x)+r0.w/2-DV().w/2;if(Math.abs(cc)<CMAG)P.x=r1(P.x-cc)}}
     else{
       var t=target(k,r0,dx,dy);
       var e0=P0.e||{};
@@ -696,7 +708,7 @@ function moveDrag(p){
     posP(sel);
   }else{
     var it=M.I[sel]||(M.I[sel]={}),I0=drag.I0,K=drag.K,s1=I0.s||1,el=resolve(sel);
-    if(k==='m'){var nx=r0.x-(I0.dx||0)*K,ny=r0.y-(I0.dy||0)*K;it.dx=r1((sn(r0.x+dx)-nx)/K);it.dy=r1((sn(r0.y+dy)-ny)/K)}
+    if(k==='m'){var nx=r0.x-(I0.dx||0)*K,ny=r0.y-(I0.dy||0)*K,tx=sn(r0.x+dx);if(S.cguide!==false){var oc=tx+r0.w/2-DV().w/2;if(Math.abs(oc)<CMAG)tx-=oc}it.dx=r1((tx-nx)/K);it.dy=r1((sn(r0.y+dy)-ny)/K)}
     else{
       var t=target(k,r0,dx,dy);
       if(t.ratio)it.s=clamp(Math.round(s1*t.ratio*1000)/1000,.2,5);
@@ -749,7 +761,9 @@ function groupResize(dx,dy){ // ridimensiona il gruppo: angoli in proporzione, l
 function multiMove(dx,dy){
   if(!drag.items){drag.items=multiItems();var pr=null;drag.items.forEach(function(x){if(x.r===sel)pr=x});drag.pr=pr||drag.items[0]}
   if(!drag.pr)return;var r0=drag.pr.r0;
-  multiShift(drag.items,sn(r0.x+dx)-r0.x,sn(r0.y+dy)-r0.y);
+  if(!drag.g0)drag.g0=selRect();
+  var tx=sn(r0.x+dx)-r0.x;if(S.cguide!==false&&drag.g0){var gc=drag.g0.x+tx+drag.g0.w/2-DV().w/2;if(Math.abs(gc)<CMAG)tx=r1(tx-gc)}
+  multiShift(drag.items,tx,sn(r0.y+dy)-r0.y);
 }
 function dropTarget(refs){ // riquadro su cui cade il centro degli oggetti trascinati (diverso da quello di partenza)
   var to=null;
@@ -966,6 +980,9 @@ function nudgeOnce(dir,st){
     posP(sel)}
   else{var el=resolve(sel);if(!el)return;var it=M.I[sel]||(M.I[sel]={}),sc=it.s||1,r=el.getBoundingClientRect(),K=el.offsetWidth?r.width/(el.offsetWidth*sc):1;if(!isFinite(K)||K<=0)K=1;
     it.dx=r1((it.dx||0)+dir[0]*st/K);it.dy=r1((it.dy||0)+dir[1]*st/K);if(!it.dx)delete it.dx;if(!it.dy)delete it.dy;restoreOne(sel);applyItem(sel)}
+  if(dir[0]&&S.cguide!==false){var cr=selRect(),el2=resolve(sel);if(cr&&el2){var oc=cr.x+cr.w/2-DV().w/2;
+    if(Math.abs(oc)>0.5&&Math.abs(oc)<st/2+0.01){if(S.lvl==='P'&&M.P[sel]){M.P[sel].x=r1(M.P[sel].x-oc);posP(sel)}
+      else{var it2=M.I[sel]||(M.I[sel]={}),sc2=it2.s||1,rr=el2.getBoundingClientRect(),K2=el2.offsetWidth?rr.width/(el2.offsetWidth*sc2):1;if(!isFinite(K2)||K2<=0)K2=1;it2.dx=r1((it2.dx||0)-oc/K2);restoreOne(sel);applyItem(sel)}}}}
   remeasure();keepVisible();
 }
 var nud=null;
@@ -1061,11 +1078,12 @@ $('#gridB').onclick=function(){
   var h='<div class="sw"><span>Aggancio alla griglia<br><small class="hint">Spento = movimento libero, al punto</small></span><button class="hb'+(S.snap?' on':'')+'" id="gS">'+(S.snap?'Acceso':'Spento')+'</button></div>';
   h+='<div class="sw"><span>Mostra la griglia</span><button class="hb'+(S.showGrid?' on':'')+'" id="gV">'+(S.showGrid?'Sì':'No')+'</button></div>';
   h+='<div class="sw"><span>Scorrimento automatico<br><small class="hint">Trascinando vicino al bordo la pagina scorre da sola</small></span><button class="hb'+(S.ascroll!==false?' on':'')+'" id="gA">'+(S.ascroll!==false?'Acceso':'Spento')+'</button></div>';
+  h+='<div class="sw"><span>Guida di centratura<br><small class="hint">Linea al centro dello schermo mentre sposti; diventa verde quando sei centrato e ti aggancia vicino al centro</small></span><button class="hb'+(S.cguide!==false?' on':'')+'" id="gC">'+(S.cguide!==false?'Accesa':'Spenta')+'</button></div>';
   h+='<span class="lbl">Passo della griglia (punti dello schermo)</span><div class="chips">';
   [2,4,5,8,10,12,16,20,24,32].forEach(function(g){h+='<button class="hb'+(S.grid===g?' on':'')+'" data-g="'+g+'">'+g+'</button>'});
   h+='</div><p class="hint" style="margin-top:12px">Con l\'aggancio acceso posizioni e misure si fermano sulle linee della griglia. Sul Mac le frecce spostano di un passo (con ⇧ di dieci).</p>';
   openSheet('Griglia',h,function(c){c.addEventListener('click',function(e){
-    if(e.target.id==='gS')S.snap=!S.snap;else if(e.target.id==='gV')S.showGrid=!S.showGrid;else if(e.target.id==='gA')S.ascroll=S.ascroll===false;
+    if(e.target.id==='gS')S.snap=!S.snap;else if(e.target.id==='gV')S.showGrid=!S.showGrid;else if(e.target.id==='gA')S.ascroll=S.ascroll===false;else if(e.target.id==='gC')S.cguide=S.cguide===false;
     else{var b=e.target.closest('[data-g]');if(!b)return;S.grid=+b.getAttribute('data-g')}
     saveSet();layoutStage();updBar();$('#gridB').onclick();
   })});
