@@ -216,7 +216,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.8.5';
+var VER='0.8.6';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -228,7 +228,12 @@ var APPS=[
   names:{'#canvasWrap':'Area di lavoro','#palette':'Elementi','#props':'Proprietà','#app > footer':'Barra dei comandi'}}
 ];
 var DEVS=[
- {k:'iphone15',n:'iPhone 15',w:393,h:852,ic:'📱'},
+ {k:'iphone16e',n:'iPhone 16e',w:390,h:844,ic:'📱',x:'anche iPhone 13 e 14'},
+ {k:'iphone15',n:'iPhone 15',w:393,h:852,ic:'📱',x:'anche 15 Pro e iPhone 16'},
+ {k:'iphone15plus',n:'iPhone 15 Plus',w:430,h:932,ic:'📱',x:'anche 15 Pro Max e 16 Plus'},
+ {k:'iphone17',n:'iPhone 17',w:402,h:874,ic:'📱',x:'anche 17 Pro e 16 Pro'},
+ {k:'iphoneair',n:'iPhone Air',w:420,h:912,ic:'📱'},
+ {k:'iphone17pm',n:'iPhone 17 Pro Max',w:440,h:956,ic:'📱',x:'anche 16 Pro Max'},
  {k:'ipad105',n:'iPad Pro 10,5″',w:834,h:1112,ic:'⬛'},
  {k:'ipad129',n:'iPad Pro 12,9″',w:1024,h:1366,ic:'⬛'},
  {k:'mac13',n:'Mac 13″',w:1280,h:800,ic:'💻'},
@@ -1233,7 +1238,7 @@ $('#target').onclick=function(){
   var h='<span class="lbl">App da modificare</span>';
   APPS.forEach(function(a){h+='<button class="opt'+(a.k===S.app?' on':'')+'" data-a="'+a.k+'"><span class="ic">◧</span><span>'+a.n+'<small>'+a.d+'</small></span></button>'});
   h+='<span class="lbl">Spazio di lavoro</span>';
-  DEVS.forEach(function(d){h+='<button class="opt'+(d.k===S.dev?' on':'')+'" data-d="'+d.k+'"><span class="ic">'+d.ic+'</span><span>'+d.n+'<small>'+d.w+' × '+d.h+' punti</small></span></button>'});
+  DEVS.forEach(function(d){h+='<button class="opt'+(d.k===S.dev?' on':'')+'" data-d="'+d.k+'"><span class="ic">'+d.ic+'</span><span>'+d.n+'<small>'+d.w+' × '+d.h+' punti'+(d.x?' · '+d.x:'')+'</small></span></button>'});
   h+='<p class="hint">Ogni combinazione app + schermo ha le sue modifiche, salvate su questo dispositivo.</p>';
   openSheet('App e schermo',h,function(c){c.addEventListener('click',function(e){
     var a=e.target.closest('[data-a]'),d=e.target.closest('[data-d]');
