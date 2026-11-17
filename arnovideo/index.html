@@ -668,7 +668,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.40.5';
+const VERSION='1.40.6';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -2390,7 +2390,7 @@ if(/^https?:/.test(location.protocol)){let chk=0;const checkNew=async()=>{if(Dat
 </script>
 <script>/* disposizione sul Mac: impaginazione ARNOCANVAS (predefinita), riquadri liberi, oppure pagina originale */
 (function(){var iph=/iPhone|iPod/i.test(navigator.userAgent),m='canvas';
-  if(iph){var si=document.createElement('script');si.src='impaginazione-iphone.js?v=7';document.body.appendChild(si);}   // iPhone: impaginazione ARNOCANVAS per iPhone
+  if(iph){var si=document.createElement('script');si.src='impaginazione-iphone.js?v=8';document.body.appendChild(si);}   // iPhone: impaginazione ARNOCANVAS per iPhone
   else{try{m=localStorage.getItem('arnovideo-disposizione-modo')||'canvas'}catch(e){}
   if(m==='canvas'){var s=document.createElement('script');s.src='impaginazione-mac.js?v=16';document.body.appendChild(s);}}
   if(iph||m==='canvas'){
