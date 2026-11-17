@@ -339,7 +339,13 @@ html.lyedit .lyBar{display:flex;position:absolute;left:0;right:0;top:0;height:22
 html.lyedit .lyS{display:block;position:absolute;right:0;bottom:0;width:22px;height:22px;z-index:2147483601;cursor:nwse-resize;background:linear-gradient(135deg,transparent 45%,#ffb21e 45%,#ffb21e 60%,transparent 60%,transparent 70%,#ffb21e 70%);touch-action:none}
 html.lyedit .lyW{display:block;position:absolute;right:-4px;top:30px;bottom:30px;width:10px;z-index:2147483601;cursor:ew-resize;touch-action:none}
 html.lyedit .lyW::after{content:"";position:absolute;left:3px;top:50%;height:46px;margin-top:-23px;width:4px;border-radius:2px;background:#ffb21e}
-html.lyedit main>.lyP{outline:2px dashed rgba(255,178,30,.8);outline-offset:2px}   /* le voci nascoste delle impostazioni restano nascoste */
+html.lyedit main>.lyP{outline:2px dashed rgba(255,178,30,.8);outline-offset:2px}
+html.lyedit .lyE{display:block;position:absolute;z-index:2147483602;touch-action:none;background:rgba(255,178,30,.28);border-radius:4px}
+html.lyedit .lyE[data-d=n],html.lyedit .lyE[data-d=s]{left:14px;right:14px;height:12px}
+html.lyedit .lyE[data-d=n]{top:-6px}html.lyedit .lyE[data-d=s]{bottom:-6px}
+html.lyedit .lyE[data-d=w]{top:34px;bottom:34px;width:12px;left:-6px}
+html.lyedit .lyE[data-d=nw],html.lyedit .lyE[data-d=ne],html.lyedit .lyE[data-d=sw]{width:16px;height:16px}
+html.lyedit .lyE[data-d=nw]{left:-8px;top:-8px}html.lyedit .lyE[data-d=ne]{right:-8px;top:-8px}html.lyedit .lyE[data-d=sw]{left:-8px;bottom:-8px}   /* le voci nascoste delle impostazioni restano nascoste */
 /* app del Mac: la pagina usa tutta la larghezza della finestra (anche a schermo intero) */
 html.macapp main{max-width:none}
 html.macapp #mirrorBox{max-width:min(800px,50vw)}
@@ -670,7 +676,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.42.3';
+const VERSION='1.42.4';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1164,12 +1170,20 @@ setTimeout(()=>{try{if(document.getElementById('cvLayoutPill')&&!/originale ·/.
     const sc=document.createElement('div');sc.className='lyS';sc.title='Ingrandisci / rimpicciolisci';
     const wd=document.createElement('div');wd.className='lyW';wd.title='Larghezza';
     el.appendChild(bar);el.appendChild(sc);el.appendChild(wd);
+    if(el.id==='tlRack')addRz(el);
     [[bar,'move'],[sc,'scale'],[wd,'width']].forEach(([h,kind])=>h.addEventListener('pointerdown',e=>startDrag(e,el,kind)));});
   function apply(){let B=0;ps.forEach(el=>{const P=L[el.dataset.lyk];if(!P)return;const st=el.style;
       st.setProperty('left',P.x+'px','important');st.setProperty('top',P.y+'px','important');st.setProperty('width',P.w+'px','important');
       st.setProperty('transform','scale('+P.s+')','important');st.setProperty('z-index',String(P.z||1),'important');
+      if(P.h){st.setProperty('height',P.h+'px','important');st.setProperty('overflow','clip','important');st.setProperty('overflow-clip-margin','12px','important');}
       B=Math.max(B,P.y+el.offsetHeight*P.s);});
     document.querySelector('main').style.minHeight=Math.ceil(B+40)+'px';try{fitCv();}catch(e){}}
+  function addRz(el){[['n','ns-resize'],['s','ns-resize'],['w','ew-resize'],['nw','nwse-resize'],['ne','nesw-resize'],['sw','nesw-resize']].forEach(([d,cur])=>{const hd=document.createElement('div');hd.className='lyE';hd.dataset.d=d;hd.title='Trascina per ridimensionare';hd.style.cursor=cur;el.appendChild(hd);hd.addEventListener('pointerdown',e=>startDrag(e,el,'r:'+d));});}
+  function rz(d,dx,dy,P,P0,H0){const u=dx/P0.s,v=dy/P0.s,W0=P0.w,xr=P0.x+W0,yb=P0.y+H0;
+    if(d.indexOf('w')>=0){P.w=Math.max(220,sn(W0-u));P.x=xr-P.w;}
+    if(d.indexOf('e')>=0){P.w=Math.max(220,sn(W0+u));}
+    if(d.indexOf('n')>=0){P.h=Math.max(60,sn(H0-v));P.y=Math.max(0,yb-P.h);}
+    if(d.indexOf('s')>=0){P.h=Math.max(60,sn(H0+v));}}
   function setEdit(v){edit=v;document.documentElement.classList.toggle('lyedit',v);if(!v){save();try{render();}catch(e){}}}
   function order(){const list=ps.map(el=>({el,P:L[el.dataset.lyk]})).sort((a,b)=>a.P.y-b.P.y||a.P.x-b.P.x);
     const W=Math.max(600,window.innerWidth-40);let x=0,y=0,rowH=0;
@@ -1178,8 +1192,9 @@ setTimeout(()=>{try{if(document.getElementById('cvLayoutPill')&&!/originale ·/.
   let dr=null,topZ=Math.max(...ps.map(el=>(L[el.dataset.lyk]||{}).z||1));
   const sn=v=>Math.round(v/8)*8;
   function startDrag(e,el,kind){e.preventDefault();e.stopPropagation();const P=L[el.dataset.lyk];P.z=++topZ;
-    dr={el,kind,P,sx:e.clientX,sy:e.clientY,P0:Object.assign({},P),pid:e.pointerId};try{e.target.setPointerCapture(e.pointerId);}catch(_){}apply();}
+    dr={el,kind,P,sx:e.clientX,sy:e.clientY,P0:Object.assign({},P),pid:e.pointerId,H0:el.offsetHeight};try{e.target.setPointerCapture(e.pointerId);}catch(_){}apply();}
   window.addEventListener('pointermove',e=>{if(!dr||e.pointerId!==dr.pid)return;const dx=e.clientX-dr.sx,dy=e.clientY-dr.sy,P=dr.P,P0=dr.P0;
+    if(dr.kind.slice(0,2)==='r:'){rz(dr.kind.slice(2),dx,dy,P,P0,dr.H0);apply();return;}
     if(dr.kind==='move'){P.x=sn(P0.x+dx);P.y=Math.max(0,sn(P0.y+dy));}
     else if(dr.kind==='scale'){P.s=Math.max(0.3,Math.min(2.5,Math.round((P0.w*P0.s+dx)/P0.w*100)/100));}
     else{P.w=Math.max(220,sn(P0.w+dx/P0.s));}
