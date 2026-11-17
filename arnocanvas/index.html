@@ -216,7 +216,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.8.6';
+var VER='0.8.7';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -1253,6 +1253,7 @@ $('#menuB').onclick=function(){
   var nd=Object.keys(M.I).filter(function(k){return M.I[k].hide}).length;
   var h='<button class="opt" data-m="claude"><span class="ic">📋</span><span>Invia le modifiche a Claude<small>Copia il riepilogo e incollalo nella chat</small></span></button>';
   h+='<button class="opt" data-m="spread"><span class="ic">⇲</span><span>Separa tutto<small>'+(S.lvl==='O'&&cont?'Mette gli oggetti di «'+esc(cut(nameAt(cont),26))+'» uno accanto all\'altro, senza sovrapposizioni':'Mette tutti i riquadri uno accanto all\'altro, senza sovrapposizioni')+' · le altre modifiche restano</small></span></button>';
+  h+='<button class="opt" data-m="copydev"><span class="ic">⇆</span><span>Copia da un altro schermo<small>Porta qui le modifiche fatte su un altro iPhone, iPad o Mac</small></span></button>';
   h+='<button class="opt" data-m="list"><span class="ic">▤</span><span>Elenco elementi<small>Accendi, spegni e ritrova riquadri e oggetti</small></span></button>';
   h+='<button class="opt" data-m="deleted"><span class="ic">🗑</span><span>Elementi eliminati ('+nd+')<small>Rimettili al loro posto</small></span></button>';
   h+='<button class="opt" data-m="import"><span class="ic">⤒</span><span>Importa modifiche<small>Incolla un riepilogo ARNOCANVAS</small></span></button>';
@@ -1262,7 +1263,7 @@ $('#menuB').onclick=function(){
   h+='<p class="hint" style="text-align:center;margin-top:14px">ARNOCANVAS versione '+VER+'<br>© 2026 Maurizio Arnone · Tutti i diritti riservati</p>';
   openSheet('Menu',h,function(c){c.addEventListener('click',function(e){var b=e.target.closest('[data-m]');if(!b)return;var m=b.getAttribute('data-m');
     if(m==='spread'){closeSheet();spreadAll();return}
-    if(m==='claude')showClaude();else if(m==='list')showList();else if(m==='deleted')showDeleted();else if(m==='import')showImport();else if(m==='help')showHelp();
+    if(m==='claude')showClaude();else if(m==='copydev')showCopyDev();else if(m==='list')showList();else if(m==='deleted')showDeleted();else if(m==='import')showImport();else if(m==='help')showHelp();
     else if(m==='reload'){closeSheet();loadApp()}
     else if(m==='reset'){if(confirm('Ripristinare l\'interfaccia originale? (Si può annullare con ↶)')){closeSheet();sel=null;cont=null;change(function(){M=blank()});setLevel('P')}}
   })});
@@ -1361,6 +1362,35 @@ function showList(){
   })});
 }
 $('#listB').onclick=showList;
+
+/* ---------- copia le modifiche da un altro schermo ---------- */
+function nChanges(m){if(!m||!m.I)return 0;return Object.keys(m.P||{}).length+Object.keys(m.I).length+(m.N||[]).length+(m.MV||[]).length}
+function showCopyDev(){
+  if(!ready){toast('Attendi che l\'app sia caricata');return}
+  var d=DV(),h='<p class="hint">Sostituisce le modifiche di <b>'+esc(A().n)+' · '+esc(d.n)+'</b> con quelle fatte su un altro schermo (si può annullare con ↶).<br><b>Adatta</b> ridimensiona in larghezza posizioni e misure per il nuovo schermo; <b>Così com\'è</b> copia i numeri identici.</p>',n=0;
+  DEVS.forEach(function(o){if(o.k===d.k)return;var m=lsGet('arnocanvas:m:'+S.app+':'+o.k,null),c=nChanges(m);if(!c)return;n++;
+    h+='<div class="li"><span class="nm">'+o.ic+' '+esc(o.n)+'<small>'+o.w+'×'+o.h+' · '+c+' modific'+(c===1?'a':'he')+'</small></span><button class="hb amb" data-cp="'+o.k+'" data-ad="1">Adatta</button><button class="hb" data-cp="'+o.k+'" data-ad="0">Così com\'è</button></div>'});
+  if(!n)h+='<p class="hint">Non ci sono modifiche di '+esc(A().n)+' su altri schermi.</p>';
+  openSheet('Copia da un altro schermo',h,function(c){c.addEventListener('click',function(e){var b=e.target.closest('[data-cp]');if(!b)return;closeSheet();copyFromDev(b.getAttribute('data-cp'),b.getAttribute('data-ad')==='1')})});
+}
+function copyFromDev(k,adapt){
+  var src=lsGet('arnocanvas:m:'+S.app+':'+k,null);if(!nChanges(src))return;
+  var from=null;DEVS.forEach(function(o){if(o.k===k)from=o});var rw=adapt&&from?DV().w/from.w:1;
+  hist.push(JSON.stringify(M));if(hist.length>80)hist.shift();redo=[];
+  // misure originali di questo schermo, per il confronto «prima»
+  M=blank();applyAll();var nat={};PANELS.forEach(function(p){if(vis(p.el)){var r=rectOf(p.el);nat[p.ref]={x:r1(r.x),y:r1(r.y),w:p.el.offsetWidth,h:p.el.offsetHeight}}});
+  var m=JSON.parse(JSON.stringify(src));if(!m.MV)m.MV=[];
+  function sc(v){return v==null?v:r1(v*rw)}
+  Object.keys(m.P||{}).forEach(function(r){var P=m.P[r],o=nat[r];
+    if(o&&P.x0!=null&&P.w0!=null){ // posizione originale di qui + la modifica fatta là (in larghezza adattata)
+      P.x=r1(o.x+(P.x-P.x0)*rw);P.y=r1(o.y+(P.y-(P.y0!=null?P.y0:P.y)));P.w=r1(o.w+(P.w-P.w0)*rw);
+    }else{P.x=sc(P.x);P.w=sc(P.w)}
+    if(P.e){if(P.e.l)P.e.l=sc(P.e.l);if(P.e.r)P.e.r=sc(P.e.r)}
+    if(o){P.x0=o.x;P.y0=o.y;P.w0=o.w;P.h0=o.h}else{P.x0=sc(P.x0);P.w0=sc(P.w0)}});
+  Object.keys(m.I||{}).forEach(function(r){var it=m.I[r];if(it.dx)it.dx=sc(it.dx);if(it.w!=null)it.w=Math.round(it.w*rw)});
+  M=m;sel=null;MS=[];cont=null;applyAll();commit();setLevel('P');
+  toast('Copiate le modifiche da '+(from?from.n:k)+(adapt&&rw!==1?' (adattate alla larghezza)':''));
+}
 
 function showDeleted(){
   var ks=Object.keys(M.I).filter(function(k){return M.I[k].hide});
