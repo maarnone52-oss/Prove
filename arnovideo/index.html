@@ -303,7 +303,8 @@ select{width:100%;min-height:46px;font-size:16px;background:#111317;color:var(--
  background:radial-gradient(circle at 35% 35%,#ffe2a0,#e89a00 70%);box-shadow:0 2px 6px rgba(0,0,0,.7)}
 #scrub::-moz-range-thumb{width:28px;height:28px;border-radius:50%;border:1px solid #ffcf6b;background:#e89a00}
 #scrub:disabled{opacity:.4}
-body.exporting #scrub:disabled{opacity:1}   /* durante l'esportazione la barra col pallino si vede bene */
+body.exporting #scrub:disabled{opacity:1}
+#expBtn.stopx{background:linear-gradient(180deg,#3a3d44,#22252b);color:#ffd36b;border-color:#ffb21e}   /* durante l'esportazione la barra col pallino si vede bene */
 /* riquadro Esportazioni: al posto dei comandi di riproduzione, avanti/indietro di un fotogramma (per esportare fotogrammi) */
 #pvBox .transport #prevItem,#pvBox .transport #rew,#pvBox .transport #playBtn,#pvBox .transport #ffw,#pvBox .transport #nextItem{display:none!important}
 #pvBox .transport .frs{min-width:96px;padding:0 14px;font-size:15px}
@@ -666,7 +667,7 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 
 <script>
 'use strict';
-const VERSION='1.39.0';
+const VERSION='1.39.1';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1694,7 +1695,7 @@ $('clearBtn').onclick=()=>{if(busy||(!items.length&&!music.length))return;pushUn
 function render(){
   renderLib();renderTrack();
   $('totDur').textContent=fmtT(totalDur());$('totN').textContent=items.length;
-  const none=!items.length;$('expBtn').disabled=none||busy;$('frameBtn').disabled=none||busy||frameBusyExp;$('clearBtn').disabled=(none&&!music.length)||busy;
+  const none=!items.length;$('expBtn').disabled=exporting?!!stopReq:(none||busy);$('frameBtn').disabled=none||busy||frameBusyExp;$('clearBtn').disabled=(none&&!music.length)||busy;
   updUndo();
   document.querySelectorAll('.tpb').forEach(b=>b.disabled=none||exporting);$('scrub').disabled=none||exporting;
   $('scrub').max=totalDur();
@@ -1981,8 +1982,9 @@ function pickMime(){
   for(const m of list){try{if(MediaRecorder.isTypeSupported(m))return m;}catch(e){}}
   return '';
 }
-function setBusy(b,exp){busy=b;exporting=!!(b&&exp);document.body.classList.toggle('exporting',exporting);$('stopBtn').hidden=!exporting;$('addBtn').disabled=b;render();}
-$('stopBtn').onclick=()=>{stopReq=true;const nr=nativeRender();if(nr)nr.postMessage({cmd:'cancel'});};
+function setBusy(b,exp){busy=b;exporting=!!(b&&exp);document.body.classList.toggle('exporting',exporting);$('stopBtn').hidden=true;   // il tasto «Esporta MP4» diventa «Ferma esportazione» finché esporta
+  {const eb=$('expBtn');eb.textContent=exporting?'■ Ferma esportazione':'● Esporta MP4';eb.classList.toggle('stopx',exporting);}$('addBtn').disabled=b;render();}
+$('stopBtn').onclick=()=>{stopReq=true;$('expBtn').disabled=true;$('expBtn').textContent='■ Fermo…';const nr=nativeRender();if(nr)nr.postMessage({cmd:'cancel'});};
 
 /* ---------- posizione, fotogramma e comandi di trasporto ---------- */
 let playT=0,playing=false,exporting=false,runP=null;
@@ -2133,7 +2135,7 @@ async function exportNative(nr){
   setBusy(false);setT(0);showFrame(0);setStatus(msg,err);
 }
 
-$('expBtn').onclick=async()=>{await stopPlay();if(busy||!items.length)return;
+$('expBtn').onclick=async()=>{if(exporting){$('stopBtn').onclick();return;}await stopPlay();if(busy||!items.length)return;
   const nr=nativeRender();if(nr)return exportNative(nr);
   const mime=pickMime(),cv=$('cv');
   if(mime===null||!cv.captureStream){setStatus('Questo browser non sa registrare video. Usa Safari su iPhone o Chrome aggiornato.',true);return;}
