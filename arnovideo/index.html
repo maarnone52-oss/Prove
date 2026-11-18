@@ -98,6 +98,9 @@ button{font:inherit;color:var(--text);cursor:pointer}
 .tclip{position:relative;flex:none;height:84px;border-radius:7px;overflow:hidden;background:#1a1c20;border:2px solid #ffb21e;cursor:grab;
  box-sizing:border-box;margin-right:2px;-webkit-user-select:none;user-select:none}
 .tclip.img{border-color:#38c6ff}
+#rbar{position:absolute;left:0;top:23px;height:4px;right:0;pointer-events:auto;z-index:4}
+#rbar i{position:absolute;top:0;height:4px;border-radius:2px;background:#ff9f1c}
+#rbar i.ok{background:#46ff7a}#rbar i.err{background:#ff4d4d}#rbar i.old{background:#555}
 .tclip .txf{position:absolute;left:0;bottom:0;height:24px;min-width:22px;z-index:3;touch-action:none;cursor:ew-resize;box-sizing:border-box;
  display:flex;align-items:center;justify-content:center;font:700 11px "SF Mono",Menlo,monospace;color:#fff;white-space:nowrap;overflow:hidden;
  background:rgba(0,0,0,.7);border-top:1px solid #ff6bd6;border-right:1px solid #ff6bd6;border-radius:0 6px 0 5px}
@@ -709,7 +712,7 @@ body.hasMenu{border-top:var(--mbh,34px) solid transparent;position:relative}
 
 <script>
 'use strict';
-const VERSION='1.44.0';
+const VERSION='1.45.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -897,6 +900,74 @@ async function toMP4(m,size,pre){size=size||'1920x1080';pre=pre||'';const nr=nat
   }catch(e){setStatus('Conversione in MP4 non riuscita: '+(e&&e.message||e),true);}
   finally{loading=false;loadUI(null);setBusy(false);render();}
   return ok;}
+
+/* ---------- rendering in sottofondo della timeline (solo app Mac) ----------
+   la timeline viene divisa in blocchi di circa 10 s (mai dentro una dissolvenza), il Mac li renderizza in qualità leggera
+   uno alla volta quando non si riproduce né si esporta; quando sono tutti pronti la riproduzione suona i blocchi */
+let rbOn=true;try{rbOn=localStorage.getItem('arnovideo-render')!=='0';}catch(e){}
+let rbPlaying=false,rbList=[],rbGen=0,rbTimer=null,rbRun=false;const rbCache=new Map();
+const RB_LEN=10;
+function rbHash(str){let h=5381;for(let i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))|0;return (h>>>0).toString(36)+str.length.toString(36);}
+function rbKey(it){return it.name+'|'+((it.file&&it.file.size)||it.size||0);}
+function rbBlocks(){normXf();const tot=totalDur();if(!items.length||tot<=0)return [];
+  const st=[];let a=0;items.forEach((c,i)=>{if(i)a+=items[i-1].dur-xfOf(i);st.push(a);});
+  const zones=items.map((c,i)=>i&&xfOf(i)>0?[st[i],st[i]+xfOf(i)]:null).filter(Boolean);
+  const cuts=[];let t=0;while(t<tot-0.01){let b=t+RB_LEN;if(b>=tot-3)b=tot;
+    if(b<tot){let best=null;items.forEach((c,i)=>[st[i],st[i]+c.dur].forEach(E=>{const d=Math.abs(b-E);if(d>0.001&&d<0.6&&(best==null||d<Math.abs(b-best)))best=E;}));if(best!=null&&best>t+1)b=best;}   // niente pezzi di clip più corti di 0,6 s
+    for(const z of zones)if(b>=z[0]&&b<z[1])b=z[1];   // mai dentro una dissolvenza
+    b=Math.min(b,tot);cuts.push([t,b]);t=b;}
+  const {w,h}=pvSize(),fit=$('fit').value,mus=music.filter(mc=>mc.start<tot-0.01);
+  return cuts.map(([b0,b1])=>{const its=[];let prevEnd=null;
+    items.forEach((c,i)=>{const s0=st[i],e0=s0+c.dur,A=Math.max(s0,b0),E=Math.min(e0,b1);if(E-A<0.02){return;}
+      const off=A-s0,d=E-A,vid=c.type==='vid';
+      const it={type:c.type,key:rbKey(c),dur:+d.toFixed(4),tin:vid?+((c.tin||0)+off).toFixed(4):0,vol:clipGain(c)*mixLevel('c'),xf:0,ain:0,aout:0,fin:0,fout:0};
+      if(vid){const ai=aIn(c),ao=aOut(c),fi=fIn(c),fo=fOut(c),endOff=off+d;
+        it.ain=Math.max(0,Math.min(d,ai-off));it.aout=Math.max(0,Math.min(d,ao-(c.dur-endOff)));
+        it.fin=off<ai+fi?Math.max(0,Math.min(d,ai+fi-Math.max(off,ai))):0;
+        const fs=c.dur-ao-fo;it.fout=endOff>fs?Math.max(0,Math.min(d,Math.min(endOff,c.dur-ao)-Math.max(off,fs))):0;}
+      if(prevEnd!=null&&prevEnd>A+0.001)it.xf=+(prevEnd-A).toFixed(4);
+      prevEnd=E;its.push(it);its[its.length-1]._m=c.media;});
+    const mu=[];mus.forEach(mc=>{const A=Math.max(mc.start,b0),E=Math.min(mc.start+mc.dur,b1,tot);if(E-A>0.01)
+      mu.push({key:rbKey(mc.media),start:+(A-b0).toFixed(4),tin:+((mc.tin||0)+(A-mc.start)).toFixed(4),dur:+(E-A).toFixed(4),vol:Math.max(0,Math.min(1,mc.vol))*mixLevel('m'),_m:mc.media});});
+    const pay={w,h,fit,items:its.map(({_m,...r})=>r),music:mu.map(({_m,...r})=>r)};
+    return {b0,b1,hash:rbHash(JSON.stringify(pay)),pay,need:[...its.map(x=>x._m),...mu.map(x=>x._m)]};});}
+function rbActive(){return rbOn&&!!nativeRender();}
+function rbSchedule(){if(!rbActive())return;clearTimeout(rbTimer);rbTimer=setTimeout(()=>{rbList=rbBlocks();rbGen++;paintRbar();rbLoop();},1200);}
+async function rbLoop(){if(rbRun)return;rbRun=true;
+  try{for(;;){const gen=rbGen;const todo=rbList.find(b=>!rbCache.has(b.hash));if(!todo||!rbActive())break;
+      while(busy||playing||exporting)await sleep(800);
+      if(gen!==rbGen)continue;   // la timeline è cambiata: si ricalcola cosa manca
+      try{await rbMake(todo);}catch(e){todo.err=true;rbCache.set(todo.hash,null);}
+      paintRbar();}
+    // tiene solo i blocchi utili (più un po' di quelli vecchi, per tornare indietro con «Annulla»)
+    const keep=new Set(rbList.map(b=>b.hash));if(rbCache.size>keep.size*2+10)for(const [k,v] of rbCache)if(!keep.has(k)){if(v&&v.url)URL.revokeObjectURL(v.url);rbCache.delete(k);if(rbCache.size<=keep.size*2)break;}}
+  finally{rbRun=false;}}
+async function rbMake(b){const nr=nativeRender();
+  for(const m of new Set(b.need))if(!(await nativeKnow(m)))throw new Error('file');
+  const id='b'+(++thumbReq);
+  const res=await new Promise(r=>{arnoNative._wait[id]=r;nr.postMessage(Object.assign({cmd:'block',id},b.pay));
+    setTimeout(()=>{if(arnoNative._wait[id]){delete arnoNative._wait[id];r(null);}},180000);});
+  if(!res||res.error)throw new Error(res&&res.error||'nessuna risposta');
+  const blob=await pxReadNative(res.url);try{nr.postMessage({cmd:'delconv',url:res.url});}catch(e){}
+  if(blob.size<500)throw new Error('blocco vuoto');
+  rbCache.set(b.hash,{url:URL.createObjectURL(blob),dur:b.b1-b.b0});}
+function rbStat(){const n=rbList.length,ok=rbList.filter(b=>rbCache.get(b.hash)).length;return {n,ok};}
+// elenco da suonare: solo se tutti i blocchi della timeline attuale sono pronti
+function rbPlayList(){if(!rbActive()||!items.length)return null;const L=rbBlocks();if(!L.length)return null;
+  const out=[];for(const b of L){const c=rbCache.get(b.hash);if(!c)return null;
+    out.push({id:'rb'+b.hash,type:'vid',name:'blocco '+(out.length+1),url:c.url,dur:b.b1-b.b0,tin:0,vol:1,ain:0,aout:0,fin:0,fout:0,xf:0,_xi:0,_xo:0});}
+  return out;}
+function paintRbar(){const tin=$('trackIn');if(!tin)return;let bar=$('rbar');
+  if(!rbActive()||!items.length){if(bar)bar.remove();return;}
+  if(!bar){bar=document.createElement('div');bar.id='rbar';tin.appendChild(bar);}
+  const cur=new Set(rbBlocks().map(b=>b.hash));
+  bar.innerHTML='';rbList.forEach(b=>{const x0=tToX(b.b0),x1=tToX(b.b1),c=rbCache.get(b.hash),d=document.createElement('i');
+    d.style.left=x0+'px';d.style.width=Math.max(1,x1-x0-1)+'px';d.className=!cur.has(b.hash)?'old':c?'ok':c===null?'err':'';
+    d.title=c?'Renderizzato: riproduzione fluida':c===null?'Rendering non riuscito: qui suonano i file':'Da renderizzare';bar.appendChild(d);});}
+function setRender(v){rbOn=v;try{localStorage.setItem('arnovideo-render',v?'1':'0');}catch(e){}
+  if(v){setStatus('Rendering in sottofondo attivo: la timeline diventa fluida man mano che i blocchi sono pronti.');rbSchedule();}
+  else{setStatus('Rendering in sottofondo spento: si riproducono i file.');paintRbar();}}
+
 /* ---------- copie leggere per la riproduzione (solo app Mac) ----------
    i video pesanti (oltre Full HD, HEVC o oltre 25 Mbit/s) suonano da una copia 960×540 creata dal Mac in sottofondo;
    l'esportazione usa sempre gli originali */
@@ -1378,7 +1449,7 @@ function renderTrack(){
       '<div class="trim l" data-side="l" title="Taglia l\'inizio"></div><div class="trim r" data-side="r" title="Taglia la fine"></div>'+
       (i>0?'<div class="txf'+(L.o>0?' on':'')+'" title="Trascina a sinistra: la clip si sovrappone alla precedente e fa la dissolvenza" style="'+(L.o>0?'width:'+L.o+'px':'')+'">'+(L.o>0?'⨯ '+fmtT(c.xf):'⧉')+'</div>':'');
     d.querySelector('.tname').textContent=(i+1)+' · '+c.name;lane.appendChild(d);});
-  renderMusic();zoomLabel();paintTrack(true);renderSel();placeHead();
+  renderMusic();zoomLabel();paintTrack(true);renderSel();placeHead();paintRbar();
 }
 /* riquadri e righello: disegnati solo nella parte visibile (la timeline può essere lunghissima) */
 let paintQueued=false;
@@ -1863,6 +1934,7 @@ function render(){
   $('scrub').max=totalDur();
   if(!busy){if(none){setT(0);blank();}else showFrame(Math.min(playT,totalDur()));}
   if(!restoring)scheduleSave();
+  rbSchedule();
 }
 const goToItem=id=>{const i=items.findIndex(x=>x.id===id);if(i>=0&&!exporting){unlockPv();jumpTo(startOf(i));}};
 
@@ -2001,7 +2073,7 @@ function clipGain(c){return Math.max(0,Math.min(4,c&&c.vol!=null?c.vol:1));}   /
 // cursore del volume: metà corsa = 100%, tutto a destra = 400%
 const volToPos=g=>g<=1?g/2:0.5+(g-1)/6,posToVol=f=>f<=0.5?f*2:1+(f-0.5)*6;
 let curAOn=true;
-function applyClipVol(){if(curPlayer&&curClip){const k=curAOn?clipGain(curClip)*curEnv:0;if(curPlayer.g)curPlayer.g.gain.value=k;else try{curPlayer.v.volume=Math.min(1,k*mixLevel('c')*(curPlayer.src?1:monK()));}catch(e){}}}
+function applyClipVol(){if(curPlayer&&curClip){const k=curAOn?clipGain(curClip)*curEnv:0;if(curPlayer.g)curPlayer.g.gain.value=k;else try{curPlayer.v.volume=Math.min(1,k*(rbPlaying?1:mixLevel('c'))*(curPlayer.src?1:monK()));}catch(e){}}}
 let curEnv=1;
 function gateAudio(lt){if(!curClip)return;const env=clipEnv(curClip,lt),on=env>0;   // taglio audio e dissolvenze
   if(on===curAOn&&Math.abs(env-curEnv)<0.004)return;curAOn=on;curEnv=env;
@@ -2066,42 +2138,48 @@ async function prepare(p,it){
 }
 
 async function runSequence(rec,startT=0){
+  // con la timeline renderizzata (app Mac) suonano i blocchi già pronti: tagli, dissolvenze, volumi e musica sono dentro
+  const BLK=!rec&&rbPlayList();const SQ=BLK||items;rbPlaying=!!BLK;if(BLK&&busC)busC.gain.value=1;
+  const xS=i=>i>0&&SQ[i]?(SQ[i].xf||0):0;
+  const sS=i=>{let a=0;for(let k=0;k<i;k++)a+=SQ[k].dur-xS(k+1);return a;};
+  const lS=t=>{let acc=0;for(let i=0;i<SQ.length;i++){const d=SQ[i].dur;if(t<acc+d||i===SQ.length-1)return {i,off:Math.max(0,Math.min(d,t-acc)),acc};acc+=d-xS(i+1);}return null;};
+  try{
   const cv=$('cv'),{w,h}=rec?outSize():pvSize();if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;fitCv();}
   const x=cv.getContext('2d'),mode=$('fit').value,total=totalDur();
   audioInit();if(actx&&actx.state!=='running'){try{await actx.resume();}catch(e){}}
   if(mon)mon.gain.value=rec?0.0001:Math.max(0.0001,monVol*monVol);    // in esportazione non si sente (resta registrato)
   let done=0,pi=0;
   const clear=()=>{x.fillStyle='#000';x.fillRect(0,0,w,h);};
-  const tick=t=>{setT(t);syncMusic(t);};
-  const mark=markCur;
+  const tick=t=>{setT(t);if(!BLK)syncMusic(t);};
+  const mark=BLK?(()=>{}):markCur;
   // da dove si parte
-  const L=locate(startT)||{i:0,off:0,acc:0};let first=L.i,off=L.off;done=L.acc;
-  if(items[first]&&off>=items[first].dur-0.05&&first<items.length-1){first++;done=startOf(first);off=Math.max(0,startT-done);}
+  const L=lS(startT)||{i:0,off:0,acc:0};let first=L.i,off=L.off;done=L.acc;
+  if(SQ[first]&&off>=SQ[first].dur-0.05&&first<SQ.length-1){first++;done=sS(first);off=Math.max(0,startT-done);}
   let carry=0;   // secondi della clip già passati durante la dissolvenza con la precedente
   // dissolvenza: la clip dopo si disegna sopra con trasparenza crescente; il suo audio sale mentre quello della clip sfuma
-  const blendNext=(i,lt,cur,np)=>{const nI=items[i+1],xf=xfOf(i+1);if(!nI||xf<=0)return;const st=it_dur(i)-xf;if(lt<st)return;
+  const blendNext=(i,lt,cur,np)=>{const nI=SQ[i+1],xf=xS(i+1);if(!nI||xf<=0)return;const st=it_dur(i)-xf;if(lt<st)return;
     const a=Math.max(0,Math.min(1,(lt-st)/xf)),nlt=lt-st;x.globalAlpha=a;
     if(nI.type==='img')drawFit(x,nI.el,nI.w,nI.h,w,h,mode);else if(np&&np.v.readyState>=2)drawFit(x,np.v,np.v.videoWidth,np.v.videoHeight,w,h,mode);
     x.globalAlpha=1;
     if(np){const k=clipGain(nI)*clipEnv(nI,nlt);if(np.g)np.g.gain.value=k;else try{np.v.volume=Math.min(1,k*mixLevel('c')*(np.src?1:monK()));}catch(_){}}};
-  const it_dur=i=>items[i].dur;
+  const it_dur=i=>SQ[i].dur;
   // avvia in anticipo il video della clip dopo, per la dissolvenza
-  const startNext=(i,busyP)=>{const nI=items[i+1];if(!nI||nI.type!=='vid')return null;const e=plan.get(i+1);
+  const startNext=(i,busyP)=>{const nI=SQ[i+1];if(!nI||nI.type!=='vid')return null;const e=plan.get(i+1);
     if(!e||!e.ready||e.p===busyP)return null;const q=e.p;if(!q.v.paused)return q;if(q.g)q.g.gain.value=0;else try{q.v.volume=0;}catch(_){}
     q.pre=performance.now();q.t0=q.v.currentTime;const pr=q.v.play();if(pr&&pr.catch)pr.catch(()=>{q.pre=0;});return q;};
   // prepara il primo video
-  const nextVid=k=>{for(let j=k;j<items.length;j++)if(items[j].type==='vid')return j;return -1;};
+  const nextVid=k=>{for(let j=k;j<SQ.length;j++)if(SQ[j].type==='vid')return j;return -1;};
   // lettori pronti in anticipo: le prossime due clip video (tre lettori a rotazione)
   const plan=new Map();
   const ensurePlan=(from,busyP)=>{let j=from-1;
     for(let n=0;n<2;n++){j=nextVid(j+1);if(j<0)break;if(plan.has(j))continue;
       const used=new Set([busyP,...[...plan.values()].map(e=>e.p)]);
       let k=0;while(k<3&&used.has(player(k)))k++;if(k>=3)break;
-      const pl=player(k),e={p:pl,ready:false};e.prom=prepare(pl,items[j]).then(()=>{e.ready=true;});plan.set(j,e);}};
+      const pl=player(k),e={p:pl,ready:false};e.prom=prepare(pl,SQ[j]).then(()=>{e.ready=true;});plan.set(j,e);}};
   ensurePlan(first,null);
   if(rec)rec.start(1000);
-  for(let i=first;i<items.length&&!stopReq;i++){
-    const it=items[i],o=i===first?off:carry;carry=0;mark(i);const xn=xfOf(i+1);setStatus((rec?'Esporto':'Riproduzione')+' · '+(i+1)+'/'+items.length+' · '+it.name);
+  for(let i=first;i<SQ.length&&!stopReq;i++){
+    const it=SQ[i],o=i===first?off:carry;carry=0;mark(i);const xn=xS(i+1);setStatus((rec?'Esporto':'Riproduzione')+' · '+(i+1)+'/'+SQ.length+' · '+it.name);
     if(it.type==='img'){
       const t0=performance.now()-o*1000;
       let drawn=0,inX=false,np=null;
@@ -2122,7 +2200,7 @@ async function runSequence(rec,startT=0){
     if(!pre&&Math.abs(v.currentTime-want)>0.04){v.currentTime=want;try{await once(v,'seeked',4000);}catch(e){}}
     curClip=it;curPlayer=p;curEnv=clipEnv(it,o);curAOn=curEnv>0;applyClipVol();   // volume della clip (entra anche nel video esportato)
     if(!pre){try{await v.play();}catch(e){setStatus('Il video «'+it.name+'» non parte: '+e.message,true);done+=it.dur-xn;continue;}}
-    const nx=items[i+1]&&items[i+1].type==='vid'?items[i+1]:null;let np=null;
+    const nx=SQ[i+1]&&SQ[i+1].type==='vid'?SQ[i+1]:null;let np=null;
     let lastDraw=-1;
     await new Promise(res=>{let fin=false;
       const stop=()=>{if(fin)return;fin=true;res();};
@@ -2151,6 +2229,7 @@ async function runSequence(rec,startT=0){
   players.forEach(q=>{if(q&&q.pre){q.pre=0;try{q.v.pause();}catch(e){}}});
   curClip=null;curPlayer=null;musicStop();
   if(mon)mon.gain.value=Math.max(0.0001,monVol*monVol);
+  }finally{rbPlaying=false;if(BLK)applyMix();}
 }
 
 function pickMime(){
@@ -2513,6 +2592,8 @@ document.addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey)return
       {l:'Riaggancia l’anteprima',run:()=>click('pvBack'),on:()=>!!btn('pvBack')},
       {l:'Disposizione dei riquadri…',run:()=>click('lyBtn'),on:()=>!!btn('lyBtn')},
       '-',
+      {l:'Rendering in sottofondo (timeline fluida)',chk:()=>rbOn&&!!nativeRender(),run:()=>setRender(!rbOn),on:()=>!!nativeRender()},
+      {l:()=>{if(!nativeRender())return 'Rendering: solo nell\'app Mac';const r=rbStat();return 'Timeline renderizzata: '+r.ok+' di '+r.n+' blocchi';},on:()=>false},
       {l:'Riproduzione con copie leggere',chk:()=>proxyOn&&!!nativeRender(),run:()=>setProxy(!proxyOn),on:()=>!!nativeRender()&&!exporting},
       {l:()=>{if(!nativeRender())return 'Copie leggere: solo nell\'app Mac';const c=pxCount();return 'Copie leggere pronte: '+c.ready+(c.work?' · in preparazione: '+c.work:'');},on:()=>false}]}];
   const val=v=>typeof v==='function'?v():v;
