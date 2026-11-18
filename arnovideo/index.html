@@ -855,7 +855,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.11';
+const VERSION='1.49.12';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1994,7 +1994,15 @@ const cutWin={el:$('cutWin'),open:false};
     $('cutInfo').textContent='taglio a '+fmtT(cut)+(side==='l'?' · accorci l\'inizio di «'+c.name+'»':' · accorci la fine di «'+c.name+'»');
     try{setT(cut);placeHead();}catch(e){}};
   W.show=(c,side)=>{const cvs=[pane.L.cv,pane.R.cv],o=outSize();cvs.forEach(cv=>{const h=Math.round(640*o.h/o.w/2)*2||360;if(cv.height!==h){cv.height=h;}cv.parentNode.style.aspectRatio=o.w+'/'+o.h;});
-    W.el.hidden=false;W.open=true;W.update(c,side);W.arm();};
+    W.el.hidden=false;W.open=true;W.place();W.update(c,side);W.arm();};
+  // posizione: subito sopra la timeline, senza coprirla (si rimpicciolisce se lo spazio è poco); se l'hai spostata a mano resta dove l'hai messa
+  W.place=()=>{if(W.moved)return;const tk=$('track');if(!tk)return;const r=tk.getBoundingClientRect(),o=outSize();
+    const mb=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--mbh'))||34,top0=mb+4,avail=r.top-6-top0;
+    const ar=o.h/o.w||9/16,extra=62;   // barra del titolo, scritte e margini
+    let wd=Math.min(760,innerWidth*0.96,(Math.max(60,avail-extra))/ar*2+24);wd=Math.max(220,wd);
+    W.el.style.width=wd+'px';W.el.style.transform='none';W.el.style.left=Math.round((innerWidth-wd)/2)+'px';
+    const h=W.el.offsetHeight;W.el.style.top=Math.max(top0,Math.round(r.top-6-h))+'px';};
+  window.addEventListener('resize',()=>{if(W.open)W.place();});
   // chiusura automatica dopo N secondi dall'ultimo tocco (0 = mai)
   let acT=null;W.autoSec=()=>{let v=5;try{const x=localStorage.getItem('arnovideo-cutauto');if(x!==null)v=parseFloat(x);}catch(e){}return isNaN(v)?5:v;};
   W.arm=()=>{clearTimeout(acT);acT=null;if(!W.open)return;const n=W.autoSec();if(n>0)acT=setTimeout(()=>{if(W.open)W.close();},n*1000);};
@@ -2004,7 +2012,7 @@ const cutWin={el:$('cutWin'),open:false};
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&W.open)W.close();});
   // si sposta trascinando la barra del titolo
   let dg=null;$('cutHead').addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;const r=W.el.getBoundingClientRect();
-    dg={dx:e.clientX-r.left,dy:e.clientY-r.top,pid:e.pointerId};W.el.style.transform='none';W.el.style.left=r.left+'px';W.el.style.top=r.top+'px';
+    W.moved=true;dg={dx:e.clientX-r.left,dy:e.clientY-r.top,pid:e.pointerId};W.el.style.transform='none';W.el.style.left=r.left+'px';W.el.style.top=r.top+'px';
     try{e.target.setPointerCapture(e.pointerId);}catch(_){}});
   window.addEventListener('pointermove',e=>{if(!dg||e.pointerId!==dg.pid)return;
     W.el.style.left=Math.max(4-W.el.offsetWidth*0.7,Math.min(innerWidth-40,e.clientX-dg.dx))+'px';W.el.style.top=Math.max(0,Math.min(innerHeight-40,e.clientY-dg.dy))+'px';});
