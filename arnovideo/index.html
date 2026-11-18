@@ -855,7 +855,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.18';
+const VERSION='1.49.19';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1952,9 +1952,9 @@ const fxPlay=(function(){let btn=null,hideT=null,watch=null,rng=null;
     btn.onclick=async e=>{e.stopPropagation();if(!rng)return;const r=rng;hide();unlockPv();await stopPlay();
       // il riquadro Cut resta aperto durante la riproduzione di «Rivedi»
       const c=items[r.i];if(c&&cutWin.show){if((c.xf||0)>0)cutWin.showXf(c);else cutWin.show(c,'l');}cutWin.keep=true;
-      setT(Math.max(0,r.a-3));startPlay();const stopAt=Math.min(totalDur(),r.b+3);clearInterval(watch);
+      setT(Math.max(0,r.a-3));startPlay();if(cutWin.syncRun)setTimeout(()=>cutWin.syncRun(r.i),300);const stopAt=Math.min(totalDur(),r.b+3);clearInterval(watch);
       // finita la riproduzione: cursore all'inizio dell'effetto e tasto di nuovo visibile per 5 s
-      const done=async()=>{clearInterval(watch);await stopPlay();cutWin.keep=false;if(cutWin.arm)cutWin.arm();showFrame(r.a);rng=r;place(5000);};
+      const done=async()=>{clearInterval(watch);await stopPlay();cutWin.keep=false;cutWin.syncStop();if(cutWin.arm)cutWin.arm();showFrame(r.a);rng=r;place(5000);};
       watch=setInterval(()=>{if(!playing){done();return;}if(playT>=stopAt)done();},40);};
     window.addEventListener('pointerdown',e=>{if(btn&&!btn.hidden&&e.target!==btn)hide();},true);}
   // i = indice della clip che entra (confine tra i-1 e i); se i è oltre l'ultima, il taglio è la fine della timeline
@@ -2004,6 +2004,17 @@ const cutWin={el:$('cutWin'),open:false};
     catch(e){}finally{p.busy=false;}}
   function show(p,it,t,tag){if(!it){p.want=null;blackOut(p,tag==='L'?'inizio della timeline':'fine della timeline');p.name.textContent='';p.tc.textContent='';return;}
     p.name.textContent='«'+it.name+'»';p.tc.textContent=it.type==='vid'?fmtT(t):'foto';p.want={it,t};pump(p);}
+  // durante «Rivedi»: i due riquadri suonano (muti) in sincronia con la timeline
+  W.syncRun=i=>{const L=items[i-1],R=items[i];if(!L||!R)return;let alive=true;W.syncStop=()=>{alive=false;[pane.L,pane.R].forEach(p=>{try{p.v.pause();}catch(e){}});};
+    const step=(p,it,st)=>{if(!it||it.type!=='vid')return;const v=p.v;if(v.dataset.url!==playUrl(it))return;
+      const lt=playT-st,inR=lt>=0&&lt<=it.dur,tt=(it.tin||0)+Math.max(0,Math.min(it.dur-0.02,lt));
+      if(inR){if(v.paused){try{v.currentTime=tt;v.play().catch(()=>{});}catch(e){}}else if(Math.abs(v.currentTime-tt)>0.2){try{v.currentTime=tt;}catch(e){}}}
+      else if(!v.paused){v.pause();try{v.currentTime=tt;}catch(e){}}
+      if(v.readyState>=2)draw(p,v,v.videoWidth,v.videoHeight);p.tc.textContent=fmtT(tt);};
+    const sL=startOf(i-1),sR=startOf(i);pane.L.want=null;pane.R.want=null;
+    const loop=()=>{if(!alive)return;if(!playing&&!W.keep){W.syncStop();return;}step(pane.L,L,sL);step(pane.R,R,sR);requestAnimationFrame(loop);};
+    requestAnimationFrame(loop);};
+  W.syncStop=()=>{};
   const kinds=(a,b)=>{$('cutLk').textContent=a;$('cutRk').textContent=b;};
   // dissolvenza: a sinistra la clip che esce dove comincia a sfumare, a destra quella che entra dove è del tutto visibile
   W.updateXf=c=>{const i=items.indexOf(c);if(i<1)return;const L=items[i-1],xf=c.xf||0;kinds('◀ inizio dissolvenza','fine dissolvenza ▶');
