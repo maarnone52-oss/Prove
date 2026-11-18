@@ -107,6 +107,9 @@ button{font:inherit;color:var(--text);cursor:pointer}
 .tclip .txf.on{height:100%;border:0;border-right:2px solid #ff6bd6;border-radius:5px 0 0 5px;align-items:flex-end;padding-bottom:4px;
  background:linear-gradient(90deg,rgba(255,107,214,.05),rgba(255,107,214,.45))}
 .tclip.xfon{box-shadow:-3px 0 0 rgba(255,107,214,.6)}
+.tclip .txo{position:absolute;right:0;top:0;height:22px;min-width:22px;z-index:6;touch-action:none;cursor:ew-resize;box-sizing:border-box;
+ display:flex;align-items:center;justify-content:center;font:700 11px "SF Mono",Menlo,monospace;color:#fff;
+ background:rgba(0,0,0,.7);border-bottom:1px solid #ff6bd6;border-left:1px solid #ff6bd6;border-radius:0 5px 0 6px}
 .tclip.sel{border-color:#fff;box-shadow:0 0 0 2px #46ff7a}
 .tclip.cur .tname{color:#46ff7a}
 .tclip.drag{opacity:.3}
@@ -850,7 +853,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.1';
+const VERSION='1.49.2';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1588,6 +1591,7 @@ function renderTrack(){
     d.innerHTML='<div class="tiles"></div><div class="tname"></div><div class="tdur">'+fmtT(c.dur)+'</div><div class="tgrip">⠿</div>'+
       (c.type==='vid'&&clipGain(c)<0.995?'<div class="tvol">'+(clipGain(c)===0?'🔇':'🔈 '+Math.round(clipGain(c)*100)+'%')+'</div>':'')+
       '<div class="trim l" data-side="l" title="Taglia l\'inizio"></div><div class="trim r" data-side="r" title="Taglia la fine"></div>'+
+      (i<items.length-1?'<div class="txo" title="Trascina a destra: la clip si allunga sotto la successiva e fa la dissolvenza (fino alla fine del file)">⧉</div>':'')+
       (i>0?'<div class="txf'+(L.o>0?' on':'')+'" title="Trascina a sinistra: la clip si sovrappone alla precedente e fa la dissolvenza" style="'+(L.o>0?'width:'+L.o+'px':'')+'">'+(L.o>0?'⨯ '+fmtT(c.xf):'⧉')+'</div>':'');
     d.querySelector('.tname').textContent=(i+1)+' · '+c.name;lane.appendChild(d);});
   renderMusic();zoomLabel();paintTrack(true);renderSel();placeHead();paintRbar();
@@ -1998,6 +2002,27 @@ const cutWin={el:$('cutWin'),open:false};
   const end=e=>{if(dg&&e.pointerId===dg.pid)dg=null;};window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
 })();
 
+/* ---------- dissolvenza dalla coda della clip che esce: la clip si allunga sotto la successiva, che resta ferma ---------- */
+(function(){let xo=null;
+  $('lane').addEventListener('pointerdown',async e=>{const h=e.target.closest('.txo');if(!h||busy)return;e.preventDefault();e.stopPropagation();
+    const el=h.closest('.tclip'),L=items.find(x=>x.id===+el.dataset.id),i=items.indexOf(L),c=items[i+1];if(!L||!c)return;
+    xo={L,c,sx:e.clientX,dur0:L.dur,xf0:c.xf||0,pid:e.pointerId,moved:false};try{h.setPointerCapture(e.pointerId);}catch(_){}
+    selId=c.id;renderSel();unlockPv();await stopPlay();if(cutWin.showXf)cutWin.showXf(c);});
+  window.addEventListener('pointermove',e=>{if(!xo||e.pointerId!==xo.pid)return;const {L,c}=xo,q=v=>Math.round(v*FPS)/FPS;
+    if(!xo.moved){if(Math.abs(e.clientX-xo.sx)<3)return;xo.moved=true;pushUndo('dissolvenza di «'+c.name+'»');}
+    const i=items.indexOf(c);
+    // limiti automatici: fine del file della clip che esce, lunghezza della clip che entra (e la sua dissolvenza dopo)
+    const mediaMax=L.type==='vid'?(L.media.dur-(L.tin||0)):60;
+    const maxD=Math.max(0,Math.min(mediaMax-xo.dur0,c.dur-0.1-xo.xf0,c.dur-xfOf(i+1)-0.1-xo.xf0));
+    const minD=-xo.xf0;
+    const d=Math.max(minD,Math.min(maxD,q((e.clientX-xo.sx)/trK()/pps)));
+    L.dur=q(xo.dur0+d);c.xf=Math.max(0,q(xo.xf0+d));relayout();
+    const tip=$('trimTip');tip.hidden=false;
+    tip.textContent=(c.xf>0?'⨯ dissolvenza '+fmtT(c.xf):'nessuna dissolvenza')+(d>=maxD-0.001&&maxD>0?' · limite':'');placeTip(tip,e.clientX);
+    showFrame(startOf(i)+Math.max(0,(c.xf||0)/2));if(cutWin.open)cutWin.updateXf(c);});
+  const up=e=>{if(!xo||e.pointerId!==xo.pid)return;const t=xo;xo=null;$('trimTip').hidden=true;if(t.moved){scheduleSave();render();}};
+  window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);})();
+
 /* ---------- taglio in testa e in coda con le maniglie ---------- */
 const TRIM_MIN=0.2;
 function relayout(){   // aggiorna larghezze e tempi senza ricostruire la timeline (il dito resta sulla maniglia)
@@ -2141,7 +2166,7 @@ const goToItem=id=>{const i=items.findIndex(x=>x.id===id);if(i>=0&&!exporting){u
     const onThumb=!!e.target.closest('.lgrip,.lthumb');if(!onThumb&&e.pointerType!=='mouse')return;   // col dito: solo dalla maniglia (il resto scorre)
     if(onThumb)e.preventDefault();
     const m=media.find(x=>x.mid===+row.dataset.mid);if(m)start(e,'lib',{m},m.thumb,m.name);});
-  $('lane').addEventListener('pointerdown',e=>{if(e.target.closest('.trim')||e.target.closest('.txf'))return;const el=e.target.closest('.tclip');if(!el)return;
+  $('lane').addEventListener('pointerdown',e=>{if(e.target.closest('.trim')||e.target.closest('.txf')||e.target.closest('.txo'))return;const el=e.target.closest('.tclip');if(!el)return;
     const c=items.find(x=>x.id===+el.dataset.id);if(!c)return;
     const grip=!!e.target.closest('.tgrip');
     if(e.pointerType!=='mouse'&&!grip){d={from:'tap',id:c.id,sx:e.clientX,sy:e.clientY,pid:e.pointerId,ev:e};return;}   // col dito: tocco o scorrimento
