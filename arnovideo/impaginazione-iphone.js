@@ -50,6 +50,7 @@ function setTS(el,dx,dy,s){var st=el.style;dx=dx||0;dy=dy||0;s=s||1;if(s!==1)put
   else{var t='';if(dx||dy)t+='translate('+dx+'px,'+dy+'px) ';if(s!==1)t+='scale('+s+')';if(t)put(st,'transform',t)}}
 function applyItem(ref){
   var it=M.I[ref],el=resolve(ref);if(!it||!el)return;var st=el.style;
+  if(el.closest&&el.closest('#tlExp,#tlStat'))return;   // tasti spostati dal riquadro Esportazioni nella Timeline: le vecchie regolazioni non valgono più
   if(it.dx||it.dy||(it.s&&it.s!==1))setTS(el,it.dx,it.dy,it.s);
   if(it.w!=null){imp(st,'box-sizing','border-box');imp(st,'width',it.w+'px');imp(st,'min-width',it.w+'px');imp(st,'max-width','none');imp(st,'flex','none')}
   if(it.h!=null){imp(st,'box-sizing','border-box');imp(st,'height',it.h+'px');imp(st,'min-height',it.h+'px');imp(st,'max-height','none')}
@@ -98,7 +99,7 @@ function applyAll(){
   for(var pass=0;pass<4&&ops.length;pass++)ops=ops.filter(function(op){return !(op.n?createNew(op.n):applyMove(op.m))});
   Object.keys(M.I).forEach(applyItem);
   if(!M.frozen)return;
-  var list=[],gone=null;Object.keys(M.P).forEach(function(ref){var el=resolve(ref);if(el&&el.classList&&el.classList.contains('setPanel'))gone=M.P[ref];else if(el&&vis(el))list.push({el:el,P:M.P[ref]})});if(gone){var nx=null;list.forEach(function(p){if(p.P.y>gone.y&&(nx==null||p.P.y<nx))nx=p.P.y});if(nx!=null){var dy=nx-gone.y;list=list.map(function(p){return p.P.y>gone.y?{el:p.el,P:Object.assign({},p.P,{y:p.P.y-dy})}:p})}}
+  var list=[],gone=[];Object.keys(M.P).forEach(function(ref){var el=resolve(ref);if(el&&el.classList&&el.classList.contains('setPanel'))gone.push(M.P[ref]);else if(el&&vis(el))list.push({el:el,P:M.P[ref]})});if(gone.length){var all=list.map(function(p){return p.P.y}).concat(gone.map(function(g){return g.y})).sort(function(a,b){return a-b}),cuts=[];gone.forEach(function(g){var nx=null;all.forEach(function(y){if(y>g.y&&(nx==null||y<nx))nx=y});if(nx!=null)cuts.push({y:g.y,d:nx-g.y})});list=list.map(function(p){var d=0;cuts.forEach(function(c){if(p.P.y>c.y)d+=c.d});return d?{el:p.el,P:Object.assign({},p.P,{y:p.P.y-d})}:p})}
   list.forEach(function(p){var st=p.el.style;imp(st,'position','absolute');imp(st,'margin','0');imp(st,'box-sizing','border-box');imp(st,'max-width','none');imp(st,'left','0px');imp(st,'top','0px');imp(st,'width',p.P.w+'px')});
   list.forEach(function(p){var r=p.el.getBoundingClientRect(),cs=W.getComputedStyle(p.el);
     p.c={x:r.left+W.pageXOffset,y:r.top+W.pageYOffset,pad:{t:parseFloat(cs.paddingTop)||0,r:parseFloat(cs.paddingRight)||0,b:parseFloat(cs.paddingBottom)||0,l:parseFloat(cs.paddingLeft)||0}}});
@@ -111,7 +112,10 @@ function pill(){var a=D.getElementById('cvLayoutPill');if(!a){a=D.createElement(
   a.style.cssText='position:fixed;z-index:2147483646;right:10px;bottom:10px;background:#04161d;color:#35d0ff;border:1px solid #1aa4d6;font:600 11px/1 -apple-system,Helvetica,Arial,sans-serif;padding:6px 9px;border-radius:8px;text-decoration:none;opacity:.9';
   D.body.appendChild(a)}
   a.textContent=off?'Impaginazione originale · mostra quella iPhone':M?'Impaginazione iPhone '+(KEY.slice(-1)==='o'?'orizzontale ':'')+'(ARNOCANVAS) · mostra originale':'Orizzontale: impaginazione non ancora disegnata';
-  a.href=location.pathname+(off?'':'?impaginazione=0');}
+  a.href=location.pathname+(off?'':'?impaginazione=0');
+  // si vede per qualche secondo e poi sparisce, così non copre i tasti che passano sotto
+  a.style.transition='opacity .6s';a.style.opacity='.9';a.style.pointerEvents='auto';clearTimeout(a._t);
+  a._t=setTimeout(function(){a.style.opacity='0';a.style.pointerEvents='none';},6000);}
 // la scelta dipende da larghezza e orientamento; girando il telefono si passa all'altra impaginazione senza ricaricare
 function choose(){var p=pick();KEY=p.k;M=p.m;BASEW=p.w}
 function relayout(){resetAll();choose();pill();if(!off&&M)applyAll();

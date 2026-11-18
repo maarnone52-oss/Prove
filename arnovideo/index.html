@@ -363,6 +363,13 @@ html.lyedit .lyE[data-d=nw]{left:-8px;top:-8px}html.lyedit .lyE[data-d=ne]{right
 html.macapp main{max-width:none}
 html.macapp #mirrorBox{max-width:min(800px,50vw)}
 html.macapp #cv{max-height:70vh}
+#mirrorBox .tlx{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+#mirrorBox .tlx{gap:6px;flex-wrap:nowrap}
+#mirrorBox .tlx .btn{height:40px!important;min-height:40px!important;min-width:0!important;width:auto!important;margin:0!important;padding:0 10px!important;font-size:14px!important;line-height:40px;position:static!important;flex:none}
+#mirrorBox .tlx #expBtn{padding:0 14px!important}
+#mirrorBox .tlxs{text-align:center;margin-top:6px}
+#mirrorBox .tlxs #status{display:block;margin:0}
+#mirrorBox .tlxs #result{margin-top:8px}
 #cv2{display:block;width:100%;height:auto;background:#000;border-radius:8px;box-shadow:inset 0 0 0 1px #000,0 2px 10px rgba(0,0,0,.6)}
 .mini{gap:6px;margin-top:8px;flex-wrap:nowrap}
 .mini .btn{min-height:40px;min-width:46px;font-size:18px;padding:0 8px;touch-action:manipulation}
@@ -673,7 +680,8 @@ var splashDone=Promise.resolve();
         <button class="btn" data-m="frame" aria-label="Esporta il fotogramma">📷</button>
         <span class="lcd" id="clock2">0:00.0</span>
         <span class="volrow mon" id="monRow2"><span class="vi" id="monIcon2">🎧</span><span class="fader" id="monFader2" style="width:90px"></span></span>
-      </div></div>
+      </div>
+      <div class="tlx" id="tlExp"></div><div class="tlxs" id="tlStat"></div></div>
     <div class="displays">
       <div class="dwin"><div class="lcd" id="totDur">0:00.0</div><span class="lbl">durata totale</span></div>
       <div class="dwin"><div class="lcd g" id="totN">0</div><span class="lbl">elementi</span></div>
@@ -702,7 +710,7 @@ var splashDone=Promise.resolve();
     <p class="note help">Lo zoom si regola trascinando la barra arancione col pallino (a sinistra meno, a destra più); al massimo ogni riquadro è un fotogramma. Per spostare la posizione trascina il pallino rosso sotto la timeline (oppure tocca il righello o un elemento, che così viene anche selezionato). Per cambiare l'ordine trascina un elemento (sul telefono tienilo per la maniglia ⠿ a sinistra). Scorri la timeline col dito o con la rotellina. Con lo zoom (anche ⌘/Ctrl + rotellina o pizzicando il trackpad) i riquadri mostrano più fotogrammi, fino a un riquadro per ogni fotogramma.</p>
   </section>
 
-  <section class="rack">
+  <section class="setPanel rack">
     <span class="lbl">Esportazioni</span>
     <div id="pvPlace" class="pvplace" hidden>L'anteprima è in una finestra a parte. <button class="btn sm" id="pvBack">⇲ Riaggancia qui</button></div>
     <div id="pvBox" class="pvbox">
@@ -814,7 +822,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.47.10';
+const VERSION='1.48.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1494,6 +1502,9 @@ setTimeout(()=>{try{if(document.getElementById('cvLayoutPill')&&!/originale ·/.
 setHelp(showHelp);
 
 /* ---------- anteprima ripetuta sopra la timeline (copia dell'anteprima principale) ---------- */
+// il riquadro Esportazioni è tolto: fotogramma per fotogramma, «Esporta MP4», lo stato e «Salva il video» vanno sotto l'anteprima della Timeline
+(function(){const r=$('tlExp'),st=$('tlStat');if(!r||!st)return;['frBack','frFwd','expBtn'].forEach(id=>{const b=$(id);if(b)r.appendChild(b);});
+  const s=$('status');if(s)st.appendChild(s);const res=$('result');if(res)st.appendChild(res);})();
 (function(){const c2=$('cv2'),x2=c2.getContext('2d');let last=0;
   let ver=-1;
   function loop(t){requestAnimationFrame(loop);if(document.hidden||t-last<33)return;last=t;
@@ -2691,7 +2702,7 @@ document.addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey)return
       {l:'Vai all’inizio',run:()=>arnoMenu('start'),on:has}]},
     {t:'Esporta',items:[
       {l:()=>exporting?'Ferma l’esportazione':'Esporta MP4',run:()=>click('expBtn'),on:()=>!!btn('expBtn')},
-      {l:'Esporta il fotogramma',run:()=>click('frameBtn'),on:()=>!!btn('frameBtn')},
+      {l:'Esporta il fotogramma',run:()=>{const b=$('frameBtn');if(b&&!b.disabled)b.click();},on:()=>{const b=$('frameBtn');return !!b&&!b.disabled;}},
       '-',
       {l:'Formato del video…',run:()=>setTimeout(()=>show(M.findIndex(m=>m.t==='Impostazioni')),0),on:()=>!!$('fmt')}]},
     {t:'Vista',items:[
@@ -2891,7 +2902,7 @@ if(/^https?:/.test(location.protocol)){let chk=0;const checkNew=async()=>{if(Dat
 </script>
 <script>/* disposizione sul Mac: impaginazione ARNOCANVAS (predefinita), riquadri liberi, oppure pagina originale */
 (function(){var iph=/iPhone|iPod/i.test(navigator.userAgent),m='free';
-  if(iph){var si=document.createElement('script');si.src='impaginazione-iphone.js?v=15';document.body.appendChild(si);}   // iPhone: impaginazione ARNOCANVAS per iPhone
+  if(iph){var si=document.createElement('script');si.src='impaginazione-iphone.js?v=18';document.body.appendChild(si);}   // iPhone: impaginazione ARNOCANVAS per iPhone
   else{try{m=localStorage.getItem('arnovideo-disposizione-modo')||'free'}catch(e){}if(m==='canvas')m='free';
   if(m==='canvas'){var s=document.createElement('script');s.src='impaginazione-mac.js?v=16';document.body.appendChild(s);}}
   if(iph||m==='canvas'){
