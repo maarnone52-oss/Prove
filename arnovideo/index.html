@@ -855,7 +855,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.10';
+const VERSION='1.49.11';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1973,9 +1973,8 @@ const cutWin={el:$('cutWin'),open:false};
       const u=playUrl(it);if(p.v.dataset.url!==u){p.v.src=u;p.v.dataset.url=u;await once(p.v,'loadedmetadata',8000);}
       const t=Math.max(0,Math.min((p.v.duration||1e9)-0.001,w.t));
       // iPhone: un video appena caricato non ha l'immagine pronta finche' non si sposta (all'inizio della clip currentTime e' gia' giusto)
-      if(Math.abs(p.v.currentTime-t)>0.0005||p.v.readyState<2){if(p.v.readyState<2&&Math.abs(p.v.currentTime-t)<=0.0005)p.v.currentTime=t+0.001;
-        try{await once(p.v,'seeked',4000);}catch(e){}if(Math.abs(p.v.currentTime-t)>0.0005){p.v.currentTime=t;try{await once(p.v,'seeked',4000);}catch(e){}}}
-      if(p.v.readyState<2){try{await once(p.v,'loadeddata',3000);}catch(e){}}
+      if(Math.abs(p.v.currentTime-t)>0.0005){p.v.currentTime=t;try{await once(p.v,'seeked',4000);}catch(e){}}
+      else if(p.v.readyState<2){p.v.currentTime=t+0.001;try{await once(p.v,'seeked',4000);}catch(e){}}   // solo la prima volta, se l'immagine non c'è ancora
       if(p.v.readyState>=2)draw(p,p.v,p.v.videoWidth,p.v.videoHeight);}}
     catch(e){}finally{p.busy=false;}}
   function show(p,it,t,tag){if(!it){p.want=null;blackOut(p,tag==='L'?'inizio della timeline':'fine della timeline');p.name.textContent='';p.tc.textContent='';return;}
