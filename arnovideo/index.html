@@ -855,7 +855,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.9';
+const VERSION='1.49.10';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1960,8 +1960,9 @@ document.addEventListener('pointerdown',e=>{if(!$('peek').hidden&&!e.target.clos
    si apre prendendo una maniglia di taglio: a sinistra l'ultimo fotogramma della clip prima del taglio, a destra il primo della clip dopo */
 const cutWin={el:$('cutWin'),open:false};
 (function(){const W=cutWin;if(!W.el)return;
-  const mk=()=>{const v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';v.setAttribute('playsinline','');return v;};
+  const mk=()=>{const v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';v.setAttribute('playsinline','');$('hidden').appendChild(v);return v;};
   const pane={L:{cv:$('cutL'),v:mk(),want:null,busy:false,name:$('cutLn'),tc:$('cutLt')},R:{cv:$('cutR'),v:mk(),want:null,busy:false,name:$('cutRn'),tc:$('cutRt')}};
+  W.unlock=()=>Object.values(pane).forEach(p=>{try{const r=p.v.play();if(r&&r.then)r.then(()=>p.v.pause()).catch(()=>{});}catch(e){}});
   function blackOut(p,msg){const x=p.cv.getContext('2d');x.fillStyle='#000';x.fillRect(0,0,p.cv.width,p.cv.height);
     if(msg){x.fillStyle='#777';x.font='600 26px -apple-system,Helvetica,sans-serif';x.textAlign='center';x.fillText(msg,p.cv.width/2,p.cv.height/2+9);}}
   function draw(p,el,w,h){const x=p.cv.getContext('2d');x.fillStyle='#000';x.fillRect(0,0,p.cv.width,p.cv.height);try{drawFit(x,el,w,h,p.cv.width,p.cv.height,'contain');}catch(e){}}
@@ -1971,7 +1972,10 @@ const cutWin={el:$('cutWin'),open:false};
       if(it.type==='img'){draw(p,it.el,it.w,it.h);continue;}
       const u=playUrl(it);if(p.v.dataset.url!==u){p.v.src=u;p.v.dataset.url=u;await once(p.v,'loadedmetadata',8000);}
       const t=Math.max(0,Math.min((p.v.duration||1e9)-0.001,w.t));
-      if(Math.abs(p.v.currentTime-t)>0.0005){p.v.currentTime=t;await once(p.v,'seeked',4000);}
+      // iPhone: un video appena caricato non ha l'immagine pronta finche' non si sposta (all'inizio della clip currentTime e' gia' giusto)
+      if(Math.abs(p.v.currentTime-t)>0.0005||p.v.readyState<2){if(p.v.readyState<2&&Math.abs(p.v.currentTime-t)<=0.0005)p.v.currentTime=t+0.001;
+        try{await once(p.v,'seeked',4000);}catch(e){}if(Math.abs(p.v.currentTime-t)>0.0005){p.v.currentTime=t;try{await once(p.v,'seeked',4000);}catch(e){}}}
+      if(p.v.readyState<2){try{await once(p.v,'loadeddata',3000);}catch(e){}}
       if(p.v.readyState>=2)draw(p,p.v,p.v.videoWidth,p.v.videoHeight);}}
     catch(e){}finally{p.busy=false;}}
   function show(p,it,t,tag){if(!it){p.want=null;blackOut(p,tag==='L'?'inizio della timeline':'fine della timeline');p.name.textContent='';p.tc.textContent='';return;}
@@ -2517,7 +2521,8 @@ const pv=makeVideo();pv.muted=true;           // lettore muto solo per mostrare 
 const pv2=makeVideo();pv2.muted=true;         // secondo lettore muto: mostra la clip che entra nella zona di dissolvenza
 let pvUnlocked=false;
 function unlockPv(){if(pvUnlocked)return;pvUnlocked=true;try{const r=pv.play();if(r&&r.then)r.then(()=>pv.pause()).catch(()=>{});}catch(e){}
-  try{const r=pv2.play();if(r&&r.then)r.then(()=>pv2.pause()).catch(()=>{});}catch(e){}}
+  try{const r=pv2.play();if(r&&r.then)r.then(()=>pv2.pause()).catch(()=>{});}catch(e){}
+  try{if(cutWin.unlock)cutWin.unlock();}catch(e){}}
 let seekBusy=false,seekWant=null;
 // apertura automatica del riquadro Cut quando il segno rosso sta su un taglio o dentro una dissolvenza (si attiva dal menu Impostazioni)
 let headDrag=false;   // il cursore si sta trascinando: il riquadro Cut resta chiuso
