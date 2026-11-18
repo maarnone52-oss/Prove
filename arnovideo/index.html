@@ -513,6 +513,9 @@ body.hasMenu{border-top:var(--mbh,34px) solid transparent;position:relative}
 #menuDrop{position:fixed;z-index:2147483641;min-width:250px;max-width:calc(100vw - 16px);padding:5px;border-radius:9px;background:#24272e;border:1px solid #3a3e47;
  box-shadow:0 10px 30px rgba(0,0,0,.55);font:400 13px -apple-system,Helvetica,sans-serif;color:#e9e9e9}
 #menuDrop[hidden]{display:none}
+main>section.setPanel{display:none!important}
+#menuDrop{max-height:calc(100vh - 60px);overflow-y:auto}
+#menuDrop .mh{padding:7px 10px 3px;font-size:11px;font-weight:700;letter-spacing:.4px;color:#ffb21e;text-transform:uppercase}
 #menuDrop .mi{display:flex;justify-content:space-between;gap:22px;padding:6px 10px;border-radius:5px;cursor:default;white-space:nowrap}
 #menuDrop .mi:hover{background:#ffb21e;color:#1a1205}
 #menuDrop .mi.off{opacity:.38;pointer-events:none}
@@ -635,7 +638,7 @@ body.hasMenu{border-top:var(--mbh,34px) solid transparent;position:relative}
     </div>
   </section>
 
-  <section class="rack">
+  <section class="setPanel rack">
     <span class="lbl">4 · Impostazioni</span>
     <div class="set">
       <label><span class="lbl">Formato del video finale</span>
@@ -712,7 +715,7 @@ body.hasMenu{border-top:var(--mbh,34px) solid transparent;position:relative}
 
 <script>
 'use strict';
-const VERSION='1.45.0';
+const VERSION='1.46.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -2521,6 +2524,7 @@ document.addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey)return
 
 /* ---------- barra dei menu a tendina (richiama gli stessi comandi dei pulsanti) ---------- */
 (function(){
+  {const sp=$('fmt')&&$('fmt').closest('section');if(sp)sp.classList.add('setPanel');}   // il riquadro «Impostazioni» è sostituito dal menu
   const bar=$('menuBar'),drop=$('menuDrop');if(!bar)return;
   if(/[?&]arnocanvas=/.test(location.search)){bar.remove();drop.remove();return;}   // nell'editor ARNOCANVAS la barra non serve
   const fitBar=()=>{document.documentElement.style.setProperty('--mbh',bar.offsetHeight+'px');document.body.classList.add('hasMenu');};
@@ -2582,7 +2586,7 @@ document.addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey)return
       {l:()=>exporting?'Ferma l’esportazione':'Esporta MP4',run:()=>click('expBtn'),on:()=>!!btn('expBtn')},
       {l:'Esporta il fotogramma',run:()=>click('frameBtn'),on:()=>!!btn('frameBtn')},
       '-',
-      {l:'Formato del video…',run:()=>{const f=$('fmt');if(f){f.scrollIntoView({block:'center'});f.focus();}},on:()=>!!$('fmt')}]},
+      {l:'Formato del video…',run:()=>setTimeout(()=>show(M.findIndex(m=>m.t==='Impostazioni')),0),on:()=>!!$('fmt')}]},
     {t:'Vista',items:[
       {l:'Adatta la timeline',run:()=>click('zFit'),on:()=>!!btn('zFit')},
       {l:'Ingrandisci la timeline',run:()=>zoomTo(pps*1.5),on:()=>items.length>0},
@@ -2596,6 +2600,22 @@ document.addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey)return
       {l:()=>{if(!nativeRender())return 'Rendering: solo nell\'app Mac';const r=rbStat();return 'Timeline renderizzata: '+r.ok+' di '+r.n+' blocchi';},on:()=>false},
       {l:'Riproduzione con copie leggere',chk:()=>proxyOn&&!!nativeRender(),run:()=>setProxy(!proxyOn),on:()=>!!nativeRender()&&!exporting},
       {l:()=>{if(!nativeRender())return 'Copie leggere: solo nell\'app Mac';const c=pxCount();return 'Copie leggere pronte: '+c.ready+(c.work?' · in preparazione: '+c.work:'');},on:()=>false}]}];
+  const pick=(id,title,fmtL)=>{const el=$(id);if(!el)return [];const row=el.closest('label');if(row&&row.hidden)return [];
+    return [{h:title},...[...el.options].map(o=>({l:fmtL?fmtL(o):o.textContent,chk:()=>el.value===o.value,
+      run:()=>{if(el.value===o.value)return;el.value=o.value;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));setStatus(title+': '+(fmtL?fmtL(o):o.textContent));},
+      on:()=>!busy}))];};
+  const cacheRun=async()=>{const b=$('cacheBtn');if(!b||b.disabled)return;b.click();await sleep(200);
+    while(b.disabled)await sleep(300);const r=$('cacheRes');setStatus((r&&r.innerHTML.replace(/<(br|\/div|\/p|\/li)[^>]*>/gi,' · ').replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/(\s*·\s*)+/g,' · ').replace(/^ · | · $/g,'').trim())||'Cache svuotata.');showSpace();};
+  M.push({t:'Impostazioni',items:()=>[
+    ...pick('fmt','Formato del video finale'),'-',
+    ...pick('fit','Adattamento'),'-',
+    ...pick('defDur','Durata predefinita delle foto',o=>o.textContent+' secondi'),'-',
+    ...pick('quality','Qualità dell\'esportazione'),'-',
+    ...pick('frameFmt','Formato del fotogramma'),'-',
+    ...(()=>{const a=pick('macZoomSel','Dimensione dell\'interfaccia (Mac)'),b=pick('uisSel','Dimensione dell\'interfaccia');return a.length||b.length?[...a,...b,'-']:[];})(),
+    {h:'Spazio'},
+    {l:()=>'Spazio usato: '+(($('spaceLcd')&&$('spaceLcd').textContent)||'–')+' · cache in RAM '+(($('ramLcd')&&$('ramLcd').textContent)||'–'),on:()=>false},
+    {l:'Svuota la cache',run:cacheRun,on:()=>!!$('cacheBtn')&&!$('cacheBtn').disabled&&!busy}]});
   const val=v=>typeof v==='function'?v():v;
   M.forEach((m,mi)=>{const t=document.createElement('span');t.className='mt'+(m.t==='logo'?' logo':'');t.dataset.mi=mi;
     t.innerHTML=m.t==='logo'?'ARNO<i>CUT</i>':m.t;bar.appendChild(t);});
@@ -2604,7 +2624,9 @@ document.addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey)return
   function close(){open=-1;drop.hidden=true;bar.querySelectorAll('.mt').forEach(x=>x.classList.remove('on'));}
   function show(mi){const m=M[mi],t=bar.querySelector('[data-mi="'+mi+'"]');open=mi;
     bar.querySelectorAll('.mt').forEach(x=>x.classList.toggle('on',x===t));
-    drop.innerHTML='';m.items.forEach(it=>{if(it==='-'){const d=document.createElement('div');d.className='ms';drop.appendChild(d);return;}
+    if(m.t==='Impostazioni'){try{showSpace();}catch(e){}}
+    drop.innerHTML='';val(m.items).forEach(it=>{if(it==='-'){const d=document.createElement('div');d.className='ms';drop.appendChild(d);return;}
+      if(it.h){const d=document.createElement('div');d.className='mh';d.textContent=it.h;drop.appendChild(d);return;}
       const d=document.createElement('div');let ok=false;try{ok=!it.on||!!it.on();}catch(e){}
       d.className='mi'+(ok?'':' off')+(it.chk&&it.chk()?' chk':'');
       d.innerHTML='<span></span><span class="k"></span>';d.firstChild.textContent=val(it.l);d.lastChild.textContent=it.k||'';
@@ -2759,7 +2781,7 @@ if(/^https?:/.test(location.protocol)){let chk=0;const checkNew=async()=>{if(Dat
 </script>
 <script>/* disposizione sul Mac: impaginazione ARNOCANVAS (predefinita), riquadri liberi, oppure pagina originale */
 (function(){var iph=/iPhone|iPod/i.test(navigator.userAgent),m='free';
-  if(iph){var si=document.createElement('script');si.src='impaginazione-iphone.js?v=14';document.body.appendChild(si);}   // iPhone: impaginazione ARNOCANVAS per iPhone
+  if(iph){var si=document.createElement('script');si.src='impaginazione-iphone.js?v=15';document.body.appendChild(si);}   // iPhone: impaginazione ARNOCANVAS per iPhone
   else{try{m=localStorage.getItem('arnovideo-disposizione-modo')||'free'}catch(e){}if(m==='canvas')m='free';
   if(m==='canvas'){var s=document.createElement('script');s.src='impaginazione-mac.js?v=16';document.body.appendChild(s);}}
   if(iph||m==='canvas'){

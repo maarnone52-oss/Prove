@@ -98,7 +98,7 @@ function applyAll(){
   for(var pass=0;pass<4&&ops.length;pass++)ops=ops.filter(function(op){return !(op.n?createNew(op.n):applyMove(op.m))});
   Object.keys(M.I).forEach(applyItem);
   if(!M.frozen)return;
-  var list=[];Object.keys(M.P).forEach(function(ref){var el=resolve(ref);if(el&&vis(el))list.push({el:el,P:M.P[ref]})});
+  var list=[],gone=null;Object.keys(M.P).forEach(function(ref){var el=resolve(ref);if(el&&el.classList&&el.classList.contains('setPanel'))gone=M.P[ref];else if(el&&vis(el))list.push({el:el,P:M.P[ref]})});if(gone){var nx=null;list.forEach(function(p){if(p.P.y>gone.y&&(nx==null||p.P.y<nx))nx=p.P.y});if(nx!=null){var dy=nx-gone.y;list=list.map(function(p){return p.P.y>gone.y?{el:p.el,P:Object.assign({},p.P,{y:p.P.y-dy})}:p})}}
   list.forEach(function(p){var st=p.el.style;imp(st,'position','absolute');imp(st,'margin','0');imp(st,'box-sizing','border-box');imp(st,'max-width','none');imp(st,'left','0px');imp(st,'top','0px');imp(st,'width',p.P.w+'px')});
   list.forEach(function(p){var r=p.el.getBoundingClientRect(),cs=W.getComputedStyle(p.el);
     p.c={x:r.left+W.pageXOffset,y:r.top+W.pageYOffset,pad:{t:parseFloat(cs.paddingTop)||0,r:parseFloat(cs.paddingRight)||0,b:parseFloat(cs.paddingBottom)||0,l:parseFloat(cs.paddingLeft)||0}}});
