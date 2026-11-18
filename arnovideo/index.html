@@ -511,6 +511,22 @@ html.uis .pvbox:not(.float) .transport{flex-wrap:wrap;justify-content:center}
 .rack .row.c:has(#expBtn){margin-top:22px!important}
 }
 
+/* ---------- riquadro Cut: coda della clip a sinistra e testa della clip a destra del taglio ---------- */
+#cutWin{position:fixed;z-index:2147483630;top:calc(var(--mbh,34px) + 8px);left:50%;transform:translateX(-50%);width:min(760px,96vw,calc((45vh - 50px) * 3.56 + 24px));box-sizing:border-box;
+ background:#1b1d22;border:1px solid #3a3e47;border-radius:12px;padding:6px 8px 8px;box-shadow:0 14px 40px rgba(0,0,0,.6);color:#e9e9e9;font:13px -apple-system,Helvetica,sans-serif}
+#cutWin[hidden]{display:none}
+#cutWin .cuthead{display:flex;align-items:center;gap:10px;padding:2px 2px 6px;cursor:move;touch-action:none;-webkit-user-select:none;user-select:none}
+#cutWin .cutttl{font-weight:900;letter-spacing:.12em;color:#ff4530}
+#cutWin .cutinfo{flex:1;color:#ffb21e;font:700 12px "SF Mono",Menlo,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#cutWin .cutpanes{display:flex;gap:8px}
+#cutWin .cutpane{flex:1;min-width:0}
+#cutWin .cutscr{position:relative;background:#000;border-radius:6px;overflow:hidden;aspect-ratio:16/9}
+#cutWin canvas{display:block;width:100%;height:100%}
+#cutWin .cutpane:first-child .cutscr{box-shadow:inset -3px 0 0 #ff4530}
+#cutWin .cutpane:last-child .cutscr{box-shadow:inset 3px 0 0 #ff4530}
+#cutWin .cutlbl{margin-top:4px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#cutWin .cutlbl b{color:#ffb21e}
+#cutWin .cuttc{float:right;font:700 12px "SF Mono",Menlo,monospace;color:#46ff7a}
 /* ---------- barra dei menu a tendina ---------- */
 #menuBar{position:fixed;top:0;left:0;right:0;z-index:2147483640;display:flex;align-items:center;gap:2px;flex-wrap:nowrap;overflow-x:auto;overflow-y:visible;
  padding:calc(env(safe-area-inset-top,0px) + 3px) 8px 3px;background:#1b1d22;border-bottom:1px solid #2c2f36;font:500 13px -apple-system,Helvetica,sans-serif;color:#e9e9e9;
@@ -637,6 +653,13 @@ var splashDone=Promise.resolve();
   setTimeout(finish,12000);   // per sicurezza, se il browser rallenta l'animazione
 })();
 </script>
+<div id="cutWin" hidden role="dialog" aria-label="Cut">
+  <div class="cuthead" id="cutHead"><span class="cutttl">CUT</span><span class="cutinfo" id="cutInfo"></span><button class="btn xs" id="cutClose" type="button">Chiudi</button></div>
+  <div class="cutpanes">
+    <div class="cutpane"><div class="cutscr"><canvas id="cutL" width="640" height="360"></canvas></div><div class="cutlbl"><b>◀ coda</b> <span id="cutLn"></span><span class="cuttc" id="cutLt"></span></div></div>
+    <div class="cutpane"><div class="cutscr"><canvas id="cutR" width="640" height="360"></canvas></div><div class="cutlbl"><b>testa ▶</b> <span id="cutRn"></span><span class="cuttc" id="cutRt"></span></div></div>
+  </div>
+</div>
 <nav id="menuBar" aria-label="Menu"></nav><div id="menuDrop" hidden></div>
 <main>
   <div class="brand">
@@ -827,7 +850,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.48.1';
+const VERSION='1.49.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1926,6 +1949,48 @@ document.addEventListener('pointerdown',e=>{if(!$('peek').hidden&&!e.target.clos
   const up=e=>{if(!xd||e.pointerId!==xd.pid)return;const t=xd;xd=null;$('trimTip').hidden=true;if(t.moved){scheduleSave();render();}};
   window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);})();
 
+
+/* ---------- riquadro Cut ----------
+   si apre prendendo una maniglia di taglio: a sinistra l'ultimo fotogramma della clip prima del taglio, a destra il primo della clip dopo */
+const cutWin={el:$('cutWin'),open:false};
+(function(){const W=cutWin;if(!W.el)return;
+  const mk=()=>{const v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';v.setAttribute('playsinline','');return v;};
+  const pane={L:{cv:$('cutL'),v:mk(),want:null,busy:false,name:$('cutLn'),tc:$('cutLt')},R:{cv:$('cutR'),v:mk(),want:null,busy:false,name:$('cutRn'),tc:$('cutRt')}};
+  function blackOut(p,msg){const x=p.cv.getContext('2d');x.fillStyle='#000';x.fillRect(0,0,p.cv.width,p.cv.height);
+    if(msg){x.fillStyle='#777';x.font='600 26px -apple-system,Helvetica,sans-serif';x.textAlign='center';x.fillText(msg,p.cv.width/2,p.cv.height/2+9);}}
+  function draw(p,el,w,h){const x=p.cv.getContext('2d');x.fillStyle='#000';x.fillRect(0,0,p.cv.width,p.cv.height);try{drawFit(x,el,w,h,p.cv.width,p.cv.height,'contain');}catch(e){}}
+  // ricerca del fotogramma: una alla volta, sempre verso l'ultima posizione chiesta (trascinando si saltano quelle intermedie)
+  async function pump(p){if(p.busy||!p.want)return;p.busy=true;
+    try{while(p.want){const w=p.want;p.want=null;const it=w.it;
+      if(it.type==='img'){draw(p,it.el,it.w,it.h);continue;}
+      const u=playUrl(it);if(p.v.dataset.url!==u){p.v.src=u;p.v.dataset.url=u;await once(p.v,'loadedmetadata',8000);}
+      const t=Math.max(0,Math.min((p.v.duration||1e9)-0.001,w.t));
+      if(Math.abs(p.v.currentTime-t)>0.0005){p.v.currentTime=t;await once(p.v,'seeked',4000);}
+      if(p.v.readyState>=2)draw(p,p.v,p.v.videoWidth,p.v.videoHeight);}}
+    catch(e){}finally{p.busy=false;}}
+  function show(p,it,t,tag){if(!it){p.want=null;blackOut(p,tag==='L'?'inizio della timeline':'fine della timeline');p.name.textContent='';p.tc.textContent='';return;}
+    p.name.textContent='«'+it.name+'»';p.tc.textContent=it.type==='vid'?fmtT(t):'foto';p.want={it,t};pump(p);}
+  W.update=(c,side)=>{const i=items.indexOf(c);if(i<0)return;
+    const L=side==='l'?items[i-1]:c,R=side==='l'?c:items[i+1];
+    const tail=it=>it.type==='vid'?(it.tin||0)+it.dur-1/FPS:0,head=it=>it.type==='vid'?(it.tin||0):0;
+    show(pane.L,L||null,L?tail(L):0,'L');show(pane.R,R||null,R?head(R):0,'R');
+    const cut=side==='l'?startOf(i):startOf(i)+c.dur-xfOf(i+1);
+    $('cutInfo').textContent='taglio a '+fmtT(cut)+(side==='l'?' · accorci l\'inizio di «'+c.name+'»':' · accorci la fine di «'+c.name+'»');
+    try{setT(cut);placeHead();}catch(e){}};
+  W.show=(c,side)=>{const cvs=[pane.L.cv,pane.R.cv],o=outSize();cvs.forEach(cv=>{const h=Math.round(640*o.h/o.w/2)*2||360;if(cv.height!==h){cv.height=h;}cv.parentNode.style.aspectRatio=o.w+'/'+o.h;});
+    W.el.hidden=false;W.open=true;W.update(c,side);};
+  W.close=()=>{W.el.hidden=true;W.open=false;Object.values(pane).forEach(p=>{p.want=null;});};
+  $('cutClose').onclick=W.close;
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&W.open)W.close();});
+  // si sposta trascinando la barra del titolo
+  let dg=null;$('cutHead').addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;const r=W.el.getBoundingClientRect();
+    dg={dx:e.clientX-r.left,dy:e.clientY-r.top,pid:e.pointerId};W.el.style.transform='none';W.el.style.left=r.left+'px';W.el.style.top=r.top+'px';
+    try{e.target.setPointerCapture(e.pointerId);}catch(_){}});
+  window.addEventListener('pointermove',e=>{if(!dg||e.pointerId!==dg.pid)return;
+    W.el.style.left=Math.max(4-W.el.offsetWidth*0.7,Math.min(innerWidth-40,e.clientX-dg.dx))+'px';W.el.style.top=Math.max(0,Math.min(innerHeight-40,e.clientY-dg.dy))+'px';});
+  const end=e=>{if(dg&&e.pointerId===dg.pid)dg=null;};window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
+})();
+
 /* ---------- taglio in testa e in coda con le maniglie ---------- */
 const TRIM_MIN=0.2;
 function relayout(){   // aggiorna larghezze e tempi senza ricostruire la timeline (il dito resta sulla maniglia)
@@ -1940,7 +2005,7 @@ function relayout(){   // aggiorna larghezze e tempi senza ricostruire la timeli
     tr={c,el,side:h.dataset.side,sx:e.clientX,tin:c.tin||0,dur:c.dur,pid:e.pointerId,moved:false};
     try{h.setPointerCapture(e.pointerId);}catch(_){}el.classList.add('trimming');
     selId=c.id;[...$('lane').children].forEach(x=>x.classList.toggle('sel',x===el));renderSel();
-    unlockPv();await stopPlay();});
+    unlockPv();await stopPlay();if(cutWin.show)cutWin.show(c,tr.side);});
   window.addEventListener('pointermove',e=>{if(!tr||e.pointerId!==tr.pid)return;
     const c=tr.c,d=(e.clientX-tr.sx)/trK()/pps,q=v=>Math.round(v*FPS)/FPS;        // passo di un fotogramma
     if(!tr.moved){if(Math.abs(e.clientX-tr.sx)<3)return;tr.moved=true;pushUndo('taglio di «'+c.name+'»');}
@@ -1956,6 +2021,7 @@ function relayout(){   // aggiorna larghezze e tempi senza ricostruire la timeli
     tip.textContent=c.type==='vid'?(tr.side==='l'?'✂ inizio '+fmtT(c.tin):'✂ fine '+fmtT(c.tin+c.dur))+' · '+fmtT(c.dur):'durata '+fmtT(c.dur);placeTip(tip,e.clientX);
     // anteprima sul punto di taglio
     const i=items.indexOf(c),st=startOf(i);showFrame(tr.side==='l'?st:st+Math.max(0,c.dur-1/FPS));
+    if(cutWin.open)cutWin.update(c,tr.side);
     const box=$('track'),r=box.getBoundingClientRect();if(e.clientX>r.right-30)box.scrollLeft+=10;else if(e.clientX<r.left+30)box.scrollLeft-=10;});
   const up=e=>{if(!tr||e.pointerId!==tr.pid)return;const t=tr;tr=null;t.el.classList.remove('trimming');$('trimTip').hidden=true;
     if(t.moved){renderSel();render();}};
