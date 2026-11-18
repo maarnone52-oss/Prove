@@ -107,6 +107,8 @@ button{font:inherit;color:var(--text);cursor:pointer}
 .tclip .txf.on{height:100%;border:0;border-right:2px solid #ff6bd6;border-radius:5px 0 0 5px;align-items:flex-end;padding-bottom:4px;
  background:linear-gradient(90deg,rgba(255,107,214,.05),rgba(255,107,214,.45))}
 .tclip.xfon{box-shadow:-3px 0 0 rgba(255,107,214,.6)}
+/* schermi touch: linguette delle dissolvenze più grandi, sopra la maniglia di taglio, così il dito le prende */
+@media (pointer:coarse){.tclip .txf:not(.on){height:34px;min-width:34px;font-size:15px}.tclip .txf.on{min-width:34px}.tclip .txo{height:32px;min-width:34px;font-size:15px}}
 .tclip .txo{position:absolute;right:0;top:0;height:22px;min-width:22px;z-index:6;touch-action:none;cursor:ew-resize;box-sizing:border-box;
  display:flex;align-items:center;justify-content:center;font:700 11px "SF Mono",Menlo,monospace;color:#fff;
  background:rgba(0,0,0,.7);border-bottom:1px solid #ff6bd6;border-left:1px solid #ff6bd6;border-radius:0 5px 0 6px}
@@ -853,7 +855,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.2';
+const VERSION='1.49.3';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
