@@ -855,7 +855,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.19';
+const VERSION='1.49.20';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1951,7 +1951,7 @@ const fxPlay=(function(){let btn=null,hideT=null,watch=null,rng=null;
     btn.addEventListener('pointerdown',e=>e.stopPropagation(),true);
     btn.onclick=async e=>{e.stopPropagation();if(!rng)return;const r=rng;hide();unlockPv();await stopPlay();
       // il riquadro Cut resta aperto durante la riproduzione di «Rivedi»
-      const c=items[r.i];if(c&&cutWin.show){if((c.xf||0)>0)cutWin.showXf(c);else cutWin.show(c,'l');}cutWin.keep=true;
+      const c=items[r.i];if(c&&cutWin.show){if((c.xf||0)>0)cutWin.showXf(c);else cutWin.show(c,'l');}cutWin.keep=true;cutWin.arm();   // toglie il conto alla rovescia partito col tocco su «Rivedi»
       setT(Math.max(0,r.a-3));startPlay();if(cutWin.syncRun)setTimeout(()=>cutWin.syncRun(r.i),300);const stopAt=Math.min(totalDur(),r.b+3);clearInterval(watch);
       // finita la riproduzione: cursore all'inizio dell'effetto e tasto di nuovo visibile per 5 s
       const done=async()=>{clearInterval(watch);await stopPlay();cutWin.keep=false;cutWin.syncStop();if(cutWin.arm)cutWin.arm();showFrame(r.a);rng=r;place(5000);};
