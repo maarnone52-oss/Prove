@@ -855,7 +855,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.12';
+const VERSION='1.49.13';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1996,18 +1996,22 @@ const cutWin={el:$('cutWin'),open:false};
   W.show=(c,side)=>{const cvs=[pane.L.cv,pane.R.cv],o=outSize();cvs.forEach(cv=>{const h=Math.round(640*o.h/o.w/2)*2||360;if(cv.height!==h){cv.height=h;}cv.parentNode.style.aspectRatio=o.w+'/'+o.h;});
     W.el.hidden=false;W.open=true;W.place();W.update(c,side);W.arm();};
   // posizione: subito sopra la timeline, senza coprirla (si rimpicciolisce se lo spazio è poco); se l'hai spostata a mano resta dove l'hai messa
-  W.place=()=>{if(W.moved)return;const tk=$('track');if(!tk)return;const r=tk.getBoundingClientRect(),o=outSize();
-    const mb=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--mbh'))||34,top0=mb+4,avail=r.top-6-top0;
-    const ar=o.h/o.w||9/16,extra=62;   // barra del titolo, scritte e margini
-    let wd=Math.min(760,innerWidth*0.96,(Math.max(60,avail-extra))/ar*2+24);wd=Math.max(220,wd);
-    W.el.style.width=wd+'px';W.el.style.transform='none';W.el.style.left=Math.round((innerWidth-wd)/2)+'px';
-    const h=W.el.offsetHeight;W.el.style.top=Math.max(top0,Math.round(r.top-6-h))+'px';};
+  // posizione: in alto, nel terzo superiore dello schermo; se copre l'anteprima della timeline, la pagina scende sotto il riquadro
+  W.shift=0;
+  W.place=()=>{const o=outSize(),ar=o.h/o.w||9/16,extra=62;
+    const mb=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--mbh'))||34,top0=mb+4;
+    if(!W.moved){const maxH=innerHeight/3;let wd=Math.min(760,innerWidth*0.96,Math.max(40,maxH-extra)/ar*2+24);wd=Math.max(220,wd);
+      W.el.style.width=wd+'px';W.el.style.transform='none';W.el.style.left=Math.round((innerWidth-wd)/2)+'px';W.el.style.top=top0+'px';}
+    W.unshift();const cv=$('cv');if(!cv)return;const pr=cv.getBoundingClientRect(),cr=W.el.getBoundingClientRect();
+    const over=cr.bottom+6-pr.top;
+    if(over>0&&pr.bottom>cr.top&&pr.right>cr.left&&pr.left<cr.right){W.shift=Math.round(over);const m=document.querySelector('main');if(m)m.style.transform='translateY('+W.shift+'px)';}};
+  W.unshift=()=>{if(!W.shift)return;W.shift=0;const m=document.querySelector('main');if(m)m.style.transform='';};
   window.addEventListener('resize',()=>{if(W.open)W.place();});
   // chiusura automatica dopo N secondi dall'ultimo tocco (0 = mai)
   let acT=null;W.autoSec=()=>{let v=5;try{const x=localStorage.getItem('arnovideo-cutauto');if(x!==null)v=parseFloat(x);}catch(e){}return isNaN(v)?5:v;};
   W.arm=()=>{clearTimeout(acT);acT=null;if(!W.open)return;const n=W.autoSec();if(n>0)acT=setTimeout(()=>{if(W.open)W.close();},n*1000);};
   ['pointerdown','pointermove','pointerup','wheel','keydown','touchstart'].forEach(ev=>window.addEventListener(ev,e=>{if(W.open&&(ev!=='pointermove'||e.buttons||e.pointerType!=='mouse'))W.arm();},{passive:true,capture:true}));
-  W.close=()=>{W.el.hidden=true;W.open=false;clearTimeout(acT);acT=null;Object.values(pane).forEach(p=>{p.want=null;});};
+  W.close=()=>{W.el.hidden=true;W.open=false;W.unshift();clearTimeout(acT);acT=null;Object.values(pane).forEach(p=>{p.want=null;});};
   $('cutClose').onclick=W.close;
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&W.open)W.close();});
   // si sposta trascinando la barra del titolo
