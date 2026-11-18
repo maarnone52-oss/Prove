@@ -44,6 +44,10 @@ for a in APPS:
     for ic in ('apple-touch-icon.png', 'icon-192.png', 'icon-512.png'):
         marca_icona(os.path.join(dst, ic))
 
+# pagine fisse (es. informative sulla privacy), copiate senza modifiche
+if os.path.isdir(os.path.join(ROOT, 'privacy')):
+    shutil.copytree(os.path.join(ROOT, 'privacy'), os.path.join(OUT, 'privacy'))
+
 righe = ''.join('<a class="app" href="%s/"><b>%s</b><span>%s</span></a>' % (a['cartella'], a['nome'], a.get('stato', '')) for a in APPS)
 open(os.path.join(OUT, 'index.html'), 'w', encoding='utf-8').write('''<!DOCTYPE html><html lang="it"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Versioni di prova</title>
