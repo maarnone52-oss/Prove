@@ -584,15 +584,15 @@ main>section.setPanel{display:none!important}
     try{var now=AC.currentTime,len=Math.floor(AC.sampleRate*2.2),buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0),l1=0,l2=0;
       for(var i=0;i<len;i++){var w=Math.random()*2-1;l1=0.92*l1+0.08*w;l2=0.7*l2+0.3*w;d[i]=l2*1.4-l1*0.6;}   // fruscio di fiato (senza bassi)
       var src=AC.createBufferSource();src.buffer=buf;
-      var hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=500;hp.Q.value=0.5;
-      var bp=AC.createBiquadFilter();bp.type='bandpass';bp.Q.value=0.55;   // il «ffff» di un soffio: si apre e poi si chiude dolcemente
-      bp.frequency.setValueAtTime(900,now);bp.frequency.linearRampToValueAtTime(1900,now+0.35);bp.frequency.linearRampToValueAtTime(1300,now+1.5);
-      var lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.setValueAtTime(4200,now);lp.frequency.linearRampToValueAtTime(2600,now+1.5);
-      var g=AC.createGain();g.gain.setValueAtTime(0.0001,now);g.gain.linearRampToValueAtTime(0.32,now+0.25);g.gain.linearRampToValueAtTime(0.26,now+0.6);
-      g.gain.exponentialRampToValueAtTime(0.0001,now+1.65);
+      var hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=220;hp.Q.value=0.5;
+      var bp=AC.createBiquadFilter();bp.type='bandpass';bp.Q.value=0.45;   // il «ffff» di un soffio: si apre e poi si chiude dolcemente
+      bp.frequency.setValueAtTime(520,now);bp.frequency.linearRampToValueAtTime(820,now+0.45);bp.frequency.linearRampToValueAtTime(600,now+1.5);
+      var lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.setValueAtTime(1700,now);lp.frequency.linearRampToValueAtTime(1100,now+1.5);
+      var g=AC.createGain();g.gain.setValueAtTime(0.0001,now);g.gain.linearRampToValueAtTime(0.2,now+0.38);g.gain.linearRampToValueAtTime(0.16,now+0.75);
+      g.gain.exponentialRampToValueAtTime(0.0001,now+1.7);
       var out=g;
-      if(AC.createStereoPanner){var pn=AC.createStereoPanner();pn.pan.setValueAtTime(-0.45,now);pn.pan.linearRampToValueAtTime(0.45,now+1.1);g.connect(pn);out=pn;}
-      var mg=AC.createGain();mg.gain.value=0.85;src.connect(hp);hp.connect(bp);bp.connect(lp);lp.connect(g);out.connect(mg);mg.connect(AC.destination);
+      if(AC.createStereoPanner){var pn=AC.createStereoPanner();pn.pan.setValueAtTime(-0.3,now);pn.pan.linearRampToValueAtTime(0.3,now+1.2);g.connect(pn);out=pn;}
+      var mg=AC.createGain();mg.gain.value=1.5;src.connect(hp);hp.connect(bp);bp.connect(lp);lp.connect(g);out.connect(mg);mg.connect(AC.destination);
       src.start(now);src.stop(now+1.75);blowOut=mg;}catch(e){}}
   function finish(){if(done)return;done=true;sp.style.opacity='0';
     if(blowOut&&AC){try{blowOut.gain.setTargetAtTime(0,AC.currentTime,0.08);}catch(e){}}
@@ -805,7 +805,7 @@ main>section.setPanel{display:none!important}
 
 <script>
 'use strict';
-const VERSION='1.47.4';
+const VERSION='1.47.5';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
