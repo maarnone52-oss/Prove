@@ -588,7 +588,7 @@ main>section.setPanel{display:none!important}
       var bp=AC.createBiquadFilter();bp.type='bandpass';bp.Q.value=0.45;   // il «ffff» di un soffio: si apre e poi si chiude dolcemente
       bp.frequency.setValueAtTime(520,now);bp.frequency.linearRampToValueAtTime(820,now+0.45);bp.frequency.linearRampToValueAtTime(600,now+1.5);
       var lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.setValueAtTime(1700,now);lp.frequency.linearRampToValueAtTime(1100,now+1.5);
-      var g=AC.createGain();g.gain.setValueAtTime(0.0001,now);g.gain.linearRampToValueAtTime(0.2,now+0.38);g.gain.linearRampToValueAtTime(0.16,now+0.75);
+      var g=AC.createGain();g.gain.setValueAtTime(0.0001,now);g.gain.linearRampToValueAtTime(0.165,now+0.45);g.gain.linearRampToValueAtTime(0.155,now+0.8);
       g.gain.exponentialRampToValueAtTime(0.0001,now+1.7);
       var out=g;
       if(AC.createStereoPanner){var pn=AC.createStereoPanner();pn.pan.setValueAtTime(-0.3,now);pn.pan.linearRampToValueAtTime(0.3,now+1.2);g.connect(pn);out=pn;}
@@ -805,7 +805,7 @@ main>section.setPanel{display:none!important}
 
 <script>
 'use strict';
-const VERSION='1.47.5';
+const VERSION='1.47.6';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
