@@ -855,7 +855,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.5';
+const VERSION='1.49.6';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -2703,20 +2703,33 @@ $('frameBtn').onclick=async()=>{
     await stopPlay();
     const L=locate(playT),c=items[L.i],png=$('frameFmt').value==='png';
     setStatus('Preparo il fotogramma…');
-    const cv=document.createElement('canvas');let v=null,t=0;
-    if(c.type==='img'){cv.width=c.el.naturalWidth;cv.height=c.el.naturalHeight;cv.getContext('2d').drawImage(c.el,0,0);}
-    else{
-      v=makeVideo();v.muted=true;v.src=c.url;
-      await once(v,'loadedmetadata',20000);if(v.readyState<2){try{await once(v,'loadeddata',5000);}catch(e){}}
-      await primeVideo(v);
-      t=Math.max(0.001,(c.tin||0)+Math.min(L.off,c.dur-0.02));v.currentTime=t;try{await once(v,'seeked',6000);}catch(e){}
-      if(v.requestVideoFrameCallback)await Promise.race([new Promise(r=>v.requestVideoFrameCallback(()=>r())),sleep(400)]);
+    const cv=document.createElement('canvas');let v=null,t=0;const tmp=[];
+    // porta un video al fotogramma giusto (offset nella clip) e lo restituisce pronto da disegnare
+    const grab=async(cl,off)=>{const vv=makeVideo();vv.muted=true;vv.src=cl.url;tmp.push(vv);
+      await once(vv,'loadedmetadata',20000);if(vv.readyState<2){try{await once(vv,'loadeddata',5000);}catch(e){}}
+      await primeVideo(vv);
+      const tt=Math.max(0.001,(cl.tin||0)+Math.min(off,cl.dur-0.02));vv.currentTime=tt;try{await once(vv,'seeked',6000);}catch(e){}
+      if(vv.requestVideoFrameCallback)await Promise.race([new Promise(r=>vv.requestVideoFrameCallback(()=>r())),sleep(400)]);
       else await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-      if(v.readyState<2||!v.videoWidth)throw new Error('il fotogramma non è disponibile');
+      if(vv.readyState<2||!vv.videoWidth)throw new Error('il fotogramma non è disponibile');
+      return {v:vv,t:tt};};
+    // dentro una dissolvenza: il fotogramma è la sovrapposizione che si vede sulla timeline
+    const nI=items[L.i+1],xf=nI?xfOf(L.i+1):0,inX=xf>0&&L.off>=c.dur-xf;
+    if(inX){
+      const al=Math.max(0,Math.min(1,(L.off-(c.dur-xf))/xf)),nlt=L.off-(c.dur-xf),mode=$('fit').value,{w,h}=outSize();
+      cv.width=w;cv.height=h;const x=cv.getContext('2d');x.fillStyle='#000';x.fillRect(0,0,w,h);
+      if(c.type==='img')drawFit(x,c.el,c.w,c.h,w,h,mode);else{const g=await grab(c,L.off);t=g.t;drawFit(x,g.v,g.v.videoWidth,g.v.videoHeight,w,h,mode);}
+      x.globalAlpha=al;
+      if(nI.type==='img')drawFit(x,nI.el,nI.w,nI.h,w,h,mode);else{const g=await grab(nI,nlt);drawFit(x,g.v,g.v.videoWidth,g.v.videoHeight,w,h,mode);}
+      x.globalAlpha=1;
+    }
+    else if(c.type==='img'){cv.width=c.el.naturalWidth;cv.height=c.el.naturalHeight;cv.getContext('2d').drawImage(c.el,0,0);}
+    else{
+      const g=await grab(c,L.off);v=g.v;t=g.t;
       cv.width=v.videoWidth;cv.height=v.videoHeight;cv.getContext('2d').drawImage(v,0,0,cv.width,cv.height);
     }
     const blob=await new Promise((res,rej)=>{try{cv.toBlob(b=>b?res(b):rej(new Error('immagine non creata')),png?'image/png':'image/jpeg',0.95);}catch(e){rej(e);}});
-    if(v){v.removeAttribute('src');v.load();v.remove();}
+    tmp.forEach(vv=>{vv.removeAttribute('src');vv.load();vv.remove();});
     const base=c.name.replace(/\.[^.]+$/,'').replace(/[^\w\-À-ÿ ]+/g,'_').slice(0,40);
     const f=Math.floor(t*FPS+1e-6),mm=Math.floor(t/60),ss=Math.floor(t%60),p2=n=>String(n).padStart(2,'0');
     const name='ARNOCUT-'+base+(c.type==='vid'?'-'+p2(mm)+'m'+p2(ss)+'s-f'+p2(f%FPS):'')+(png?'.png':'.jpg');
