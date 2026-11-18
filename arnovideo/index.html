@@ -855,7 +855,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.7';
+const VERSION='1.49.8';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -2519,7 +2519,15 @@ let pvUnlocked=false;
 function unlockPv(){if(pvUnlocked)return;pvUnlocked=true;try{const r=pv.play();if(r&&r.then)r.then(()=>pv.pause()).catch(()=>{});}catch(e){}
   try{const r=pv2.play();if(r&&r.then)r.then(()=>pv2.pause()).catch(()=>{});}catch(e){}}
 let seekBusy=false,seekWant=null;
-function showFrame(t){setT(t);seekWant=playT;if(seekBusy)return;seekBusy=true;
+// apertura automatica del riquadro Cut quando il segno rosso sta su un taglio o dentro una dissolvenza (si attiva dal menu Impostazioni)
+function cutAutoOpen(){let on=true;try{on=localStorage.getItem('arnovideo-cutopen')!=='0';}catch(e){}
+  if(!on||playing||exporting||!items.length||!cutWin.show)return;
+  const tol=1/FPS+1e-4;
+  for(let i=1;i<items.length;i++){const st=startOf(i),xf=xfOf(i),c=items[i];
+    if(xf>0&&playT>=st-tol&&playT<=st+xf+tol){if(cutWin.open&&cutWin.cur===c.id+'x'){cutWin.arm();return;}cutWin.cur=c.id+'x';const t=playT;cutWin.showXf(c);setT(t);return;}
+    if(xf<=0&&Math.abs(playT-st)<=tol){if(cutWin.open&&cutWin.cur===c.id+'l'){cutWin.arm();return;}cutWin.cur=c.id+'l';cutWin.show(c,'l');return;}}
+  cutWin.cur=null;}
+function showFrame(t){setT(t);cutAutoOpen();seekWant=playT;if(seekBusy)return;seekBusy=true;
   (async()=>{while(seekWant!==null){const tt=seekWant;seekWant=null;try{await drawAt(tt);}catch(e){}}seekBusy=false;})();}
 async function drawAt(t){
   if(!items.length)return blank();
@@ -2551,6 +2559,7 @@ async function drawAt(t){
 async function startPlay(){
   if(playing||busy||!items.length)return;
   if(playT>=totalDur()-0.05)setT(0);
+  if(cutWin.open)cutWin.close();cutWin.cur=null;
   stopReq=false;playing=true;setBusy(true);$('playBtn').textContent='❚❚';
   runP=runSequence(null,playT).catch(e=>setStatus('Errore: '+e.message,true));
   await runP;
@@ -2879,6 +2888,9 @@ document.addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey)return
     ...pick('defDur','Durata predefinita delle foto',o=>o.textContent+' secondi'),'-',
     ...pick('quality','Qualità dell\'esportazione'),'-',
     ...pick('frameFmt','Formato del fotogramma'),'-',
+    {h:'Riquadro Cut'},
+    {l:'Si apre da solo sul taglio o sulla dissolvenza',chk:()=>{try{return localStorage.getItem('arnovideo-cutopen')!=='0';}catch(e){return true;}},
+      run:()=>{let on=true;try{on=localStorage.getItem('arnovideo-cutopen')!=='0';localStorage.setItem('arnovideo-cutopen',on?'0':'1');}catch(e){}setStatus(on?'Apertura automatica del riquadro Cut spenta.':'Apertura automatica del riquadro Cut accesa.');}},
     {h:'Chiusura automatica del riquadro Cut'},
     ...[[0,'Mai'],[3,'3 secondi'],[5,'5 secondi'],[10,'10 secondi'],[20,'20 secondi']].map(([n,l])=>({l,chk:()=>cutWin.autoSec&&cutWin.autoSec()===n,
       run:()=>{try{localStorage.setItem('arnovideo-cutauto',String(n));}catch(e){}if(cutWin.arm)cutWin.arm();setStatus('Chiusura automatica del riquadro Cut: '+l.toLowerCase());}})),'-',
