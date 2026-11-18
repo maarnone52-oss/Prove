@@ -855,7 +855,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.14';
+const VERSION='1.49.15';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -2540,8 +2540,10 @@ function unlockPv(){if(pvUnlocked)return;pvUnlocked=true;try{const r=pv.play();i
   try{if(cutWin.unlock)cutWin.unlock();}catch(e){}}
 let seekBusy=false,seekWant=null;
 // apertura automatica del riquadro Cut quando il segno rosso sta su un taglio o dentro una dissolvenza (si attiva dal menu Impostazioni)
+let cutUserOk=false;   // all'apertura dell'app il riquadro Cut non si apre da solo: solo dopo il primo tocco dell'utente
+['pointerdown','keydown'].forEach(ev=>window.addEventListener(ev,()=>{cutUserOk=true;},{capture:true,passive:true}));
 let headDrag=false;   // il cursore si sta trascinando: il riquadro Cut resta chiuso
-function cutAutoOpen(){if(headDrag){if(cutWin.open)cutWin.close();cutWin.cur=null;return;}let on=true;try{on=localStorage.getItem('arnovideo-cutopen')!=='0';}catch(e){}
+function cutAutoOpen(){if(!cutUserOk)return;if(headDrag){if(cutWin.open)cutWin.close();cutWin.cur=null;return;}let on=true;try{on=localStorage.getItem('arnovideo-cutopen')!=='0';}catch(e){}
   if(!on||playing||exporting||!items.length||!cutWin.show)return;
   const tol=1/FPS+1e-4;
   for(let i=1;i<items.length;i++){const st=startOf(i),xf=xfOf(i),c=items[i];
