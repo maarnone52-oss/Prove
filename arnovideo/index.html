@@ -855,7 +855,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.6';
+const VERSION='1.49.7';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1991,8 +1991,12 @@ const cutWin={el:$('cutWin'),open:false};
     $('cutInfo').textContent='taglio a '+fmtT(cut)+(side==='l'?' · accorci l\'inizio di «'+c.name+'»':' · accorci la fine di «'+c.name+'»');
     try{setT(cut);placeHead();}catch(e){}};
   W.show=(c,side)=>{const cvs=[pane.L.cv,pane.R.cv],o=outSize();cvs.forEach(cv=>{const h=Math.round(640*o.h/o.w/2)*2||360;if(cv.height!==h){cv.height=h;}cv.parentNode.style.aspectRatio=o.w+'/'+o.h;});
-    W.el.hidden=false;W.open=true;W.update(c,side);};
-  W.close=()=>{W.el.hidden=true;W.open=false;Object.values(pane).forEach(p=>{p.want=null;});};
+    W.el.hidden=false;W.open=true;W.update(c,side);W.arm();};
+  // chiusura automatica dopo N secondi dall'ultimo tocco (0 = mai)
+  let acT=null;W.autoSec=()=>{let v=5;try{const x=localStorage.getItem('arnovideo-cutauto');if(x!==null)v=parseFloat(x);}catch(e){}return isNaN(v)?5:v;};
+  W.arm=()=>{clearTimeout(acT);acT=null;if(!W.open)return;const n=W.autoSec();if(n>0)acT=setTimeout(()=>{if(W.open)W.close();},n*1000);};
+  ['pointerdown','pointermove','pointerup','wheel','keydown','touchstart'].forEach(ev=>window.addEventListener(ev,e=>{if(W.open&&(ev!=='pointermove'||e.buttons||e.pointerType!=='mouse'))W.arm();},{passive:true,capture:true}));
+  W.close=()=>{W.el.hidden=true;W.open=false;clearTimeout(acT);acT=null;Object.values(pane).forEach(p=>{p.want=null;});};
   $('cutClose').onclick=W.close;
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&W.open)W.close();});
   // si sposta trascinando la barra del titolo
@@ -2875,6 +2879,9 @@ document.addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey)return
     ...pick('defDur','Durata predefinita delle foto',o=>o.textContent+' secondi'),'-',
     ...pick('quality','Qualità dell\'esportazione'),'-',
     ...pick('frameFmt','Formato del fotogramma'),'-',
+    {h:'Chiusura automatica del riquadro Cut'},
+    ...[[0,'Mai'],[3,'3 secondi'],[5,'5 secondi'],[10,'10 secondi'],[20,'20 secondi']].map(([n,l])=>({l,chk:()=>cutWin.autoSec&&cutWin.autoSec()===n,
+      run:()=>{try{localStorage.setItem('arnovideo-cutauto',String(n));}catch(e){}if(cutWin.arm)cutWin.arm();setStatus('Chiusura automatica del riquadro Cut: '+l.toLowerCase());}})),'-',
     ...(()=>{const a=pick('macZoomSel','Dimensione dell\'interfaccia (Mac)'),b=pick('uisSel','Dimensione dell\'interfaccia');return a.length||b.length?[...a,...b,'-']:[];})(),
     {h:'Avvio'},
     {l:'Sigla all\'apertura',chk:()=>{try{return localStorage.getItem('arnovideo-sigla')!=='0';}catch(e){return true;}},run:()=>{let on=true;try{on=localStorage.getItem('arnovideo-sigla')!=='0';localStorage.setItem('arnovideo-sigla',on?'0':'1');}catch(e){}setStatus(on?'Sigla all\'apertura spenta.':'Sigla all\'apertura accesa: la vedrai al prossimo avvio.');}},'-',
