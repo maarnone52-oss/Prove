@@ -814,7 +814,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.47.9';
+const VERSION='1.47.10';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -2180,9 +2180,9 @@ let curEnv=1;
 // iPhone/iPad: Safari ferma un video se ne parte un altro con l'audio. Nelle dissolvenze la clip che entra parte muta
 // e prende l'audio quando diventa la clip corrente, con una breve salita
 const XF_MUTE=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-let xfFadeT=0;
+let xfFadeT=0,xfFadeD=220;
 function gateAudio(lt){if(!curClip)return;let env=clipEnv(curClip,lt);
-  if(xfFadeT){const k=(performance.now()-xfFadeT)/220;if(k>=1)xfFadeT=0;else env*=Math.max(0,k);}
+  if(xfFadeT){const k=(performance.now()-xfFadeT)/xfFadeD;if(k>=1)xfFadeT=0;else env*=Math.max(0,k);}
   const on=env>0;   // taglio audio e dissolvenze
   if(on===curAOn&&Math.abs(env-curEnv)<0.004)return;curAOn=on;curEnv=env;
   if(curPlayer&&curPlayer.g&&actx){const g=curPlayer.g.gain;try{g.cancelScheduledValues(actx.currentTime);g.setTargetAtTime(clipGain(curClip)*env,actx.currentTime,0.012);}catch(e){applyClipVol();}}else applyClipVol();}
@@ -2274,7 +2274,7 @@ async function runSequence(rec,startT=0){
   // avvia in anticipo il video della clip dopo, per la dissolvenza
   const startNext=(i,busyP)=>{const nI=SQ[i+1];if(!nI||nI.type!=='vid')return null;const e=plan.get(i+1);
     if(!e||!e.ready||e.p===busyP)return null;const q=e.p;if(!q.v.paused)return q;if(q.g)q.g.gain.value=0;else try{q.v.volume=0;}catch(_){}
-    if(XF_MUTE){q.v.muted=true;q.xfMuted=true;}
+    if(XF_MUTE){q.v.muted=true;q.xfMuted=true;q.xfCut=false;}
     q.pre=performance.now();q.t0=q.v.currentTime;const pr=q.v.play();if(pr&&pr.catch)pr.catch(()=>{q.pre=0;});return q;};
   // prepara il primo video
   const nextVid=k=>{for(let j=k;j<SQ.length;j++)if(SQ[j].type==='vid')return j;return -1;};
@@ -2305,7 +2305,7 @@ async function runSequence(rec,startT=0){
     ensurePlan(i+1,p);                 // mentre suona questa, si preparano le due successive
     const v=p.v;
     const pre=p.pre&&!v.paused;p.pre=0;
-    if(p.xfMuted){p.xfMuted=false;xfFadeT=performance.now();p.v.muted=!elAudio()&&(!actx||!p.src);}   // dopo la dissolvenza la clip prende l'audio   // già partito in anticipo (muto) alla fine della clip prima
+    if(p.xfMuted){p.xfMuted=false;xfFadeD=p.xfCut?40:220;p.xfCut=false;xfFadeT=performance.now();p.v.muted=!elAudio()&&(!actx||!p.src);}   // taglio: l'audio entra quasi subito   // dopo la dissolvenza la clip prende l'audio   // già partito in anticipo (muto) alla fine della clip prima
     const want=(it.tin||0)+o;   // controlla di partire davvero dal punto giusto (taglio in testa)
     if(!pre&&Math.abs(v.currentTime-want)>0.04){v.currentTime=want;try{await once(v,'seeked',4000);}catch(e){}}
     curClip=it;curPlayer=p;curEnv=clipEnv(it,o);curAOn=curEnv>0;applyClipVol();   // volume della clip (entra anche nel video esportato)
@@ -2323,7 +2323,7 @@ async function runSequence(rec,startT=0){
         // cambio clip senza buco: la clip dopo parte in anticipo (muta) del tempo che il telefono impiega ad avviarla,
         // e si passa a lei appena le sue immagini si muovono
         if(!xn&&nx&&!np&&lt>=it.dur-preLat-0.01){const e=plan.get(i+1);
-          if(e&&e.ready&&e.p.v.paused){np=e.p;if(np.g)np.g.gain.value=0;else try{np.v.volume=0;}catch(_){}np.pre=performance.now();np.t0=np.v.currentTime;const pr=np.v.play();if(pr&&pr.catch)pr.catch(()=>{np.pre=0;});}}
+          if(e&&e.ready&&e.p.v.paused){np=e.p;if(np.g)np.g.gain.value=0;else try{np.v.volume=0;}catch(_){}if(XF_MUTE){np.v.muted=true;np.xfMuted=true;np.xfCut=true;}np.pre=performance.now();np.t0=np.v.currentTime;const pr=np.v.play();if(pr&&pr.catch)pr.catch(()=>{np.pre=0;});}}
         if(!xn&&np&&np.pre&&np.v.currentTime>np.t0+0.004){const lat=(performance.now()-np.pre)/1000;
           preLat=Math.max(0.03,Math.min(0.5,preLat*0.6+lat*0.4));try{localStorage.setItem('arnovideo-avvio',preLat.toFixed(3));}catch(e){}
           v.pause();return stop();}
