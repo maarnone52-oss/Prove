@@ -855,7 +855,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.15';
+const VERSION='1.49.16';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1942,6 +1942,26 @@ document.addEventListener('pointerdown',e=>{if(!$('peek').hidden&&!e.target.clos
   al.addEventListener('pointerup',up);al.addEventListener('pointercancel',up);})();
 
 /* ---------- dissolvenza: sovrapposizione della clip alla precedente ---------- */
+/* ---------- tasto «▶ Rivedi» dopo un taglio o una dissolvenza: suona da 3 s prima dell'effetto a 3 s dopo ---------- */
+const fxPlay=(function(){let btn=null,hideT=null,watch=null,rng=null;
+  function hide(){if(btn)btn.hidden=true;clearTimeout(hideT);}
+  function make(){btn=document.createElement('button');btn.type='button';btn.className='btn';btn.textContent='▶ Rivedi';
+    btn.style.cssText='position:fixed;z-index:2147483640;padding:4px 12px;font-weight:700;background:#ff4530;color:#fff;border-radius:16px;box-shadow:0 4px 14px rgba(0,0,0,.6);transform:translate(-50%,-100%)';
+    btn.hidden=true;document.body.appendChild(btn);
+    btn.addEventListener('pointerdown',e=>e.stopPropagation(),true);
+    btn.onclick=async e=>{e.stopPropagation();if(!rng)return;const r=rng;hide();unlockPv();await stopPlay();
+      setT(Math.max(0,r.a-3));startPlay();const stopAt=Math.min(totalDur(),r.b+3);clearInterval(watch);
+      watch=setInterval(()=>{if(!playing){clearInterval(watch);return;}if(playT>=stopAt){clearInterval(watch);stopPlay().then(()=>showFrame(stopAt));}},40);};
+    window.addEventListener('pointerdown',e=>{if(btn&&!btn.hidden&&e.target!==btn)hide();},true);}
+  // i = indice della clip che entra (confine tra i-1 e i); se i è oltre l'ultima, il taglio è la fine della timeline
+  return function(i){if(!items.length)return;if(!btn)make();
+    if(i>=items.length){const t=totalDur();rng={a:t,b:t};}else if(i<=0){rng={a:0,b:0};}else{const st=startOf(i);rng={a:st,b:st+xfOf(i)};}
+    requestAnimationFrame(()=>{const ph=$('phead'),tk=$('track');let x,y;
+      if(ph&&ph.getBoundingClientRect().width>=0){const r=ph.getBoundingClientRect();x=r.left+r.width/2;y=r.top;}
+      if(tk){const t=tk.getBoundingClientRect();if(x==null||x<t.left||x>t.right)x=t.left+t.width/2;if(y==null||y<t.top-10)y=t.top+4;}
+      btn.style.left=Math.round(Math.max(50,Math.min(innerWidth-50,x)))+'px';btn.style.top=Math.round(y)+'px';btn.hidden=false;
+      clearTimeout(hideT);hideT=setTimeout(hide,10000);});};
+})();
 (function(){let xd=null;
   $('lane').addEventListener('pointerdown',async e=>{const h=e.target.closest('.txf');if(!h||busy)return;e.preventDefault();e.stopPropagation();
     const el=h.closest('.tclip'),c=items.find(x=>x.id===+el.dataset.id);if(!c)return;
@@ -1952,7 +1972,7 @@ document.addEventListener('pointerdown',e=>{if(!$('peek').hidden&&!e.target.clos
     c.xf=Math.max(0,xd.xf0-(e.clientX-xd.sx)/trK()/pps);relayout();
     const tip=$('trimTip');tip.hidden=false;tip.textContent=c.xf>0?'⨯ dissolvenza '+fmtT(c.xf):'nessuna dissolvenza';placeTip(tip,e.clientX);
     const i=items.indexOf(c);showFrame(startOf(i)+Math.max(0,(c.xf||0)/2));if(cutWin.open)cutWin.updateXf(c);});
-  const up=e=>{if(!xd||e.pointerId!==xd.pid)return;const t=xd;xd=null;$('trimTip').hidden=true;if(t.moved){scheduleSave();render();}};
+  const up=e=>{if(!xd||e.pointerId!==xd.pid)return;const t=xd;xd=null;$('trimTip').hidden=true;if(t.moved){scheduleSave();render();fxPlay(items.indexOf(t.c));}};
   window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);})();
 
 
@@ -2045,7 +2065,7 @@ const cutWin={el:$('cutWin'),open:false};
     const tip=$('trimTip');tip.hidden=false;
     tip.textContent=(c.xf>0?'⨯ dissolvenza '+fmtT(c.xf):'nessuna dissolvenza')+(d>=maxD-0.001&&maxD>0?' · limite':'');placeTip(tip,e.clientX);
     showFrame(startOf(i)+Math.max(0,(c.xf||0)/2));if(cutWin.open)cutWin.updateXf(c);});
-  const up=e=>{if(!xo||e.pointerId!==xo.pid)return;const t=xo;xo=null;$('trimTip').hidden=true;if(t.moved){scheduleSave();render();}};
+  const up=e=>{if(!xo||e.pointerId!==xo.pid)return;const t=xo;xo=null;$('trimTip').hidden=true;if(t.moved){scheduleSave();render();fxPlay(items.indexOf(t.c));}};
   window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);})();
 
 /* ---------- taglio in testa e in coda con le maniglie ---------- */
@@ -2081,7 +2101,7 @@ function relayout(){   // aggiorna larghezze e tempi senza ricostruire la timeli
     if(cutWin.open)cutWin.update(c,tr.side);
     const box=$('track'),r=box.getBoundingClientRect();if(e.clientX>r.right-30)box.scrollLeft+=10;else if(e.clientX<r.left+30)box.scrollLeft-=10;});
   const up=e=>{if(!tr||e.pointerId!==tr.pid)return;const t=tr;tr=null;t.el.classList.remove('trimming');$('trimTip').hidden=true;
-    if(t.moved){renderSel();render();}};
+    if(t.moved){renderSel();render();const k=items.indexOf(t.c);fxPlay(t.side==='l'?k:k+1);}};
   window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
 })();
 
