@@ -855,7 +855,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.4';
+const VERSION='1.49.5';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -2512,7 +2512,8 @@ function blank(){const cv=$('cv');cv.width=1280;cv.height=720;fitCv();const x=cv
 const pv=makeVideo();pv.muted=true;           // lettore muto solo per mostrare i fotogrammi
 const pv2=makeVideo();pv2.muted=true;         // secondo lettore muto: mostra la clip che entra nella zona di dissolvenza
 let pvUnlocked=false;
-function unlockPv(){if(pvUnlocked)return;pvUnlocked=true;try{const r=pv.play();if(r&&r.then)r.then(()=>pv.pause()).catch(()=>{});}catch(e){}}
+function unlockPv(){if(pvUnlocked)return;pvUnlocked=true;try{const r=pv.play();if(r&&r.then)r.then(()=>pv.pause()).catch(()=>{});}catch(e){}
+  try{const r=pv2.play();if(r&&r.then)r.then(()=>pv2.pause()).catch(()=>{});}catch(e){}}
 let seekBusy=false,seekWant=null;
 function showFrame(t){setT(t);seekWant=playT;if(seekBusy)return;seekBusy=true;
   (async()=>{while(seekWant!==null){const tt=seekWant;seekWant=null;try{await drawAt(tt);}catch(e){}}seekBusy=false;})();}
@@ -2526,10 +2527,13 @@ async function drawAt(t){
   const nlt=inX?L.off-(it.dur-xf):0,al=inX?Math.max(0,Math.min(1,nlt/xf)):0;
   let nReady=false;
   if(inX&&nI.type==='vid'){
-    {const u=playUrl(nI);if(pv2.dataset.url!==u){pv2.src=u;pv2.dataset.url=u;await once(pv2,'loadedmetadata',15000);}}
-    const nt=(nI.tin||0)+Math.min(nlt,Math.max(0,nI.dur-0.05));
-    if(Math.abs(pv2.currentTime-nt)>0.01||pv2.readyState<2){pv2.currentTime=nt;try{await once(pv2,'seeked',4000);}catch(e){}}
-    nReady=pv2.readyState>=2;}
+    try{
+      {const u=playUrl(nI);if(pv2.dataset.url!==u){pv2.src=u;pv2.dataset.url=u;pv2.load();await once(pv2,'loadedmetadata',8000);}}
+      const nt=(nI.tin||0)+Math.min(nlt,Math.max(0,nI.dur-0.05));
+      if(Math.abs(pv2.currentTime-nt)>0.01||pv2.readyState<2){pv2.currentTime=nt;try{await once(pv2,'seeked',4000);}catch(e){}}
+      nReady=pv2.readyState>=2;
+      if(!nReady)setStatus('Dissolvenza: la clip che entra non è pronta (stato '+pv2.readyState+')',true);
+    }catch(e){pv2.dataset.url='';setStatus('Dissolvenza: la clip che entra non si carica ('+(e&&e.message||e)+')',true);}}
   const drawNext=()=>{if(!inX)return;x.globalAlpha=al;
     if(nI.type==='img')drawFit(x,nI.el,nI.w,nI.h,w,h,mode);else if(nReady)drawFit(x,pv2,pv2.videoWidth,pv2.videoHeight,w,h,mode);
     x.globalAlpha=1;};
