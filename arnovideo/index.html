@@ -367,6 +367,11 @@ html.macapp #cv{max-height:70vh}
 #mirrorBox .tlx{gap:6px;flex-wrap:nowrap}
 #mirrorBox .tlx .btn{height:40px!important;min-height:40px!important;min-width:0!important;width:auto!important;margin:0!important;padding:0 10px!important;font-size:14px!important;line-height:40px;position:static!important;flex:none}
 #mirrorBox .tlx #expBtn{padding:0 14px!important}
+#expProg{margin:10px auto 0;max-width:420px}
+#expProg[hidden]{display:none}
+#expProg .epbar{height:10px;border-radius:5px;background:#0a0403;box-shadow:inset 0 1px 3px rgba(0,0,0,.9),0 0 0 1px #2c2f36;overflow:hidden}
+#expProg .epbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff4530,#ffb21e);border-radius:5px;transition:width .25s linear}
+#expProg .eptxt{display:flex;justify-content:space-between;margin-top:4px;font:700 13px "SF Mono",Menlo,monospace;color:#ffb21e}
 #mirrorBox .tlxs{text-align:center;margin-top:6px}
 #mirrorBox .tlxs #status{display:block;margin:0}
 #mirrorBox .tlxs #result{margin-top:8px}
@@ -681,7 +686,7 @@ var splashDone=Promise.resolve();
         <span class="lcd" id="clock2">0:00.0</span>
         <span class="volrow mon" id="monRow2"><span class="vi" id="monIcon2">🎧</span><span class="fader" id="monFader2" style="width:90px"></span></span>
       </div>
-      <div class="tlx" id="tlExp"></div><div class="tlxs" id="tlStat"></div></div>
+      <div class="tlx" id="tlExp"></div><div id="expProg" hidden><div class="epbar"><i id="epFill"></i></div><div class="eptxt"><span id="epPct">0%</span><span id="epEta">calcolo…</span></div></div><div class="tlxs" id="tlStat"></div></div>
     <div class="displays">
       <div class="dwin"><div class="lcd" id="totDur">0:00.0</div><span class="lbl">durata totale</span></div>
       <div class="dwin"><div class="lcd g" id="totN">0</div><span class="lbl">elementi</span></div>
@@ -822,7 +827,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.48.0';
+const VERSION='1.48.1';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -2360,7 +2365,17 @@ function pickMime(){
   for(const m of list){try{if(MediaRecorder.isTypeSupported(m))return m;}catch(e){}}
   return '';
 }
-function setBusy(b,exp){busy=b;exporting=!!(b&&exp);document.body.classList.toggle('exporting',exporting);$('stopBtn').hidden=true;   // il tasto «Esporta MP4» diventa «Ferma esportazione» finché esporta
+/* barra di avanzamento dell'esportazione con il tempo che manca */
+let natP=null,epT=null,epTimer=null;
+function epShow(on){const box=$('expProg');if(!box)return;box.hidden=!on;clearInterval(epTimer);
+  if(on){natP=null;epT=null;$('epFill').style.width='0';$('epPct').textContent='0%';$('epEta').textContent='calcolo…';epTimer=setInterval(epTick,250);}}
+function epTick(){if(!exporting){epShow(false);return;}const tot=totalDur()||0;
+  const p=natP!=null?natP:(tot?Math.max(0,Math.min(1,playT/tot)):0);   // Mac: dal motore nativo; iPhone e browser: posizione della registrazione
+  $('epFill').style.width=(p*100).toFixed(1)+'%';$('epPct').textContent=Math.round(p*100)+'%';
+  let left=null;if(natP==null){left=tot*(1-p);}   // registrazione in tempo reale: manca esattamente il resto del video
+  else if(p>0.02){if(epT==null)epT={t:performance.now(),p};const el=(performance.now()-epT.t)/1000,dp=p-epT.p;if(dp>0.005&&el>0.5)left=el*(1-p)/dp;}
+  $('epEta').textContent=left==null?'calcolo…':'mancano '+fmtT(Math.max(0,left)).replace(/\.\d$/,'');}
+function setBusy(b,exp){busy=b;const wasExp=exporting;exporting=!!(b&&exp);document.body.classList.toggle('exporting',exporting);if(exporting!==wasExp)epShow(exporting);$('stopBtn').hidden=true;   // il tasto «Esporta MP4» diventa «Ferma esportazione» finché esporta
   {const eb=$('expBtn');eb.textContent=exporting?'■ Ferma esportazione':'● Esporta MP4';eb.classList.toggle('stopx',exporting);}$('addBtn').disabled=b;render();}
 $('stopBtn').onclick=()=>{stopReq=true;$('expBtn').disabled=true;$('expBtn').textContent='■ Fermo…';const nr=nativeRender();if(nr)nr.postMessage({cmd:'cancel'});};
 
@@ -2481,7 +2496,7 @@ $('nextItem').onclick=()=>{unlockPv();if(!items.length)return;const L=locate(pla
 function nativeRender(){try{return window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.render;}catch(e){return null;}}
 window.arnoNative={_wait:{},
   reply(id,data){const f=this._wait[id];if(f){delete this._wait[id];f(data);}},
-  progress(p){setStatus('Il Mac sta creando il video… '+Math.round(p*100)+'%');const sc=$('scrub');sc.style.setProperty('--p',(p*100)+'%');sc.value=p*(+sc.max||0);},
+  progress(p){natP=p;setStatus('Il Mac sta creando il video… '+Math.round(p*100)+'%');const sc=$('scrub');sc.style.setProperty('--p',(p*100)+'%');sc.value=p*(+sc.max||0);},
   done(ok,msg){const f=this._wait.done;if(f){delete this._wait.done;f({ok,msg});}},
   vprog(id,p){const f=this._wait['p'+id];if(f)f(p);}};
 async function exportNative(nr){
