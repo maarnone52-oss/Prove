@@ -526,6 +526,56 @@ main>section.setPanel{display:none!important}
 </style>
 </head>
 <body>
+<div id="splash" style="position:fixed;inset:0;z-index:2147483647;background:#000;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .3s">
+<svg viewBox="0 0 300 200" style="height:max(110px,12.5vh);width:auto" role="img" aria-label="ArnoCUT">
+  <defs>
+    <clipPath id="spIco"><rect x="40" y="6" width="220" height="188" rx="34"/></clipPath>
+    <linearGradient id="spA" x1="0" y1="0" x2=".6" y2="1"><stop offset="0" stop-color="#fff0c4"/><stop offset=".18" stop-color="#ffc94f"/><stop offset=".48" stop-color="#c47208"/><stop offset=".7" stop-color="#ffbf3d"/><stop offset="1" stop-color="#7d4404"/></linearGradient>
+    <linearGradient id="spB" x1="0" y1="0" x2=".6" y2="1"><stop offset="0" stop-color="#e2f8ff"/><stop offset=".18" stop-color="#5fd6ff"/><stop offset=".48" stop-color="#0d78a8"/><stop offset=".7" stop-color="#4fcfff"/><stop offset="1" stop-color="#064361"/></linearGradient>
+    <linearGradient id="spR" x1="0" y1="0" x2=".6" y2="1"><stop offset="0" stop-color="#ffd0c8"/><stop offset=".18" stop-color="#ff6a55"/><stop offset=".48" stop-color="#a41d0d"/><stop offset=".7" stop-color="#ff5a44"/><stop offset="1" stop-color="#560e05"/></linearGradient>
+    <linearGradient id="spSpec" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".42" stop-color="#fff" stop-opacity=".6"/><stop offset=".58" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="spTop" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity=".25"/></linearGradient>
+  </defs>
+  <rect x="40" y="6" width="220" height="188" rx="34" fill="#140806"/>
+  <polygon points="132,20 132,64 170,42" fill="#ffb21e"/>
+  <text x="150" y="122" text-anchor="middle" font-family="-apple-system,Helvetica,Arial,sans-serif" font-weight="900" font-size="50"><tspan fill="#ffb21e">Arno</tspan><tspan fill="#ff4530">CUT</tspan></text>
+  <g clip-path="url(#spIco)" id="spBlk"></g>
+  <rect id="spBlack" x="-10" y="-10" width="320" height="220" fill="#000" opacity="0"/>
+</svg></div>
+<script>
+/* sigla all'apertura: 1 s ferma, i blocchi diventano metallo e vengono aspirati a destra, poi dissolvenza al nero in 3 fotogrammi */
+(function(){var sp=document.getElementById('splash');if(!sp)return;
+  var off=false;try{off=localStorage.getItem('arnovideo-sigla')==='0';}catch(e){}
+  if(off||/[?&](arnocanvas|impaginazione)=/.test(location.search)){sp.remove();return;}
+  var NS='http://www.w3.org/2000/svg',G=document.getElementById('spBlk'),BL=document.getElementById('spBlack');
+  var B=[{x:62,w:52,g:'spA',f:'#ffb21e',s:'#6e3c03'},{x:120,w:30,g:'spB',f:'#38c6ff',s:'#053a54'},{x:156,w:48,g:'spA',f:'#ffb21e',s:'#6e3c03'},{x:210,w:28,g:'spR',f:'#ff4530',s:'#4a0c04'}];
+  var Y=148,H=28,D=6;
+  function el(t,a){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);return e;}
+  B.forEach(function(b){var g=el('g',{}),m=el('g',{opacity:0});
+    m.appendChild(el('rect',{x:b.x+3,y:Y+4,width:b.w,height:H,rx:6,fill:'#000',opacity:.5}));
+    m.appendChild(el('polygon',{points:(b.x+3)+','+Y+' '+(b.x+D+3)+','+(Y-D)+' '+(b.x+b.w+D)+','+(Y-D)+' '+(b.x+b.w)+','+Y,fill:'url(#spTop)'}));
+    m.appendChild(el('polygon',{points:(b.x+b.w)+','+(Y+1)+' '+(b.x+b.w+D)+','+(Y-D+1)+' '+(b.x+b.w+D)+','+(Y+H-D-3)+' '+(b.x+b.w)+','+(Y+H-2),fill:b.s}));
+    m.appendChild(el('rect',{x:b.x,y:Y,width:b.w,height:H,rx:6,fill:'url(#'+b.g+')'}));
+    m.appendChild(el('rect',{x:b.x,y:Y,width:b.w,height:H,rx:6,fill:'url(#spSpec)'}));
+    m.appendChild(el('rect',{x:b.x+.6,y:Y+.6,width:b.w-1.2,height:H-1.2,rx:5.4,fill:'none',stroke:'#fff','stroke-opacity':.4,'stroke-width':.9}));
+    var f=el('rect',{x:b.x,y:Y,width:b.w,height:H,rx:6,fill:b.f});g.appendChild(m);g.appendChild(f);
+    b.g=g;b.m=m;b.f=f;b.cx=b.x+b.w/2;b.cy=Y+H/2;G.appendChild(g);});
+  var STILL=1,TOT=3,STAG=.22,DUR=1.05,DIST=230,MORPH=.28,FADE=.1,LAST=STILL+(B.length-1)*STAG+DUR,t0=null,done=false;
+  function ease(p){var s=1.25;return p*p*((s+1)*p-s);}
+  function finish(){if(done)return;done=true;sp.style.opacity='0';setTimeout(function(){sp.remove();},320);}
+  function frame(now){if(done)return;if(t0==null)t0=now;var t=(now-t0)/1000;
+    B.forEach(function(b,i){var p=Math.max(0,Math.min(1,(t-STILL-i*STAG)/DUR)),e=ease(p),m=Math.min(1,p/MORPH),op=p<.75?1:Math.max(0,1-(p-.75)/.25),sx=1+Math.max(0,e)*.3;
+      b.m.setAttribute('opacity',m);b.f.setAttribute('opacity',1-m);
+      b.g.setAttribute('transform','translate('+(e*DIST)+' '+(-Math.max(0,e)*3)+') rotate('+(e*9)+' '+b.cx+' '+b.cy+') translate('+b.cx+' '+b.cy+') scale('+sx+' '+(1-Math.max(0,e)*.12)+') translate('+(-b.cx)+' '+(-b.cy)+')');
+      b.g.setAttribute('opacity',op);});
+    BL.setAttribute('opacity',Math.max(0,Math.min(1,(t-LAST)/FADE)));
+    if(t>=TOT){finish();return;}
+    requestAnimationFrame(frame);}
+  sp.addEventListener('pointerdown',function(e){e.preventDefault();finish();});
+  requestAnimationFrame(frame);
+  setTimeout(finish,6000);   // per sicurezza, se il browser rallenta l'animazione
+})();
+</script>
 <nav id="menuBar" aria-label="Menu"></nav><div id="menuDrop" hidden></div>
 <main>
   <div class="brand">
@@ -715,7 +765,7 @@ main>section.setPanel{display:none!important}
 
 <script>
 'use strict';
-const VERSION='1.46.0';
+const VERSION='1.47.0';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -2613,6 +2663,8 @@ document.addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey)return
     ...pick('quality','Qualità dell\'esportazione'),'-',
     ...pick('frameFmt','Formato del fotogramma'),'-',
     ...(()=>{const a=pick('macZoomSel','Dimensione dell\'interfaccia (Mac)'),b=pick('uisSel','Dimensione dell\'interfaccia');return a.length||b.length?[...a,...b,'-']:[];})(),
+    {h:'Avvio'},
+    {l:'Sigla all\'apertura',chk:()=>{try{return localStorage.getItem('arnovideo-sigla')!=='0';}catch(e){return true;}},run:()=>{let on=true;try{on=localStorage.getItem('arnovideo-sigla')!=='0';localStorage.setItem('arnovideo-sigla',on?'0':'1');}catch(e){}setStatus(on?'Sigla all\'apertura spenta.':'Sigla all\'apertura accesa: la vedrai al prossimo avvio.');}},'-',
     {h:'Spazio'},
     {l:()=>'Spazio usato: '+(($('spaceLcd')&&$('spaceLcd').textContent)||'–')+' · cache in RAM '+(($('ramLcd')&&$('ramLcd').textContent)||'–'),on:()=>false},
     {l:'Svuota la cache',run:cacheRun,on:()=>!!$('cacheBtn')&&!$('cacheBtn').disabled&&!busy}]});
