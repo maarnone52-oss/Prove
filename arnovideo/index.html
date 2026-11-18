@@ -577,12 +577,34 @@ main>section.setPanel{display:none!important}
       var r=p.r0+(p.r1-p.r0)*(1-Math.exp(-q*2.2)),env=Math.min(1,q/.08)*Math.pow(Math.max(0,1-lt/span),1.4);
       cx.globalAlpha=p.al*env;cx.save();cx.translate((x+120)*sx,(y+120)*sy);cx.rotate(p.rot+q*.8);cx.drawImage(spr,-r*sx,-r*sy,r*2*sx,r*2*sy);cx.restore();});
     cx.globalAlpha=1;}
-  function finish(){if(done)return;done=true;sp.style.opacity='0';setTimeout(function(){sp.remove();},320);}
+  // soffio: fruscio d'aria generato al momento (niente file), sincronizzato con il fumo; va da sinistra a destra
+  var AC=null,blowOut=null,blown=false;
+  try{var C=window.AudioContext||window.webkitAudioContext;if(C){AC=new C();if(AC.state==='suspended'&&AC.resume)AC.resume().catch(function(){});}}catch(e){AC=null;}
+  function blow(){if(blown||!AC)return;blown=true;if(AC.state!=='running')return;   // il browser non ha ancora permesso l'audio: niente suono
+    try{var now=AC.currentTime,len=Math.floor(AC.sampleRate*2),buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0),last=0;
+      for(var i=0;i<len;i++){var w=Math.random()*2-1;last=(last+0.06*w)/1.06;d[i]=last*3.2+w*0.35;}   // rumore morbido (rosa/marrone)
+      var src=AC.createBufferSource();src.buffer=buf;
+      var bp=AC.createBiquadFilter();bp.type='bandpass';bp.Q.value=0.7;
+      bp.frequency.setValueAtTime(350,now);bp.frequency.exponentialRampToValueAtTime(2600,now+0.28);bp.frequency.exponentialRampToValueAtTime(700,now+1.5);
+      var lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=5200;
+      var g=AC.createGain();g.gain.setValueAtTime(0.0001,now);g.gain.exponentialRampToValueAtTime(0.7,now+0.06);g.gain.exponentialRampToValueAtTime(0.25,now+0.45);g.gain.exponentialRampToValueAtTime(0.0001,now+1.6);
+      var out=g;
+      if(AC.createStereoPanner){var pn=AC.createStereoPanner();pn.pan.setValueAtTime(-0.8,now);pn.pan.linearRampToValueAtTime(0.8,now+0.7);g.connect(pn);out=pn;}
+      var mg=AC.createGain();mg.gain.value=0.9;src.connect(bp);bp.connect(lp);lp.connect(g);out.connect(mg);mg.connect(AC.destination);
+      // colpo d'aria iniziale, più grave
+      var src2=AC.createBufferSource();src2.buffer=buf;var lp2=AC.createBiquadFilter();lp2.type='lowpass';lp2.frequency.value=260;
+      var g2=AC.createGain();g2.gain.setValueAtTime(0.0001,now);g2.gain.exponentialRampToValueAtTime(0.9,now+0.03);g2.gain.exponentialRampToValueAtTime(0.0001,now+0.5);
+      src2.connect(lp2);lp2.connect(g2);g2.connect(mg);
+      src.start(now);src.stop(now+1.7);src2.start(now);src2.stop(now+0.6);blowOut=mg;}catch(e){}}
+  function finish(){if(done)return;done=true;sp.style.opacity='0';
+    if(blowOut&&AC){try{blowOut.gain.setTargetAtTime(0,AC.currentTime,0.08);}catch(e){}}
+    setTimeout(function(){sp.remove();if(AC&&AC.close)setTimeout(function(){try{AC.close();}catch(e){}},400);},320);}
   function frame(now){if(done)return;if(t0==null)t0=now;var t=(now-t0)/1000;
     B.forEach(function(b){var p=Math.max(0,Math.min(1,(t-b.st)/b.dur)),push=1-Math.pow(1-p,1.6)*(1-p*.35);
       var dx=b.dist*Math.pow(p,1.35),dy=b.hop*Math.sin(Math.PI*Math.min(1,p*1.2))+18*p*p,rot=b.rot*push,sc=1+(b.sc-1)*Math.min(1,p*1.6),op=p<.7?1:Math.max(0,1-(p-.7)/.3);
       b.el.setAttribute('transform','translate('+dx+' '+dy+') translate('+b.cx+' '+b.cy+') rotate('+rot+') scale('+sc+') translate('+(-b.cx)+' '+(-b.cy)+')');
       b.el.setAttribute('opacity',op);});
+    if(t>=G0)blow();
     smoke(t);
     BL.style.opacity=Math.max(0,Math.min(1,(t-(BLACK-FADE))/FADE));
     if(t>=TOT){finish();return;}
@@ -781,7 +803,7 @@ main>section.setPanel{display:none!important}
 
 <script>
 'use strict';
-const VERSION='1.47.1';
+const VERSION='1.47.2';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
