@@ -656,8 +656,8 @@ var splashDone=Promise.resolve();
 <div id="cutWin" hidden role="dialog" aria-label="Cut">
   <div class="cuthead" id="cutHead"><span class="cutttl">CUT</span><span class="cutinfo" id="cutInfo"></span><button class="btn xs" id="cutClose" type="button">Chiudi</button></div>
   <div class="cutpanes">
-    <div class="cutpane"><div class="cutscr"><canvas id="cutL" width="640" height="360"></canvas></div><div class="cutlbl"><b>◀ coda</b> <span id="cutLn"></span><span class="cuttc" id="cutLt"></span></div></div>
-    <div class="cutpane"><div class="cutscr"><canvas id="cutR" width="640" height="360"></canvas></div><div class="cutlbl"><b>testa ▶</b> <span id="cutRn"></span><span class="cuttc" id="cutRt"></span></div></div>
+    <div class="cutpane"><div class="cutscr"><canvas id="cutL" width="640" height="360"></canvas></div><div class="cutlbl"><b id="cutLk">◀ coda</b> <span id="cutLn"></span><span class="cuttc" id="cutLt"></span></div></div>
+    <div class="cutpane"><div class="cutscr"><canvas id="cutR" width="640" height="360"></canvas></div><div class="cutlbl"><b id="cutRk">testa ▶</b> <span id="cutRn"></span><span class="cuttc" id="cutRt"></span></div></div>
   </div>
 </div>
 <nav id="menuBar" aria-label="Menu"></nav><div id="menuDrop" hidden></div>
@@ -850,7 +850,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.0';
+const VERSION='1.49.1';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1940,12 +1940,12 @@ document.addEventListener('pointerdown',e=>{if(!$('peek').hidden&&!e.target.clos
   $('lane').addEventListener('pointerdown',async e=>{const h=e.target.closest('.txf');if(!h||busy)return;e.preventDefault();e.stopPropagation();
     const el=h.closest('.tclip'),c=items.find(x=>x.id===+el.dataset.id);if(!c)return;
     xd={c,sx:e.clientX,xf0:c.xf||0,pid:e.pointerId,moved:false};try{h.setPointerCapture(e.pointerId);}catch(_){}
-    selId=c.id;[...$('lane').children].forEach(x=>x.classList.toggle('sel',x===el));renderSel();unlockPv();await stopPlay();});
+    selId=c.id;[...$('lane').children].forEach(x=>x.classList.toggle('sel',x===el));renderSel();unlockPv();await stopPlay();if(cutWin.showXf)cutWin.showXf(c);});
   window.addEventListener('pointermove',e=>{if(!xd||e.pointerId!==xd.pid)return;const c=xd.c;
     if(!xd.moved){if(Math.abs(e.clientX-xd.sx)<3)return;xd.moved=true;pushUndo('dissolvenza di «'+c.name+'»');}
     c.xf=Math.max(0,xd.xf0-(e.clientX-xd.sx)/trK()/pps);relayout();
     const tip=$('trimTip');tip.hidden=false;tip.textContent=c.xf>0?'⨯ dissolvenza '+fmtT(c.xf):'nessuna dissolvenza';placeTip(tip,e.clientX);
-    const i=items.indexOf(c);showFrame(startOf(i)+Math.max(0,(c.xf||0)/2));});
+    const i=items.indexOf(c);showFrame(startOf(i)+Math.max(0,(c.xf||0)/2));if(cutWin.open)cutWin.updateXf(c);});
   const up=e=>{if(!xd||e.pointerId!==xd.pid)return;const t=xd;xd=null;$('trimTip').hidden=true;if(t.moved){scheduleSave();render();}};
   window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);})();
 
@@ -1970,7 +1970,14 @@ const cutWin={el:$('cutWin'),open:false};
     catch(e){}finally{p.busy=false;}}
   function show(p,it,t,tag){if(!it){p.want=null;blackOut(p,tag==='L'?'inizio della timeline':'fine della timeline');p.name.textContent='';p.tc.textContent='';return;}
     p.name.textContent='«'+it.name+'»';p.tc.textContent=it.type==='vid'?fmtT(t):'foto';p.want={it,t};pump(p);}
-  W.update=(c,side)=>{const i=items.indexOf(c);if(i<0)return;
+  const kinds=(a,b)=>{$('cutLk').textContent=a;$('cutRk').textContent=b;};
+  // dissolvenza: a sinistra la clip che esce dove comincia a sfumare, a destra quella che entra dove è del tutto visibile
+  W.updateXf=c=>{const i=items.indexOf(c);if(i<1)return;const L=items[i-1],xf=c.xf||0;kinds('◀ inizio dissolvenza','fine dissolvenza ▶');
+    const tl=L.type==='vid'?(L.tin||0)+Math.max(0,L.dur-xf-(xf?0:1/FPS)):0,tr=c.type==='vid'?(c.tin||0)+xf:0;
+    show(pane.L,L,tl,'L');show(pane.R,c,tr,'R');const st=startOf(i);
+    $('cutInfo').textContent=xf>0?'dissolvenza '+fmtT(xf)+' · da '+fmtT(st)+' a '+fmtT(st+xf):'nessuna dissolvenza · taglio a '+fmtT(st);};
+  W.showXf=c=>{W.show(c,'l');W.updateXf(c);};
+  W.update=(c,side)=>{const i=items.indexOf(c);if(i<0)return;kinds('◀ coda','testa ▶');
     const L=side==='l'?items[i-1]:c,R=side==='l'?c:items[i+1];
     const tail=it=>it.type==='vid'?(it.tin||0)+it.dur-1/FPS:0,head=it=>it.type==='vid'?(it.tin||0):0;
     show(pane.L,L||null,L?tail(L):0,'L');show(pane.R,R||null,R?head(R):0,'R');
