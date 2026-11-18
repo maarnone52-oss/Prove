@@ -855,7 +855,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.8';
+const VERSION='1.49.9';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -2208,16 +2208,16 @@ const goToItem=id=>{const i=items.findIndex(x=>x.id===id);if(i>=0&&!exporting){u
   let scr=false,scrWas=false;
   $('ruler').addEventListener('pointerdown',e=>{if(!items.length||exporting)return;e.preventDefault();scr=true;unlockPv();scrWas=playing;
     try{e.target.setPointerCapture(e.pointerId);}catch(_){}stopPlay().then(()=>showFrame(xToT(snapX(trackX(e)))));});
-  $('ruler').addEventListener('pointermove',e=>{if(scr&&!playing)showFrame(xToT(snapX(trackX(e))));});
-  ['pointerup','pointercancel'].forEach(t=>$('ruler').addEventListener(t,async()=>{if(!scr)return;scr=false;
+  $('ruler').addEventListener('pointermove',e=>{if(scr&&!playing){headDrag=true;showFrame(xToT(snapX(trackX(e))));}});
+  ['pointerup','pointercancel'].forEach(t=>$('ruler').addEventListener(t,async()=>{if(!scr)return;scr=false;if(headDrag){headDrag=false;cutAutoOpen();}
     if(resumeAfter(scrWas)){seekWant=null;await waitStopped();startPlay();}scrWas=false;}));
   // fascia col pallino: come il righello, e scorre la timeline vicino ai bordi
   let kz=false,kzWas=false;
   $('kzone').addEventListener('pointerdown',async e=>{if(!items.length||exporting)return;e.preventDefault();kz=true;unlockPv();$('phead').classList.add('drag');
     try{e.target.setPointerCapture(e.pointerId);}catch(_){}kzWas=playing;await stopPlay();if(kz)showFrame(xToT(snapX(trackX(e))));});
   $('kzone').addEventListener('pointermove',e=>{if(!kz||playing)return;const tr=$('track'),r=tr.getBoundingClientRect();
-    if(e.clientX<r.left+30)tr.scrollLeft-=12;else if(e.clientX>r.right-30)tr.scrollLeft+=12;showFrame(xToT(snapX(trackX(e))));});
-  const kzEnd=async()=>{if(!kz)return;kz=false;$('phead').classList.remove('drag');
+    headDrag=true;if(e.clientX<r.left+30)tr.scrollLeft-=12;else if(e.clientX>r.right-30)tr.scrollLeft+=12;showFrame(xToT(snapX(trackX(e))));});
+  const kzEnd=async()=>{if(!kz)return;kz=false;if(headDrag){headDrag=false;cutAutoOpen();}$('phead').classList.remove('drag');
     if(resumeAfter(kzWas)){seekWant=null;await waitStopped();startPlay();}kzWas=false;};
   ['pointerup','pointercancel'].forEach(t=>$('kzone').addEventListener(t,kzEnd));
 })();
@@ -2520,7 +2520,8 @@ function unlockPv(){if(pvUnlocked)return;pvUnlocked=true;try{const r=pv.play();i
   try{const r=pv2.play();if(r&&r.then)r.then(()=>pv2.pause()).catch(()=>{});}catch(e){}}
 let seekBusy=false,seekWant=null;
 // apertura automatica del riquadro Cut quando il segno rosso sta su un taglio o dentro una dissolvenza (si attiva dal menu Impostazioni)
-function cutAutoOpen(){let on=true;try{on=localStorage.getItem('arnovideo-cutopen')!=='0';}catch(e){}
+let headDrag=false;   // il cursore si sta trascinando: il riquadro Cut resta chiuso
+function cutAutoOpen(){if(headDrag){if(cutWin.open)cutWin.close();cutWin.cur=null;return;}let on=true;try{on=localStorage.getItem('arnovideo-cutopen')!=='0';}catch(e){}
   if(!on||playing||exporting||!items.length||!cutWin.show)return;
   const tol=1/FPS+1e-4;
   for(let i=1;i<items.length;i++){const st=startOf(i),xf=xfOf(i),c=items[i];
@@ -2616,8 +2617,8 @@ $('nextItem').onclick=()=>{unlockPv();if(!items.length)return;const L=locate(pla
 // barra di posizione trascinabile
 (function(){let was=false,active=false;const sc=$('scrub');
   sc.addEventListener('pointerdown',async()=>{unlockPv();if(active)return;active=true;was=playing;await stopPlay();});
-  sc.addEventListener('input',async()=>{if(playing)await stopPlay();showFrame(+sc.value);});
-  const fine=async()=>{if(!active)return;active=false;if(resumeAfter(was)){seekWant=null;await waitStopped();startPlay();}was=false;};
+  sc.addEventListener('input',async()=>{if(playing)await stopPlay();if(active)headDrag=true;showFrame(+sc.value);});
+  const fine=async()=>{if(!active)return;active=false;if(headDrag){headDrag=false;cutAutoOpen();}if(resumeAfter(was)){seekWant=null;await waitStopped();startPlay();}was=false;};
   sc.addEventListener('change',fine);sc.addEventListener('pointerup',fine);
 })();
 ['fmt','fit'].forEach(id=>$(id).addEventListener('change',()=>{if(!busy&&items.length)showFrame(playT);}));
