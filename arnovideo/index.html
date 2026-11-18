@@ -855,7 +855,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.3';
+const VERSION='1.49.4';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -2510,6 +2510,7 @@ function markCur(i){[...$('lane').children].forEach((c,k)=>c.classList.toggle('c
 function blank(){const cv=$('cv');cv.width=1280;cv.height=720;fitCv();const x=cv.getContext('2d');x.fillStyle='#000';x.fillRect(0,0,1280,720);
   x.fillStyle='#3a3f47';x.font='bold 40px Helvetica, Arial';x.textAlign='center';x.fillText('ARNOCUT',640,370);markCur(-1);}
 const pv=makeVideo();pv.muted=true;           // lettore muto solo per mostrare i fotogrammi
+const pv2=makeVideo();pv2.muted=true;         // secondo lettore muto: mostra la clip che entra nella zona di dissolvenza
 let pvUnlocked=false;
 function unlockPv(){if(pvUnlocked)return;pvUnlocked=true;try{const r=pv.play();if(r&&r.then)r.then(()=>pv.pause()).catch(()=>{});}catch(e){}}
 let seekBusy=false,seekWant=null;
@@ -2520,12 +2521,24 @@ async function drawAt(t){
   const L=locate(t),it=items[L.i];markCur(L.i);
   const cv=$('cv'),{w,h}=pvSize();if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;fitCv();}cvVer++;
   const x=cv.getContext('2d'),mode=$('fit').value;
-  if(it.type==='img'){x.fillStyle='#000';x.fillRect(0,0,w,h);drawFit(x,it.el,it.w,it.h,w,h,mode);return;}
+  // zona di dissolvenza: la clip che entra si vede sopra, con trasparenza crescente (come in riproduzione)
+  const nI=items[L.i+1],xf=nI?xfOf(L.i+1):0,inX=xf>0&&L.off>=it.dur-xf;
+  const nlt=inX?L.off-(it.dur-xf):0,al=inX?Math.max(0,Math.min(1,nlt/xf)):0;
+  let nReady=false;
+  if(inX&&nI.type==='vid'){
+    {const u=playUrl(nI);if(pv2.dataset.url!==u){pv2.src=u;pv2.dataset.url=u;await once(pv2,'loadedmetadata',15000);}}
+    const nt=(nI.tin||0)+Math.min(nlt,Math.max(0,nI.dur-0.05));
+    if(Math.abs(pv2.currentTime-nt)>0.01||pv2.readyState<2){pv2.currentTime=nt;try{await once(pv2,'seeked',4000);}catch(e){}}
+    nReady=pv2.readyState>=2;}
+  const drawNext=()=>{if(!inX)return;x.globalAlpha=al;
+    if(nI.type==='img')drawFit(x,nI.el,nI.w,nI.h,w,h,mode);else if(nReady)drawFit(x,pv2,pv2.videoWidth,pv2.videoHeight,w,h,mode);
+    x.globalAlpha=1;};
+  if(it.type==='img'){x.fillStyle='#000';x.fillRect(0,0,w,h);drawFit(x,it.el,it.w,it.h,w,h,mode);drawNext();return;}
   {const u=playUrl(it);if(pv.dataset.url!==u){pv.src=u;pv.dataset.url=u;await once(pv,'loadedmetadata',15000);}}
   const target=(it.tin||0)+Math.min(L.off,Math.max(0,it.dur-0.05));
   if(Math.abs(pv.currentTime-target)>0.01||pv.readyState<2){pv.currentTime=target;try{await once(pv,'seeked',4000);}catch(e){}}
   if(playing||exporting)return;      // nel frattempo è ripartita la riproduzione
-  if(pv.readyState>=2){x.fillStyle='#000';x.fillRect(0,0,w,h);drawFit(x,pv,pv.videoWidth,pv.videoHeight,w,h,mode);}
+  if(pv.readyState>=2){x.fillStyle='#000';x.fillRect(0,0,w,h);drawFit(x,pv,pv.videoWidth,pv.videoHeight,w,h,mode);drawNext();}
 }
 async function startPlay(){
   if(playing||busy||!items.length)return;
