@@ -2,6 +2,7 @@ ARNOCLICK PROVA per Mac - versione "Mac App Store" (modalità protetta attiva)
 =============================================================================
 Serve a provare sul Mac, PRIMA di inviarla ad Apple, la stessa app che andrà sul Mac App Store:
 stessa app Mac di ARNOCLICK, ma con la modalità protetta (sandbox) attiva.
+Novità di questa prova: l'ascolto dal vivo (microfono e ingressi della scheda audio) funziona anche su macOS prima della 12, perché l'app cattura l'audio da sé.
 Cosa cambia rispetto all'app Mac normale: il collegamento con Reaper non funziona qui
 (la modalità protetta non permette di leggere la cartella condivisa con lo script).
 Tutto il resto (aprire brani e video, salvare, scheda audio, uscite separate) deve funzionare.

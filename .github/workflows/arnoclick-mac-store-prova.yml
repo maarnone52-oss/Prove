@@ -24,6 +24,11 @@ jobs:
           repository: maarnone52-oss/ArnoClick
           path: src
 
+      - name: Aggiunge la cattura dal vivo (ascolto dal vivo senza microfono del motore web)
+        run: |
+          cp arnoclick-mac-store/Mac-patch/*.swift src/Mac/
+          python3 arnoclick-mac-store/applica.py src/Mac/WebViewController.swift
+
       - name: Genera il progetto Xcode
         working-directory: src
         run: |
@@ -74,5 +79,5 @@ jobs:
           sleep 3
           gh release create arnoclick-mac-store --target main --prerelease \
             --title "ARNOCLICK PROVA Mac negozio ${VER}" \
-            --notes "Prova dell'app Mac con la modalità protetta attiva (come sul Mac App Store). Collegamento con Reaper non disponibile. Doppio clic sul .dmg, trascina in Applicazioni. La prima volta: clic destro sull'app > Apri." \
+            --notes "Prova dell'app Mac con la modalità protetta attiva (come sul Mac App Store) e con la cattura dal vivo dalla scheda audio o dal microfono anche su Catalina. Collegamento con Reaper non disponibile. Doppio clic sul .dmg, trascina in Applicazioni. La prima volta: clic destro sull'app > Apri." \
             "ArnoClick-Prova-negozio-${VER}.dmg"
