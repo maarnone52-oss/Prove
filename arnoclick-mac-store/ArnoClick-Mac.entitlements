@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Modalità protetta richiesta dal Mac App Store -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- Ingressi della scheda audio / microfono -->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<!-- Aprire e salvare i file che scegli tu con i pannelli del Finder -->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<!-- Necessario al motore della pagina (WebKit) -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+</dict>
+</plist>

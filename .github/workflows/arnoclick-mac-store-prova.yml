@@ -1,0 +1,78 @@
+# ARNOCLICK PROVA Mac "negozio": compila l'app Mac di ARNOCLICK (sorgente del repository pubblico
+# maarnone52-oss/ArnoClick) con la MODALITÀ PROTETTA (sandbox) attiva, come sarà sul Mac App Store.
+# Non si firma con Apple e non si carica nulla su App Store Connect: serve solo per provarla sul Mac.
+name: ARNOCLICK PROVA Mac negozio
+
+on:
+  push:
+    branches: [main]
+    paths: ['arnoclick-mac-store/**', '.github/workflows/arnoclick-mac-store-prova.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scarica il sorgente pubblico di ARNOCLICK
+        uses: actions/checkout@v4
+        with:
+          repository: maarnone52-oss/ArnoClick
+          path: src
+
+      - name: Genera il progetto Xcode
+        working-directory: src
+        run: |
+          brew install xcodegen
+          xcodegen generate
+          VER=$(sed -n 's/.*MARKETING_VERSION: "\([0-9.]*\)".*/\1/p' project.yml | head -1)
+          echo "VER=$VER" >> "$GITHUB_ENV"
+          echo "Versione $VER"
+
+      - name: Compila l'app Mac con la modalità protetta
+        working-directory: src
+        run: |
+          set -o pipefail
+          xcodebuild -project ArnoClick.xcodeproj -scheme ArnoClickMac \
+            -destination 'generic/platform=macOS' -configuration Release \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
+            PRODUCT_BUNDLE_IDENTIFIER=it.arnone.arnoclick.prova.mac \
+            CODE_SIGN_ENTITLEMENTS="$GITHUB_WORKSPACE/arnoclick-mac-store/ArnoClick-Mac.entitlements" \
+            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual \
+            build | tail -n 40
+          APP=$(find "$RUNNER_TEMP/dd/Build/Products/Release" -maxdepth 1 -name '*.app' | head -1)
+          echo "APP=$APP" >> "$GITHUB_ENV"
+
+      - name: Controlla firma, permessi e versione minima
+        run: |
+          codesign --verify --deep --strict "$APP" && echo "firma ok"
+          echo "--- permessi dell'app ---"
+          codesign -d --entitlements :- "$APP" 2>/dev/null | grep -E "com.apple.security" || true
+          lipo -archs "$APP/Contents/MacOS/"*
+          /usr/libexec/PlistBuddy -c "Print :LSMinimumSystemVersion" "$APP/Contents/Info.plist"
+          grep -q "com.apple.security.app-sandbox" <(codesign -d --entitlements :- "$APP" 2>/dev/null) || { echo "::error::sandbox non attiva"; exit 1; }
+
+      - name: File di installazione (.dmg)
+        run: |
+          set -e
+          rm -rf dmg && mkdir -p dmg
+          cp -R "$APP" "dmg/ARNOCLICK PROVA negozio.app"
+          ln -s /Applications dmg/Applicazioni
+          cp arnoclick-mac-store/LEGGIMI.txt dmg/
+          hdiutil create -volname "ARNOCLICK PROVA negozio" -srcfolder dmg -ov -format UDZO "ArnoClick-Prova-negozio-${VER}.dmg"
+          ls -lh *.dmg
+
+      - name: Pubblica nella pagina Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete arnoclick-mac-store --yes --cleanup-tag >/dev/null 2>&1 || true
+          sleep 3
+          gh release create arnoclick-mac-store --target main --prerelease \
+            --title "ARNOCLICK PROVA Mac negozio ${VER}" \
+            --notes "Prova dell'app Mac con la modalità protetta attiva (come sul Mac App Store). Collegamento con Reaper non disponibile. Doppio clic sul .dmg, trascina in Applicazioni. La prima volta: clic destro sull'app > Apri." \
+            "ArnoClick-Prova-negozio-${VER}.dmg"
