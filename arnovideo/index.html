@@ -855,7 +855,7 @@ var splashDone=Promise.resolve();
 
 <script>
 'use strict';
-const VERSION='1.49.20';
+const VERSION='1.49.21';
 document.getElementById('ver').textContent=VERSION;
 const $=id=>document.getElementById(id);
 const media=[];               // file caricati: {mid,type,file,url,name,dur,w,h,thumb,strip,fkey,el}
@@ -1434,7 +1434,7 @@ setTimeout(()=>{try{if(document.getElementById('cvLayoutPill')&&!/originale ·/.
 /* ---------- riquadri liberi (solo Mac): ogni riquadro si sposta e si ridimensiona; la disposizione resta salvata ---------- */
 (function(){
   const isMac=navigator.maxTouchPoints===0&&window.innerWidth>=900&&!/iPhone|iPad|Android/i.test(navigator.userAgent)&&!EMU_PHONE;if(!isMac)return;
-  let mode='free';try{mode=localStorage.getItem('arnovideo-disposizione-modo')||'free';if(mode==='canvas'){mode='free';localStorage.setItem('arnovideo-disposizione-modo','free');}}catch(e){}
+  let mode='free';try{mode=localStorage.getItem('arnovideo-disposizione-modo')||'free';if(!localStorage.getItem('arnovideo-cv-088')){localStorage.setItem('arnovideo-cv-088','1');mode='canvas';localStorage.setItem('arnovideo-disposizione-modo','canvas');}}catch(e){}
   const btn=document.createElement('button');btn.id='lyBtn';btn.type='button';btn.textContent='▦ Disposizione';document.body.appendChild(btn);
   const menu=document.createElement('div');menu.id='lyMenu';menu.hidden=true;document.body.appendChild(menu);
   const panels=()=>[...document.querySelectorAll('main > .brand, main > section.rack, main > footer')];
@@ -1446,6 +1446,7 @@ setTimeout(()=>{try{if(document.getElementById('cvLayoutPill')&&!/originale ·/.
   let edit=false;
   function drawMenu(){menu.innerHTML='<div class="h">Disposizione dei riquadri</div>'+
     '<button class="btn xs'+(mode==='free'?' on':'')+'" data-m="free">✋ Riquadri liberi (salvati per progetto)</button>'+
+    '<button class="btn xs'+(mode==='canvas'?' on':'')+'" data-m="canvas">▧ Impaginazione ARNOCANVAS</button>'+
     '<button class="btn xs'+(mode==='orig'?' on':'')+'" data-m="orig">☰ Pagina originale</button>'+
     '<div class="h">Riquadri</div><button class="btn xs" data-a="order">⇲ Rimetti in ordine</button>'+
     '<button class="btn xs" data-a="reset">↺ Ricomincia dalla pagina originale</button>';}
@@ -3127,8 +3128,8 @@ if(/^https?:/.test(location.protocol)){let chk=0;const checkNew=async()=>{if(Dat
 <script>/* disposizione sul Mac: impaginazione ARNOCANVAS (predefinita), riquadri liberi, oppure pagina originale */
 (function(){var iph=/iPhone|iPod/i.test(navigator.userAgent),m='free';
   if(iph){var si=document.createElement('script');si.src='impaginazione-iphone.js?v=18';document.body.appendChild(si);}   // iPhone: impaginazione ARNOCANVAS per iPhone
-  else{try{m=localStorage.getItem('arnovideo-disposizione-modo')||'free'}catch(e){}if(m==='canvas')m='free';
-  if(m==='canvas'){var s=document.createElement('script');s.src='impaginazione-mac.js?v=16';document.body.appendChild(s);}}
+  else{try{m=localStorage.getItem('arnovideo-disposizione-modo')||'free'}catch(e){}if(!localStorage.getItem('arnovideo-cv-088'))m='canvas';
+  if(m==='canvas'){var s=document.createElement('script');s.src='impaginazione-mac.js?v=17';document.body.appendChild(s);}}
   if(iph||m==='canvas'){
     // riquadri nuovi (Timeline, Mixer) non ancora disposti in ARNOCANVAS: si mettono sotto agli altri
     setTimeout(function(){try{var pill=document.getElementById('cvLayoutPill');if(!pill||!/· mostra originale/.test(pill.textContent))return;
