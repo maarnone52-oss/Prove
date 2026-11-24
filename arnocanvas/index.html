@@ -165,6 +165,10 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 .li.off .nm{opacity:.5}
 .li .hb{min-height:34px;min-width:34px;padding:0 7px;font-size:13px}
 .li .ey.on{background:linear-gradient(180deg,#7fe3ff,#1aa4d6);color:#04161d}
+#bIn{display:none!important}
+.bx.grp{outline:2px dashed #b98cff;outline-offset:-1px}
+.bx.grp>.tg{background:#b98cff;color:#1a0b33}
+.bx.wrp>.tg{background:#9fe0ff;color:#04161d}
 #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 166px);transform:translateX(-50%);background:#04161d;color:var(--cy);border:1px solid #1aa4d6;
  padding:9px 14px;border-radius:10px;font-size:14px;z-index:200;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
 #toast.on{opacity:1}
@@ -184,8 +188,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
   </header>
   <div class="bar">
     <div class="seg">
-      <button class="hb" data-l="P">① Riquadri</button>
-      <button class="hb" data-l="O">② Oggetti</button>
+      <button class="hb" data-l="E">✎ Modifica</button>
       <button class="hb" data-l="U">▶ Usa</button>
     </div>
     <span class="sp"></span>
@@ -206,8 +209,9 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
     <button class="hb" id="bDup"><b>⧉</b>Duplica</button>
     <button class="hb" id="bDel"><b>🗑</b>Elimina</button>
     <button class="hb" id="bProp"><b>🎨</b>Aspetto</button>
+    <button class="hb" id="bGrp"><b>⧉</b><span id="bGrpT">Gruppo</span></button>
     <button class="hb" id="bIn"><b>⤵</b>Entra</button>
-    <button class="hb" id="bMv"><b>⇄</b>Riquadro</button>
+    <button class="hb" id="bMv"><b>⇄</b>Sposta in</button>
     <div id="useMsg">Stai usando l'app: i comandi funzionano davvero.<br>Torna a ① o ② per modificare.</div>
   </footer>
 </div>
@@ -216,7 +220,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.8.10';
+var VER='0.9.0';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -252,7 +256,7 @@ function saveSet(){lsSet('arnocanvas:set',{app:S.app,dev:S.dev,lvl:S.lvl,grid:S.
 function A(){for(var i=0;i<APPS.length;i++)if(APPS[i].k===S.app)return APPS[i];return APPS[0]}
 function DV(){for(var i=0;i<DEVS.length;i++)if(DEVS[i].k===S.dev)return DEVS[i];return DEVS[0]}
 function mkey(){return 'arnocanvas:m:'+S.app+':'+S.dev}
-function blank(){return {v:1,frozen:false,P:{},I:{},N:[],MV:[],seq:1}}
+function blank(){return {v:1,frozen:false,P:{},I:{},N:[],MV:[],G:[],seq:1}}
 
 var F=$('#F'),ov=$('#ov'),stage=$('#stage'),wrap=$('#wrap'),fbox=$('#fbox');
 var W=null,D=null,ready=false,M=blank(),ORIG={},CB={},PANELS=[],BOXES=[],CONTR=null;
@@ -304,11 +308,13 @@ function relPath(root,el){var s='';while(el&&el!==root){var p=el.parentElement,i
 /* ---------- nomi leggibili ---------- */
 function txt(el){return ((el&&el.textContent)||'').replace(/\s+/g,' ').trim()}
 function panelName(el){
+  if(el.classList&&el.classList.contains('cv-wrap')){var ch=el.firstElementChild;return ch?objName(ch):'Oggetto libero'}
   var nm=A().names;if(nm)for(var q in nm){try{if(el.matches(q))return nm[q]}catch(e){}}
   if(el.querySelector('.wordmark')||el.classList.contains('brand')&&el.tagName!=='DIV'||el.tagName==='HEADER')return 'Intestazione';
   if(el.classList.contains('brand')||el.querySelector(':scope > .brand'))return 'Intestazione';
   if(el.tagName==='FOOTER')return 'Piè di pagina';
   var l=el.querySelector('.lbl,h1,h2,h3,.dt');var t=l?txt(l):'';
+  if(!t){var me=refOf(el),fr=null;(M.MV||[]).forEach(function(m){if(m.from&&m.ref.indexOf(me+'/')===0)fr=m.from});if(fr)return cut((visKids(el).length?'Resto di «':'Cornice vuota di «')+fr+'»',34)}
   if(!t)t=el.id?el.id:'Riquadro';
   return cut(t,34);
 }
@@ -326,6 +332,7 @@ function objName(el){
   if(t&&t.length<=24&&!el.children.length)return '«'+t+'»';
   return 'Gruppo'+(el.id?' '+el.id:'')+(t?' «'+cut(t,18)+'»':'');
 }
+function isWrap(el){return !!(el&&el.classList&&el.classList.contains('cv-wrap'))}
 function isPanelEl(el){for(var i=0;i<PANELS.length;i++)if(PANELS[i].el===el)return true;return false}
 function nameAt(ref){var el=resolve(ref);if(!el)return ref;return isPanelEl(el)?panelName(el):objName(el)}
 function panelOf(el){while(el&&!isPanelEl(el))el=el.parentElement;return el}
@@ -373,6 +380,7 @@ function buildNew(n){
     case 'slider':e=D.createElement('input');e.type='range';e.style.width='160px';break;
     case 'select':e=D.createElement('select');e.innerHTML='<option>Opzione 1</option><option>Opzione 2</option>';break;
     case 'row':e=D.createElement('div');e.className='row c';e.style.minHeight='44px';e.style.outline='1px dashed #666';break;
+    case 'wrap':e=D.createElement('div');e.className='cv-wrap';e.style.cssText='display:block;margin:0;padding:0;border:0;background:none;box-shadow:none';break;
   }
   return e;
 }
@@ -468,6 +476,7 @@ function applyAll(){
   detectPanels();
   Object.keys(M.I).forEach(applyItem);
   if(M.frozen)applyFreeze();
+  if(!M.G)M.G=[];pruneGroups();if(S.gin&&!grpById(S.gin))S.gin=null;
   if(sel&&!resolve(sel))sel=null;
   MS=MS.filter(function(r){return !!resolve(r)});if(MS.length===1){sel=MS[0];MS=[]}
   if(cont&&!resolve(cont))cont=null;
@@ -502,7 +511,7 @@ function layoutStage(){
 function hasKids(el){for(var c=el.firstElementChild;c;c=c.nextElementSibling)if(!/^(SCRIPT|STYLE|TEMPLATE|OPTION)$/.test(c.tagName)&&vis(c))return true;return false}
 function measure(){
   BOXES=[];CONTR=null;if(!ready||!D)return;
-  if(S.lvl==='P'){var n=0;PANELS.forEach(function(p){if(!vis(p.el))return;n++;BOXES.push({ref:p.ref,el:p.el,r:rectP(p.ref,p.el),num:n,name:panelName(p.el),nw:isNew(p.el)||!!p.el.closest('[data-cvn]'),cut:(M.P[p.ref]&&M.P[p.ref].det)?null:cutSides(p.ref,p.el)})})}
+  if(S.lvl==='P'){var n=0;PANELS.forEach(function(p){if(!vis(p.el))return;n++;BOXES.push({ref:p.ref,el:p.el,wrap:isWrap(p.el),r:rectP(p.ref,p.el),num:n,name:panelName(p.el),nw:isNew(p.el)||!!p.el.closest('[data-cvn]'),cut:(M.P[p.ref]&&M.P[p.ref].det)?null:cutSides(p.ref,p.el)})})}
   else if(S.lvl==='O'&&cont){
     var c=resolve(cont);if(!c){cont=null;return}
     CONTR=isPanelEl(c)?rectP(cont,c):rectOf(c);
@@ -512,24 +521,38 @@ function measure(){
       BOXES.push({ref:refOf(ch),el:ch,r:r,name:objName(ch),nw:isFresh(ch)});
     }
   }
+  groupBoxes();
+}
+function groupBoxes(){ // i membri di un gruppo diventano un solo elemento (o, se ci sei dentro, solo loro)
+  var key=ctxKey(),gin=S.gin?grpById(S.gin):null;
+  if(gin&&gin.c===key){var m=gin.m;BOXES=BOXES.filter(function(b){return m.indexOf(b.ref)>=0});
+    if(BOXES.length){var L=1e9,T=1e9,Rr=-1e9,B=-1e9;BOXES.forEach(function(b){L=Math.min(L,b.r.x);T=Math.min(T,b.r.y);Rr=Math.max(Rr,b.r.x+b.r.w);B=Math.max(B,b.r.y+b.r.h)});CONTR={x:L-6,y:T-6,w:Rr-L+12,h:B-T+12,grp:gin}}
+    return}
+  if(gin&&gin.c!==key)S.gin=null;
+  (M.G||[]).forEach(function(g){if(g.c!==key)return;var mem=BOXES.filter(function(b){return g.m.indexOf(b.ref)>=0});if(mem.length<1)return;
+    var L=1e9,T=1e9,Rr=-1e9,B=-1e9;mem.forEach(function(b){L=Math.min(L,b.r.x);T=Math.min(T,b.r.y);Rr=Math.max(Rr,b.r.x+b.r.w);B=Math.max(B,b.r.y+b.r.h)});
+    var first=BOXES.indexOf(mem[0]);BOXES=BOXES.filter(function(b){return mem.indexOf(b)<0});
+    BOXES.splice(Math.max(0,Math.min(first,BOXES.length)),0,{ref:'G:'+g.id,grp:g,els:mem.map(function(b){return b.el}),mem:mem,r:{x:L,y:T,w:Rr-L,h:B-T},name:g.n,num:'⧉'})});
+  var n=0;BOXES.forEach(function(b){if(S.lvl==='P'&&!b.grp)b.num=isWrap(b.el)?'•':++n})
 }
 function render(){
   if(!ov)return;var h='',d=DV();
   for(var k=1;k*d.h<H;k++)h+='<div class="scr" style="top:'+(k*d.h*Z)+'px"><span>fine schermata '+k+'</span></div>';
-  if(CONTR)h+='<div class="ct" style="left:'+CONTR.x*Z+'px;top:'+CONTR.y*Z+'px;width:'+CONTR.w*Z+'px;height:'+CONTR.h*Z+'px"><b>✎ Stai lavorando dentro «'+esc(cut(nameAt(cont),30))+'»<small>'+(MAC?'clic su un altro riquadro per cambiare · Esc per chiudere':'tocca un altro riquadro per cambiare')+'</small></b>'+fitBtns()+'</div>';
+  if(CONTR)h+='<div class="ct" style="left:'+CONTR.x*Z+'px;top:'+CONTR.y*Z+'px;width:'+CONTR.w*Z+'px;height:'+CONTR.h*Z+'px"><b>✎ Stai lavorando dentro «'+esc(cut(CONTR.grp?CONTR.grp.n:nameAt(cont),30))+'»<small>'+(MAC?'Esc o ⤴ per uscire':'⤴ per uscire')+'</small></b>'+(CONTR.grp?'':fitBtns())+'</div>';
   BOXES.forEach(function(b){
     var many=selList().length>1,s=isSel(b.ref),one=s&&!many&&b.ref===sel,r=b.r;
-    h+='<div class="bx'+(S.lvl==='P'?' pn':'')+(s?' sel':'')+(s&&(r.w*Z<90||r.h*Z<70)?' small':'')+(b.nw?' nw':'')+'" data-ref="'+esc(b.ref)+'" style="left:'+r.x*Z+'px;top:'+r.y*Z+'px;width:'+r.w*Z+'px;height:'+r.h*Z+'px">';
+    if(b.grp){h+='<div class="bx grp'+(s?' sel':'')+'" data-ref="'+esc(b.ref)+'" style="left:'+r.x*Z+'px;top:'+r.y*Z+'px;width:'+r.w*Z+'px;height:'+r.h*Z+'px"><span class="tg"><b class="nm">⧉</b>'+esc(b.name)+' · '+b.mem.length+'</span>'+(s?'<span class="dm">gruppo · doppio tocco per entrare</span>':'')+'</div>';return}
+    h+='<div class="bx'+(S.lvl==='P'?' pn':'')+(b.wrap?' wrp':'')+(s?' sel':'')+(s&&(r.w*Z<90||r.h*Z<70)?' small':'')+(b.nw?' nw':'')+'" data-ref="'+esc(b.ref)+'" style="left:'+r.x*Z+'px;top:'+r.y*Z+'px;width:'+r.w*Z+'px;height:'+r.h*Z+'px">';
     if(S.lvl==='P')h+='<span class="tg"><b class="nm">'+b.num+'</b>'+esc(b.name)+'</span>';
     else if(s&&!(many&&S.lvl==='O'))h+='<span class="tg">'+(many?'✓ ':'')+esc(b.name)+'</span>';
     if(b.nw)h+='<span class="na">da assegnare</span>';
     if(b.cut)h+='<span class="na cut">contenuto tagliato '+b.cut+'</span>';
     if(s&&many&&b.ref===sel&&S.lvl!=='O')h+='<span class="dm">'+selList().length+' selezionati</span>';
-    if(one&&S.lvl==='P'){var dt=M.P[b.ref]&&M.P[b.ref].det;h+='<span class="lk'+(dt?' off':'')+'" data-lk="1">'+(dt?'⛓ oggetti sganciati':'🔗 oggetti agganciati')+'</span>'}
+    if(one&&S.lvl==='P'&&!b.wrap){var dt=M.P[b.ref]&&M.P[b.ref].det;h+='<span class="lk'+(dt?' off':'')+'" data-lk="1">'+(dt?'⛓ oggetti sganciati':'🔗 oggetti agganciati')+'</span>'}
     if(one){if(S.lvl==='P')h+='<i class="sz" data-h="st"></i><i class="sz" data-h="sr"></i><i class="sz" data-h="sb"></i><i class="sz" data-h="sl"></i>';h+='<i data-h="t"></i><i data-h="r"></i><i data-h="b"></i><i data-h="l"></i><i class="co" data-h="tl"></i><i class="co" data-h="tr"></i><i class="co" data-h="br"></i><i class="co" data-h="bl"></i><span class="dm">'+dimTxt(b)+'</span>'}
     h+='</div>';
   });
-  var gr=groupRect();
+  var gr=gselOn()?null:groupRect();
   if(gr){var n=selList().length;
     var gp=6;h+='<div class="bx gb" data-gb="1" style="left:'+(gr.x*Z-gp)+'px;top:'+(gr.y*Z-gp)+'px;width:'+(gr.w*Z+gp*2)+'px;height:'+(gr.h*Z+gp*2)+'px"><span class="tg">Gruppo · '+n+' oggetti</span>'+
       '<i data-h="t"></i><i data-h="r"></i><i data-h="b"></i><i data-h="l"></i><i class="co" data-h="tl"></i><i class="co" data-h="tr"></i><i class="co" data-h="br"></i><i class="co" data-h="bl"></i>'+
@@ -580,11 +603,30 @@ function dimTxt(b){
 }
 var rafM=0;function remeasure(){if(rafM)return;rafM=requestAnimationFrame(function(){rafM=0;measure();render()})}
 
+/* ---------- gruppi: oggetti (o riquadri) che si muovono insieme ---------- */
+function ctxKey(){return S.lvl==='P'?'':(cont||'')}
+function grpById(id){var g=null;(M.G||[]).forEach(function(x){if(x.id===id)g=x});return g}
+function grpOf(ref){var g=null;(M.G||[]).forEach(function(x){if(x.m.indexOf(ref)>=0)g=x});return g}
+function grpLive(g){return g.m.filter(function(r){var e=resolve(r);return e&&vis(e)})}
+function pruneGroups(){M.G=(M.G||[]).map(function(g){g.m=g.m.filter(function(r){return !!resolve(r)});return g}).filter(function(g){return g.m.length>1})}
+function renameRefs(pairs){(M.G||[]).forEach(function(g){g.m=g.m.map(function(r){for(var i=0;i<pairs.length;i++)if(pairs[i][0]===r)return pairs[i][1];return r})})}
+function selectRef(ref){
+  if(ref&&ref.indexOf('G:')===0){var g=grpById(ref.slice(2));if(!g)return;var m=grpLive(g);if(!m.length)return;S.gsel=g.id;MS=m.length>1?m.slice():[];sel=m[m.length-1];return}
+  S.gsel=null;sel=ref;MS=[];
+}
+function gselOn(){if(!S.gsel)return null;var g=grpById(S.gsel);if(!g)return null;var L=selList();if(!L.length)return null;
+  for(var i=0;i<L.length;i++)if(g.m.indexOf(L[i])<0)return null;return g}
+
 /* ---------- selezione (singola o multipla) ---------- */
 function selList(){var a=MS.length?MS.slice():(sel?[sel]:[]);return a.filter(function(r){return !!resolve(r)})}
-function isSel(r){return MS.length?MS.indexOf(r)>=0:r===sel}
+function isSel(r){if(r&&r.indexOf('G:')===0){var g=gselOn();return !!(g&&'G:'+g.id===r)}return MS.length?MS.indexOf(r)>=0:r===sel}
 function clearMulti(){MS=[]}
 function toggleMulti(r){
+  if(r&&r.indexOf('G:')===0){var g=grpById(r.slice(2));if(!g)return;var m=grpLive(g);if(!MS.length&&sel)MS=[sel];
+    var all=m.every(function(x){return MS.indexOf(x)>=0});
+    if(all)MS=MS.filter(function(x){return m.indexOf(x)<0});else m.forEach(function(x){if(MS.indexOf(x)<0)MS.push(x)});
+    sel=MS.length?MS[MS.length-1]:null;if(MS.length===1){sel=MS[0];MS=[]}S.gsel=null;return}
+  S.gsel=null;
   if(!MS.length&&sel&&sel!==r)MS=[sel];
   var i=MS.indexOf(r);
   if(i>=0){MS.splice(i,1);sel=MS.length?MS[MS.length-1]:null}else{MS.push(r);sel=r}
@@ -597,7 +639,7 @@ function pt(e){var r=ov.getBoundingClientRect();return {x:(e.clientX-r.left)/Z,y
 function inside(r,p){return r&&p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h}
 function hit(p){
   try{var top=D.elementFromPoint(p.x-W.pageXOffset,p.y-W.pageYOffset);
-    for(var e=top;e;e=e.parentElement){for(var i=0;i<BOXES.length;i++)if(BOXES[i].el===e)return BOXES[i]}}catch(_){}
+    for(var e=top;e;e=e.parentElement){for(var i=0;i<BOXES.length;i++)if(BOXES[i].el===e||(BOXES[i].els&&BOXES[i].els.indexOf(e)>=0))return BOXES[i]}}catch(_){}
   var best=null;BOXES.forEach(function(b){if(inside(b.r,p)&&(!best||b.r.w*b.r.h<best.r.w*best.r.h))best=b});return best}
 function panelAt(p){var best=null;PANELS.forEach(function(q){if(vis(q.el)){var r=rectP(q.ref,q.el);if(inside(r,p)&&(!best||r.w*r.h<best.a))best={ref:q.ref,a:r.w*r.h}}});return best}
 
@@ -608,7 +650,7 @@ ov.addEventListener('pointerdown',function(e){
   var hd=e.target.closest('[data-h]'),gbx=e.target.closest('.gb'),bx=e.target.closest('.bx:not(.gb)'),p=pt(e);
   if(gbx&&!e.shiftKey){e.preventDefault();startDrag(hd?hd.getAttribute('data-h'):'m',p);try{ov.setPointerCapture(e.pointerId)}catch(_){}return}
   if(!hd&&bx&&e.pointerType==='mouse'&&e.shiftKey){toggleMulti(bx.getAttribute('data-ref'));render();updBar();return}
-  if(!hd&&bx&&e.pointerType==='mouse'&&!S.multi&&!isSel(bx.getAttribute('data-ref'))){sel=bx.getAttribute('data-ref');clearMulti();render();updBar()}
+  if(!hd&&bx&&e.pointerType==='mouse'&&!S.multi&&!isSel(bx.getAttribute('data-ref'))){selectRef(bx.getAttribute('data-ref'));render();updBar()}
   if(sel&&(hd||(bx&&isSel(bx.getAttribute('data-ref'))))){
     e.preventDefault();startDrag(hd?hd.getAttribute('data-h'):'m',p);
     try{ov.setPointerCapture(e.pointerId)}catch(_){}
@@ -657,9 +699,9 @@ function tapAt(p){
   if(S.multi){if(b)toggleMulti(b.ref);render();updBar();return}
   if(b){
     if(lastTap.ref===b.ref&&now-lastTap.t<420){lastTap={};enter(b.ref);return}
-    lastTap={ref:b.ref,t:now};sel=b.ref;
-  }else sel=null;
-  clearMulti();render();updBar();
+    lastTap={ref:b.ref,t:now};selectRef(b.ref);
+  }else{sel=null;MS=[];S.gsel=null}
+  render();updBar();
 }
 function liftPanels(refs){ // mentre si trascina, gli oggetti restano visibili sopra tutti i riquadri
   var done=[];refs.forEach(function(r){var e=resolve(r),pe=e?panelOf(e):null;if(!pe||done.indexOf(pe)>=0)return;done.push(pe);
@@ -833,13 +875,16 @@ function endDrag(){
 
 /* ---------- livelli ---------- */
 function setLevel(l){
+  if(l!==S.lvl&&l!=='U')S.gin=null;
   S.lvl=l;saveSet();MS=[];
-  $$('.seg .hb').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-l')===l)});
+  $$('.seg .hb').forEach(function(b){var k=b.getAttribute('data-l');b.classList.toggle('on',k==='E'?l!=='U':k===l)});
   ov.classList.toggle('use',l==='U');
   if(l==='O'&&!cont&&sel&&S.lvl==='O'){}
   measure();render();updBar();updCrumb();
 }
 function enter(ref){
+  if(ref&&ref.indexOf('G:')===0||(!ref&&gselOn())){var g=ref?grpById(ref.slice(2)):gselOn();if(!g)return;S.gin=g.id;S.gsel=null;sel=null;MS=[];measure();render();updBar();updCrumb();toast('Dentro «'+g.n+'»: sistemi un oggetto alla volta · ⤴ per uscire');return}
+  if(gselOn()){enter('G:'+S.gsel);return}
   MS=[];
   if(S.lvl==='P'){cont=ref;sel=null;setLevel('O');return}
   var el=resolve(ref);
@@ -851,22 +896,25 @@ function orderBoxes(){return BOXES.filter(function(b){return !b.el||!b.el.classL
 function navGo(k){
   if(S.lvl==='U'||!ready)return;
   if(k==='in'){if(sel)enter(sel);return}
+  if(k==='up'&&S.gin){var gi=S.gin;S.gin=null;measure();selectRef('G:'+gi);render();updBar();updCrumb();return}
   if(k==='up'){if(S.lvl!=='O'||!cont)return;var c=resolve(cont);if(!c)return;if(isPanelEl(c))goTo('');else goTo(refOf(c.parentElement));return}
   var L=orderBoxes();if(!L.length)return;var i=-1;for(var j=0;j<L.length;j++)if(L[j].ref===sel)i=j;
   i=k==='next'?(i+1)%L.length:(i<=0?L.length-1:i-1);
-  sel=L[i].ref;MS=[];render();updBar();keepVisible();
+  selectRef(L[i].ref);render();updBar();keepVisible();
 }
 function updNav(){
   var u=S.lvl==='U',L=u?[]:orderBoxes(),i=-1;for(var j=0;j<L.length;j++)if(L[j].ref===sel)i=j;
   $('#nav').classList.toggle('show',!u&&ready&&L.length>0);
   $('#navN').textContent=(i>=0?i+1:'–')+'/'+L.length;
   var e=sel?resolve(sel):null;
-  $('#nav [data-nv=in]').disabled=!(e&&(S.lvl==='P'||hasKids(e)));
-  $('#nav [data-nv=up]').disabled=!(S.lvl==='O'&&cont);
+  $('#nav [data-nv=in]').disabled=!(gselOn()||(e&&selList().length<2&&((S.lvl==='P'&&!isWrap(e))||hasKids(e))));
+  $('#nav [data-nv=up]').disabled=!(S.gin||(S.lvl==='O'&&cont));
 }
 $$('#nav [data-nv]').forEach(function(b){b.onclick=function(){navGo(b.getAttribute('data-nv'))}});
 
 function goTo(ref){ // dalla barra del percorso
+  if(ref==='~'){navGo('up');return}
+  S.gin=null;
   if(!ref){sel=cont?refOf(panelOf(resolve(cont))||resolve(cont)):null;cont=null;setLevel('P');return}
   var old=cont;cont=ref;sel=null;MS=[];
   var o=resolve(old);if(o){var c=resolve(ref);while(o&&o.parentElement!==c)o=o.parentElement;if(o)sel=refOf(o)}
@@ -874,29 +922,28 @@ function goTo(ref){ // dalla barra del percorso
 }
 function updCrumb(){
   var cr=$('#crumb');
-  if(S.lvl!=='O'){cr.classList.remove('show');return}
+  if(S.lvl==='U'){cr.classList.remove('show');return}
   cr.classList.add('show');
-  if(!cont){cr.innerHTML='<button class="ck" data-g="">‹ Riquadri</button><span class="gt">Tocca un riquadro per modificarne gli oggetti</span>';return}
+  var gi=S.gin?grpById(S.gin):null,gtail=gi?'<span class="gt">›</span><button class="ck cur" data-g="~">⧉ '+esc(gi.n)+'</button>':'';
+  if(S.lvl==='P'||!cont){cr.innerHTML='<button class="ck'+(gi?'':' cur')+'" data-g="">⌂ Pagina</button>'+(gi?gtail:'<span class="gt">doppio tocco su un gruppo per lavorarci dentro</span>');return}
   var chain=[],e=resolve(cont);
   while(e&&!isPanelEl(e)){chain.unshift(e);e=e.parentElement}
-  var h='<button class="ck" data-g="">‹ Riquadri</button>';
+  var h='<button class="ck" data-g="">⌂ Pagina</button>';
   if(e)h+='<span class="gt">›</span><button class="ck'+(chain.length?'':' cur')+'" data-g="'+esc(refOf(e))+'">'+esc(panelName(e))+'</button>';
   chain.forEach(function(c,i){h+='<span class="gt">›</span><button class="ck'+(i===chain.length-1?' cur':'')+'" data-g="'+esc(refOf(c))+'">'+esc(cut(objName(c),24))+'</button>'});
-  cr.innerHTML=h;
+  cr.innerHTML=h+gtail;
 }
 $('#crumb').addEventListener('click',function(e){var b=e.target.closest('[data-g]');if(b)goTo(b.getAttribute('data-g'))});
 $$('.seg .hb').forEach(function(b){b.addEventListener('click',function(){
   var l=b.getAttribute('data-l');
-  if(l==='O'&&S.lvl==='P'&&sel){cont=sel;sel=null}
-  if(l==='P'&&S.lvl==='O'&&cont){var pe=panelOf(resolve(cont));sel=pe?refOf(pe):null}
+  if(l==='E'){if(S.lvl==='U')setLevel(cont?'O':'P');return}
   setLevel(l);
-  if(l==='O'&&!cont)toast('Tocca il riquadro di cui vuoi modificare gli oggetti');
 })});
 
 function updBar(){
   var u=S.lvl==='U';
   ['#bNew','#bDup','#bDel','#bProp','#bIn'].forEach(function(s){$(s).style.display=u?'none':''});
-  $('#bMv').style.display=(!u&&S.lvl==='O')?'':'none';
+  $('#bMv').style.display=(!u&&(S.lvl==='O'||selList().some(function(r){return isWrap(resolve(r))})))?'':'none';
   $('#useMsg').style.display=u?'block':'none';
   $('#zoom').style.display=u&&!MAC?'none':'flex';
   var has=!!(sel&&resolve(sel));
@@ -910,6 +957,7 @@ function updBar(){
   var lv=has&&!u?levelOf(sel):null;$('#zord').classList.toggle('show',!!lv&&lv.of>1);if(lv)$('#zlv').innerHTML=nsel>1?nsel+'<br>selez.':'livello<br>'+lv.n+' di '+lv.of;
   if(MAC){$$('#pad [data-d],#pad [data-zs]').forEach(function(b){b.disabled=!has});$$('#zord [data-z]').forEach(function(b){b.disabled=!(lv&&lv.of>1)});if(!lv||lv.of<2)$('#zlv').innerHTML=has?'livello<br>unico':'nessuna<br>selez.'}$('#multiB').classList.toggle('on',!!S.multi);$('#multiB').innerHTML=(S.multi?'☑':'☐')+(nsel>1?' '+nsel:'<small style="font-size:11px"> multi</small>');$('#multiB').style.display=u?'none':'';
   $('#bIn').disabled=$('#bIn').disabled||nsel>1;
+  var gm=grpMode();$('#bGrp').style.display=u?'none':'';$('#bGrp').disabled=!gm;$('#bGrpT').textContent=gm==='sep'||gm==='explode'?'Separa':'Raggruppa';
   $('#gridB').textContent='▦'+(S.snap?S.grid+'🧲':' libero');
   $('#gridB').classList.toggle('on',S.snap);
 }
@@ -926,7 +974,7 @@ $('#bNew').onclick=function(){
   var h='<p class="hint">Gli elementi nuovi hanno l\'aspetto giusto ma <b>nessuna funzione</b>: sono segnati «da assegnare». La funzione la descrivi poi a Claude.</p><span class="lbl">Riquadro</span>';
   h+='<button class="opt" data-k="panel"><span class="ic">▣</span><span>Riquadro vuoto<small>Un nuovo riquadro numerato'+(M.frozen?', messo in fondo':', dopo quello selezionato')+'</small></span></button>';
   if(S.lvl==='O'&&cont){h+='<span class="lbl">Oggetto dentro «'+esc(cut(nameAt(cont),30))+'»</span>';NEWK.forEach(function(k){h+='<button class="opt" data-k="'+k[0]+'"><span class="ic">'+k[1]+'</span><span>'+k[2]+'<small>'+k[3]+'</small></span></button>'})}
-  else h+='<p class="hint">Per aggiungere pulsanti, scritte, display… passa a <b>② Oggetti</b> ed entra in un riquadro.</p>';
+  else h+='<p class="hint">Per aggiungere pulsanti, scritte, display… entra in un riquadro con il doppio tocco.</p>';
   openSheet('Nuovo elemento',h,function(c){c.addEventListener('click',function(e){var b=e.target.closest('[data-k]');if(b){closeSheet();addNew(b.getAttribute('data-k'))}})});
 };
 function addNew(kind){
@@ -965,7 +1013,8 @@ $('#bDup').onclick=function(){
       else if(el.contains(e))M.I[nref+relPath(el,e)]=JSON.parse(JSON.stringify(M.I[k]))});
     if(isP&&M.frozen&&M.P[src]){var P=M.P[src];M.P[nref]={x:P.x+24,y:P.y+24,w:P.w,s:P.s||1,mh:P.mh}}
   })});
-  if(made.length>1){MS=made;sel=made[made.length-1]}else{MS=[];sel=made[0]||null}
+  var gs=gselOn();if(gs&&made.length>1){var gid='g'+(M.seq||1);M.seq=(M.seq||1)+1;M.G.push({id:gid,c:gs.c,m:made.slice(),n:gs.n+' copia'});commit();measure();selectRef('G:'+gid)}
+  else if(made.length>1){MS=made;sel=made[made.length-1]}else{MS=[];sel=made[0]||null}
   render();updBar();toast(made.length>1?made.length+' copie create: funzioni da assegnare':'Copia creata: le sue funzioni sono da assegnare');
 };
 function removeNew(id){
@@ -985,9 +1034,69 @@ function removeNew(id){
 $('#bDel').onclick=function(){
   var refs=selList();if(!refs.length)return;
   change(function(){refs.forEach(function(r){if(/^@[^/]+$/.test(r))removeNew(r.slice(1));else{(M.I[r]||(M.I[r]={})).hide=true}})});
-  sel=null;MS=[];render();updBar();toast((refs.length>1?refs.length+' elementi eliminati':'Eliminato')+' · ↶ per annullare');
+  sel=null;MS=[];S.gsel=null;render();updBar();toast((refs.length>1?refs.length+' elementi eliminati':'Eliminato')+' · ↶ per annullare');
 };
 $('#bIn').onclick=function(){if(sel)enter(sel)};
+function grpMode(){ // cosa farebbe il pulsante Gruppo adesso
+  if(S.lvl==='U')return null;if(gselOn())return 'sep';var L=selList();
+  if(L.length>1)return 'grp';
+  if(L.length===1){var e=resolve(L[0]);if(!e)return null;
+    if(S.lvl==='P'&&!isWrap(e)&&visKids(e).length)return 'explode';
+    if(S.lvl==='O'&&!isPanelEl(e)&&visKids(e).length>1)return 'explode'}
+  return null;
+}
+$('#bGrp').onclick=function(){var m=grpMode();if(m==='grp')doGroup();else if(m==='sep')doUngroup();else if(m==='explode')doExplode()};
+function doGroup(){
+  var refs=docOrder(selList());if(refs.length<2)return;var key=ctxKey();
+  var before=JSON.stringify(M);if(!M.G)M.G=[];
+  M.G.forEach(function(g){g.m=g.m.filter(function(r){return refs.indexOf(r)<0})});pruneGroups();
+  var n=1;M.G.forEach(function(g){var k=+(String(g.n).match(/\d+$/)||[0])[0];if(k>=n)n=k+1});
+  var id='g'+(M.seq||1);M.seq=(M.seq||1)+1;M.G.push({id:id,c:key,m:refs,n:'Gruppo '+n});
+  if(S.gin){var o=grpById(S.gin);if(o)S.gin=null}
+  hist.push(before);if(hist.length>80)hist.shift();redo=[];commit();measure();selectRef('G:'+id);render();updBar();updCrumb();
+  toast('Creato «Gruppo '+n+'»: '+refs.length+' elementi si muovono insieme · doppio tocco per lavorarci dentro');
+}
+function doUngroup(){
+  var g=gselOn();if(!g)return;var before=JSON.stringify(M),m=grpLive(g);
+  M.G=M.G.filter(function(x){return x!==g});S.gsel=null;S.gin=null;
+  hist.push(before);if(hist.length>80)hist.shift();redo=[];commit();measure();MS=m.length>1?m:[];sel=m[m.length-1]||null;render();updBar();updCrumb();
+  toast('«'+g.n+'» separato: gli elementi restano selezionati e ora si muovono da soli');
+}
+function doExplode(){ // scioglie un contenitore vero: i suoi oggetti diventano liberi, ognuno al suo posto
+  var ref=sel,el=resolve(ref);if(!el)return;var kids=visKids(el);if(!kids.length)return;var pname=isPanelEl(el)?panelName(el):objName(el);
+  var before=JSON.stringify(M);
+  if(S.lvl==='O'){ // gruppo dentro un riquadro: gli oggetti passano al contenitore di sopra
+    var keep={};MS=kids.map(function(k){return refOf(k)});sel=MS[MS.length-1];MS.forEach(function(r){keep[r]=rectOf(resolve(r))});
+    hist.push(before);if(hist.length>80)hist.shift();redo=[];moveTo(refOf(el.parentElement),keep);
+    toast('Separato: '+kids.length+' oggetti liberi nel contenitore di sopra (la cornice vuota resta, puoi eliminarla)');return}
+  ensureFrozen();el=resolve(ref);kids=visKids(el);var P=M.P[ref];if(!P){toast('Questo gruppo non si può separare');return}
+  var sc=P.s||1,want=[],pairs=[],wraps=[],par=refOf(el.parentElement);
+  kids.forEach(function(k){want.push({r:refOf(k),rc:rectOf(k),w:k.offsetWidth})});
+  var aft=ref;
+  want.forEach(function(x){
+    var wid='n'+(M.seq||1);M.seq=(M.seq||1)+1;var wref='@'+wid;
+    M.N.push({id:wid,kind:'wrap',panel:true,par:par,aft:aft});aft=wref;
+    var nid='m'+(M.seq||1);M.seq=(M.seq||1)+1;var nref='%'+nid,src=x.r;
+    if(/^@[^/]+$/.test(src)){M.N.forEach(function(n){if('@'+n.id===src){n.par=wref;n.aft=null}});nref=src}
+    else if(/^%[^/]+$/.test(src)){M.MV.forEach(function(m){if('%'+m.id===src){m.to=wref;m.aft=null}});nref=src}
+    else{M.MV.push({id:nid,ref:src,to:wref,aft:null,from:panelName(el)});
+      Object.keys(M.I).forEach(function(k){if(k===src||k.indexOf(src+'/')===0){M.I[nref+k.slice(src.length)]=M.I[k];delete M.I[k]}})}
+    pairs.push([src,nref]);wraps.push({w:wref,o:nref,x:x});
+  });
+  renameRefs(pairs);
+  applyAll();
+  wraps.forEach(function(w){M.P[w.w]={x:r1(w.x.rc.x),y:r1(w.x.rc.y),w:w.x.w,s:sc,x0:r1(w.x.rc.x),y0:r1(w.x.rc.y),w0:w.x.w}});
+  applyAll();
+  wraps.forEach(function(w){var o=resolve(w.o);if(!o)return;var c=rectOf(o),P2=M.P[w.w];P2.x=r1(P2.x+(w.x.rc.x-c.x));P2.y=r1(P2.y+(w.x.rc.y-c.y));P2.x0=P2.x;P2.y0=P2.y});
+  // livelli: gli oggetti liberi subito sopra la cornice da cui escono
+  var L=PANELS.filter(function(p){return vis(p.el)}).map(function(p,i){var it=M.I[p.ref],Pp=M.P[p.ref];return {r:p.ref,i:i,z:it&&it.z!=null?it.z:(Pp&&Pp.z)||0}})
+    .filter(function(x){return !wraps.some(function(w){return w.w===x.r})}).sort(function(a,b){return a.z-b.z||a.i-b.i}).map(function(x){return x.r});
+  var at=L.indexOf(ref);L.splice(at+1,0,...wraps.map(function(w){return w.w}));
+  L.forEach(function(r,n){var o=M.I[r]||(M.I[r]={});o.z=n+1;if(M.P[r])delete M.P[r].z});
+  hist.push(before);if(hist.length>80)hist.shift();redo=[];applyAll();commit();
+  MS=wraps.length>1?wraps.map(function(w){return w.w}):[];sel=wraps.length?wraps[wraps.length-1].w:null;S.gsel=null;render();updBar();updCrumb();
+  toast('«'+pname+'» separato: '+wraps.length+' oggetti liberi sulla pagina, ognuno al suo posto (la cornice vuota resta, puoi eliminarla)');
+}
 $('#multiB').onclick=function(){S.multi=!S.multi;if(!S.multi&&MS.length){sel=MS[MS.length-1];MS=[]}else if(S.multi&&sel&&!MS.length)MS=[sel];if(MS.length===1)MS=[];render();updBar();
   toast(S.multi?'Selezione multipla: tocca gli elementi da aggiungere o togliere':'Selezione singola')};
 $('#bMv').onclick=function(){
@@ -1027,6 +1136,7 @@ function moveTo(to,keep){ // keep: posizioni a schermo da mantenere (oggetti tra
     clearPos(newRef);
   }
   done.push(newRef);pairs.push([src,newRef])});
+  renameRefs(pairs);
   applyAll();
   if(keep){pairs.forEach(function(pr){var want=keep[pr[0]],el=resolve(pr[1]);if(!want||!el)return;
       var cur=rectOf(el),it=M.I[pr[1]]||(M.I[pr[1]]={}),K=el.offsetWidth?cur.w/(el.offsetWidth*(it.s||1)):1;if(!isFinite(K)||K<=0)K=1;
@@ -1114,11 +1224,12 @@ $('#padMode').onclick=function(){S.pmode=S.pmode==='size'?'move':'size';saveSet(
 $('#padSt').onclick=function(){S.fine=!S.fine;saveSet();updBar();toast(S.fine?'Spostamento fine: 1 punto per tocco':'Passo della griglia: '+stepVal()+' punti per tocco')};
 
 /* ---------- livelli (sopra / sotto) ---------- */
-function zOf(b){var it=M.I[b.ref];if(it&&it.z!=null)return it.z;var P=M.P[b.ref];return P&&P.z?P.z:0}
+function zOf(b){if(b.grp){var z=0;b.mem.forEach(function(x){z=Math.max(z,zOf(x))});return z}var it=M.I[b.ref];if(it&&it.z!=null)return it.z;var P=M.P[b.ref];return P&&P.z?P.z:0}
 function stackList(){ // dal più sotto al più sopra, come li disegna il browser
   return BOXES.map(function(b,i){return {b:b,i:i,z:zOf(b)}}).sort(function(a,c){return a.z-c.z||a.i-c.i}).map(function(x){return x.b});
 }
-function levelOf(ref){var L=stackList();for(var i=0;i<L.length;i++)if(L[i].ref===ref)return {n:i+1,of:L.length};return null}
+function levelOf(ref){var L=stackList();for(var i=0;i<L.length;i++)if(L[i].ref===ref||(L[i].grp&&L[i].grp.m.indexOf(ref)>=0))return {n:i+1,of:L.length};return null}
+function zAssign(L){var n=0;L.forEach(function(b){var list=b.grp?b.mem.slice().sort(function(a,c){return zOf(a)-zOf(c)}):[b];list.forEach(function(x){var o=M.I[x.ref]||(M.I[x.ref]={});o.z=++n;if(M.P[x.ref])delete M.P[x.ref].z})})}
 function visKids(par){var a=[];if(!par)return a;for(var c=par.firstElementChild;c;c=c.nextElementSibling)if(!/^(SCRIPT|STYLE|TEMPLATE)$/.test(c.tagName)&&!c.hasAttribute('data-cvph')&&vis(c))a.push(c);return a}
 function overlapR(a,b){return a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+b.h&&b.y<a.y+a.h}
 function liftChain(el,k){ // alza i contenitori dell'oggetto (gruppi e riquadro) quanto serve
@@ -1138,11 +1249,12 @@ function liftChain(el,k){ // alza i contenitori dell'oggetto (gruppi e riquadro)
 function zMove(k){
   if(!sel||S.lvl==='U')return;
   var L=stackList(),old=L.map(function(b){return b.ref}).join('|'),j;
-  if(k==='top'||k==='bot'){var a=L.filter(function(b){return !isSel(b.ref)}),m=L.filter(function(b){return isSel(b.ref)});L=k==='top'?a.concat(m):m.concat(a)}
-  else if(k==='up'){for(j=L.length-2;j>=0;j--)if(isSel(L[j].ref)&&!isSel(L[j+1].ref)){var t1=L[j];L[j]=L[j+1];L[j+1]=t1}}
-  else{for(j=1;j<L.length;j++)if(isSel(L[j].ref)&&!isSel(L[j-1].ref)){var t2=L[j];L[j]=L[j-1];L[j-1]=t2}}
+  var isS=function(b){return isSel(b.ref)||(b.grp&&b.grp.m.some(function(r){return isSel(r)}))};
+  if(k==='top'||k==='bot'){var a=L.filter(function(b){return !isS(b)}),m=L.filter(function(b){return isS(b)});L=k==='top'?a.concat(m):m.concat(a)}
+  else if(k==='up'){for(j=L.length-2;j>=0;j--)if(isS(L[j])&&!isS(L[j+1])){var t1=L[j];L[j]=L[j+1];L[j+1]=t1}}
+  else{for(j=1;j<L.length;j++)if(isS(L[j])&&!isS(L[j-1])){var t2=L[j];L[j]=L[j-1];L[j-1]=t2}}
   var same=L.map(function(b){return b.ref}).join('|')===old,before=JSON.stringify(M),lifted=false;
-  if(!same)L.forEach(function(b,n){var o=M.I[b.ref]||(M.I[b.ref]={});o.z=n+1;if(M.P[b.ref])delete M.P[b.ref].z});
+  if(!same)zAssign(L);
   // un oggetto sta dentro il suo riquadro (e nei suoi gruppi): per portarlo davvero davanti si alzano anche loro
   if(S.lvl==='O'&&(k==='top'||k==='up'))selList().forEach(function(r){var e=resolve(r);if(e&&liftChain(e,k))lifted=true});
   if(same&&!lifted){toast(k==='up'||k==='top'?'È già il più in alto':'È già il più in basso');return}
@@ -1425,10 +1537,11 @@ function showDeleted(){
 }
 function showHelp(){
   openSheet('Come si usa','<p class="hint">ARNOCANVAS apre la <b>vera app</b> (versione di prova) dentro lo spazio dello schermo scelto. Le modifiche agiscono sugli elementi veri, che si portano dietro le loro funzioni.</p>'+
-  '<span class="lbl">① Riquadri</span><p class="hint">Tocca un riquadro per selezionarlo. Trascinalo per spostarlo. Maniglie <b>azzurre sui quattro lati</b>: ognuna sposta solo il proprio lato e <b>il contenuto resta fermo</b>. Servono <b>solo a ritagliare</b>: verso l\'interno nascondono quel lato, verso l\'esterno lo riscoprono, ma non vanno mai oltre il bordo originale (nessun margine in più). Etichetta <b>🔗 oggetti agganciati / ⛓ sganciati</b> (in alto a destra del riquadro selezionato): con gli oggetti <b>sganciati</b> le barrette arancioni e azzurre cambiano solo la cornice; gli oggetti restano fermi, interi e senza ridisporsi. Barrette <b>arancioni fuori dai quattro lati</b>: allargano o stringono davvero il riquadro da quel lato, senza proporzione (il contenuto si ridispone), il lato opposto resta fermo. Pallini <b>arancioni sui quattro angoli</b>: ingrandiscono o rimpiccioliscono tutto in proporzione, l\'angolo opposto resta fermo. Doppio tocco: entra negli oggetti.</p>'+
-  '<span class="lbl">② Oggetti</span><p class="hint">La <b>cornice arancione tratteggiata</b> non si seleziona: indica il riquadro (o il gruppo) dentro cui stai lavorando, e il resto si scurisce. Dentro, ogni oggetto ha un bordino azzurro: clic per selezionarlo. Clic su un altro riquadro per lavorare lì; Esc chiude la cornice e resti in ② Oggetti (da un gruppo risale al suo riquadro); ‹ Riquadri in alto torna a ①. Mostra gli oggetti del riquadro (o del gruppo) in cui sei entrato; il percorso in alto dice dove sei e ti fa risalire. Stesse maniglie: lati per larghezza e altezza, angoli per la scala in proporzione. Doppio tocco su un gruppo per entrarci. Sotto la cornice gialla, <b>⤡ Adatta all\'azzurro</b> ritaglia la cornice del riquadro esattamente sul bordo azzurro degli oggetti selezionati (nessun oggetto si sposta); <b>↺ Cornice intera</b> la riporta com\'era.</p>'+
+  '<span class="lbl">✎ Modifica: oggetti e gruppi</span><p class="hint">Sulla pagina tutto è un oggetto. I riquadri dell\'app sono <b>gruppi già pronti</b> (numerati, con il loro nome): tocca per selezionare, trascina per spostare, <b>doppio tocco</b> (o ⤵) per lavorare sugli oggetti che contengono; il percorso in alto (⌂ Pagina › …) e ⤴ ti riportano fuori. Gli <b>oggetti liberi</b> (azzurri, segnati •) stanno direttamente sulla pagina.</p>'+
+  '<span class="lbl">⧉ Raggruppa / Separa</span><p class="hint">Seleziona più elementi (☐ multi) e tocca <b>⧉ Raggruppa</b>: diventano un gruppo (viola) che si seleziona, si sposta, si scala e cambia livello come un pezzo unico; doppio tocco per sistemarne gli oggetti uno alla volta. Con un gruppo selezionato lo stesso pulsante diventa <b>Separa</b>. Su un riquadro dell\'app, <b>Separa</b> libera i suoi oggetti sulla pagina, ognuno al suo posto e con un livello proprio (la cornice vuota resta: puoi eliminarla). Sul Mac ⌘G e ⇧⌘G.</p>'+
+  '<span class="lbl">Maniglie</span><p class="hint">Barrette <b>azzurre</b> sui lati: ritaglio. Barrette <b>arancioni</b> fuori dai lati (solo riquadri): larghezza e altezza vere, il contenuto si ridispone. Pallini <b>arancioni</b> sugli angoli: scala in proporzione. Etichetta <b>🔗/⛓</b>: oggetti agganciati o sganciati dalla cornice. Dentro un riquadro, sotto la cornice gialla: <b>⤡ Adatta all\'azzurro</b> e <b>↺ Cornice intera</b>.</p>'+
   '<span class="lbl">☐ Multi · selezione multipla</span><p class="hint">Accendi <b>☐ Multi</b> e tocca gli elementi da aggiungere o togliere (stesso livello: tutti riquadri, oppure oggetti dello stesso riquadro). Poi puoi trascinarli insieme, usare le frecce, duplicare, eliminare, cambiare livello, spostarli con ⇄ Riquadro e cambiare i colori in Aspetto. Con più oggetti selezionati compare la <b>cornice arancione del gruppo</b>: trascinala per spostarli tutti; pallini arancioni sugli angoli = ingrandisci o rimpicciolisci tutto in proporzione (angolo opposto fermo); maniglie azzurre sui lati = allunga o accorcia il gruppo solo in larghezza o solo in altezza. Sul Mac: ⇧+clic, ⌘A tutti, Esc nessuno.</p>'+
-  '<span class="lbl">⇄ Riquadro</span><p class="hint">In ② Oggetti sposta l\'oggetto o il gruppo selezionato in un altro riquadro, o in uno nuovo: è l\'elemento vero, quindi le funzioni restano collegate. Più semplice: <b>trascina l\'oggetto sopra un altro riquadro e lascialo</b>: entra in quel riquadro, con le funzioni, nel punto in cui l\'hai lasciato (si annulla con ↶). Mentre lo trascini resta sempre visibile sopra tutto.</p>'+
+  '<span class="lbl">⇄ Sposta in</span><p class="hint">Dentro un riquadro sposta l\'oggetto o il gruppo selezionato in un altro riquadro, o in uno nuovo: è l\'elemento vero, quindi le funzioni restano collegate. Più semplice: <b>trascina l\'oggetto sopra un altro riquadro e lascialo</b>: entra in quel riquadro, con le funzioni, nel punto in cui l\'hai lasciato (si annulla con ↶). Mentre lo trascini resta sempre visibile sopra tutto.</p>'+
   '<span class="lbl">Navigazione ‹ ›</span><p class="hint">La barra <b>‹ 3/7 ›</b> passa all\'elemento precedente o successivo (dall\'alto in basso, da sinistra a destra) e lo seleziona, pronto da modificare. <b>⤵</b> entra nel gruppo o riquadro selezionato, <b>⤴</b> risale al contenitore. Sul Mac anche Tab e ⇧Tab.</p>'+
   '<span class="lbl">▶ Usa</span><p class="hint">Toglie il velo di modifica: puoi usare l\'app (caricare file, premere i pulsanti) e vedere come si comporta con le modifiche.</p>'+
   '<span class="lbl">Frecce ◀ ▲ ▶ ▼</span><p class="hint">Con un elemento selezionato compare a sinistra la croce di frecce: ogni tocco lo sposta di un passo della griglia; tenendo premuto continua e poi accelera. Il tasto in alto a sinistra della croce cambia modo: <b>✥ SPOSTA</b> (le frecce spostano) oppure <b>⤢ MISURA</b> (▶ allarga, ◀ stringe, ▲ alza, ▼ abbassa, con il centro fermo; compaiono anche − ＋ per la scala in proporzione). Sul Mac i tasti freccia della tastiera spostano sempre. I tasti arancioni <b>− ＋</b> ai lati di ▼ rimpiccioliscono o ingrandiscono in proporzione gli elementi selezionati (2% per tocco, 1% in modo fine; tenendo premuto continua), con il centro che resta fermo; con più elementi si scala tutto il gruppo. Il tasto al centro passa allo spostamento fine (1 punto) e ritorno. Sul Mac anche i tasti freccia (con ⇧ dieci passi); sul Mac la croce e i pulsanti dei livelli restano sempre visibili.</p>'+
@@ -1459,12 +1572,15 @@ function claudeText(note){
   var a=A(),d=DV(),pan=[],obj=[],nw=[],names={};
   function nm(r){var n=nameAt(r);names[r]=n;var e=resolve(r);return e&&isPanelEl(e)?'riquadro «'+n+'»':n}
   function where(r){var e=resolve(r);var p=e?panelOf(e):null;return p&&p!==e?' (riquadro «'+panelName(p)+'»)':''}
+  var free=[];
   M.N.forEach(function(n){var r='@'+n.id,e=resolve(r);
+    if(n.kind==='wrap'){var o=e&&e.firstElementChild,P=M.P[r];if(o){var mv=null;(M.MV||[]).forEach(function(m){if(m.to===r)mv=m});
+      free.push(objName(o)+(mv&&mv.from?' tolto dal riquadro «'+mv.from+'»':'')+' e messo libero sulla pagina'+(P?': posizione x '+Math.round(P.x)+', y '+Math.round(P.y)+', larghezza '+Math.round(P.w)+(P.s&&P.s!==1?', scala '+Math.round(P.s*100)+'%':''):'')+(M.I[r]&&M.I[r].z!=null?', livello '+M.I[r].z:'')+' (con le sue funzioni)')}return}
     var what=n.kind==='clone'?'Copia di '+nm(n.of):n.panel&&e?'Riquadro nuovo «'+panelName(e)+'»':KN[n.kind]+(e&&txt(e)?' «'+cut(txt(e),24)+'»':'');
     var extra=[];if(M.P[r])extra.push('posizione x '+Math.round(M.P[r].x)+', y '+Math.round(M.P[r].y)+', larghezza '+Math.round(M.P[r].w)+(M.P[r].s&&M.P[r].s!==1?', scala '+Math.round(M.P[r].s*100)+'%':''));
     if(M.I[r])extra=extra.concat(descI(M.I[r]));
     nm(r);nw.push(what+(n.par&&!n.panel?' dentro '+nm(n.par):'')+(extra.length?': '+extra.join('; '):'')+' — FUNZIONE DA ASSEGNARE')});
-  Object.keys(M.P).forEach(function(r){if(r[0]==='@')return;var P=M.P[r],c=[];
+  Object.keys(M.P).forEach(function(r){if(r[0]==='@')return;var P=M.P[r],c=[];if(P.x0==null)return;
     if(Math.round(P.x)!==Math.round(P.x0)||Math.round(P.y)!==Math.round(P.y0))c.push('posizione x '+Math.round(P.x)+', y '+Math.round(P.y)+' (prima '+Math.round(P.x0)+', '+Math.round(P.y0)+')');
     if(P.det)c.push('oggetti sganciati dalla cornice (restano fermi e interi)');
     if(Math.round(P.w)!==Math.round(P.w0))c.push('larghezza '+Math.round(P.w)+' (prima '+Math.round(P.w0)+')');
@@ -1477,13 +1593,16 @@ function claudeText(note){
   var zg={},zl=[];
   Object.keys(M.I).forEach(function(r){if(M.I[r].z==null)return;var e=resolve(r);if(!e||!e.parentElement)return;var isP=isPanelEl(e),k=isP?'P':refOf(e.parentElement);(zg[k]||(zg[k]=[])).push({r:r,z:M.I[r].z,isP:isP})});
   Object.keys(zg).forEach(function(k){var g=zg[k].sort(function(a,b){return a.z-b.z});if(g.length<2)return;
-    zl.push((k==='P'?'Riquadri':'Dentro '+nm(k))+', dal più sotto al più sopra: '+g.map(function(x){return x.isP?'«'+nameAt(x.r)+'»':nameAt(x.r)}).join(' → '))});
+    zl.push((k==='P'?'Sulla pagina':'Dentro '+nm(k))+', dal più sotto al più sopra: '+g.map(function(x){return x.isP?'«'+nameAt(x.r)+'»':nameAt(x.r)}).join(' → '))});
   var L=['Ciao Claude, ecco le modifiche fatte con ARNOCANVAS '+VER+'.','App: '+a.n+' ('+a.d+') · Schermo: '+d.n+' ('+d.w+'×'+d.h+')',''];
   var k=0;
   if(pan.length){L.push('RIQUADRI');pan.forEach(function(x){L.push((++k)+'. '+x)});L.push('')}
   if(obj.length){L.push('OGGETTI');obj.forEach(function(x){L.push((++k)+'. '+x)});L.push('')}
-  var mvl=(M.MV||[]).map(function(m){var e=resolve('%'+m.id);return (e?objName(e):m.ref)+' spostato'+(m.from?' dal riquadro «'+m.from+'»':'')+' a '+nm(m.to)+' (con le sue funzioni)'});
+  var mvl=(M.MV||[]).filter(function(m){var t=resolve(m.to);return !(t&&isWrap(t))}).map(function(m){var e=resolve('%'+m.id);return (e?objName(e):m.ref)+' spostato'+(m.from?' dal riquadro «'+m.from+'»':'')+' a '+nm(m.to)+' (con le sue funzioni)'});
   if(mvl.length){L.push('OGGETTI SPOSTATI IN UN ALTRO RIQUADRO');mvl.forEach(function(x){L.push((++k)+'. '+x)});L.push('')}
+  if(free.length){L.push('OGGETTI LIBERI SULLA PAGINA (fuori da ogni riquadro)');free.forEach(function(x){L.push((++k)+'. '+x)});L.push('')}
+  var gl=(M.G||[]).map(function(g){return g.n+(g.c?' (dentro '+nm(g.c)+')':' (sulla pagina)')+': '+g.m.map(function(r){return nameAt(r)}).join(', ')+' — si muovono e si ridimensionano insieme'});
+  if(gl.length){L.push('GRUPPI');gl.forEach(function(x){L.push((++k)+'. '+x)});L.push('')}
   if(zl.length){L.push('LIVELLI (SOPRA / SOTTO)');zl.forEach(function(x){L.push((++k)+'. '+x)});L.push('')}
   if(nw.length){L.push('ELEMENTI NUOVI O COPIATI');nw.forEach(function(x){L.push((++k)+'. '+x)});L.push('')}
   if(!k)L.push('(Nessuna modifica)','');
@@ -1524,6 +1643,8 @@ document.addEventListener('keydown',function(e){
   var mod=e.metaKey||e.ctrlKey;
   if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();(e.shiftKey?$('#redoB'):$('#undoB')).onclick();return}
   if(mod&&e.key.toLowerCase()==='a'&&S.lvl!=='U'){e.preventDefault();MS=BOXES.map(function(b){return b.ref});sel=MS[MS.length-1]||null;if(MS.length<2)MS=[];render();updBar();return}
+  if(mod&&e.key.toLowerCase()==='g'&&S.lvl!=='U'){e.preventDefault();var gm=grpMode();if(e.shiftKey){if(gm==='sep')doUngroup();else if(gm==='explode')doExplode()}else if(gm==='grp')doGroup();return}
+  if(e.key==='Escape'&&S.gin&&!sel&&!MS.length){navGo('up');return}
   if(e.key==='Tab'&&S.lvl!=='U'){e.preventDefault();navGo(e.shiftKey?'prev':'next');return}
   if(e.key==='Escape'){if(!sel&&!MS.length&&S.lvl==='O'&&cont){var ce=resolve(cont);if(ce&&!isPanelEl(ce)&&ce.parentElement)goTo(refOf(ce.parentElement));else{cont=null;sel=null;MS=[];measure();render();updBar();updCrumb()}return}sel=null;MS=[];render();updBar();return}
   if(!sel||S.lvl==='U')return;
