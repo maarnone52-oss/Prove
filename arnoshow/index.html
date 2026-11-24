@@ -106,6 +106,7 @@ body.dragging #delcur.hot{background:var(--del);border-color:var(--del);color:#f
 #zthumb{position:absolute;left:50%;width:30px;height:30px;border-radius:50%;background:var(--acc);border:3px solid var(--card);box-shadow:0 2px 6px rgba(0,0,0,.35);transform:translate(-50%,50%);pointer-events:none}
 
 .tile{position:relative;display:flex;flex-direction:column;background:var(--card);border:3px solid var(--mut);box-shadow:0 2px 6px rgba(0,0,0,.25);border-radius:12px;overflow:hidden;cursor:pointer;min-width:0}
+.tile.sel{border-color:#ffffff;box-shadow:0 0 0 2px rgba(255,255,255,.55)}
 .tile.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}
 .tile.drag{z-index:40;pointer-events:none;opacity:.92;box-shadow:0 10px 26px rgba(0,0,0,.5);transition:border-color .12s ease,opacity .12s ease}
 .tile.drag.trash{border-color:var(--del);opacity:.78}
@@ -196,7 +197,7 @@ header .brand{flex:none;min-width:0}
 #dd .mm>*:active:not(.sep):not(.mhd){background:var(--acc)!important;color:#fff!important}
 #dd .mm>*[disabled]{opacity:.4}
 #dd .mm>* svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
-#dd .mm>#cont.on{color:var(--acc)!important}
+#dd .mm>#cont.on,#dd .mm>#tap1.on{color:var(--acc)!important}
 #dd .sep{height:1px;background:var(--line);margin:4px 8px}
 #dd .mhd{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);padding:8px 12px 4px}
 #dd select{display:block;width:calc(100% - 16px);margin:2px 8px 6px;height:38px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font-size:15px;padding:0 8px}
@@ -244,7 +245,7 @@ header .brand{flex:none;min-width:0}
 <video id="vout" playsinline webkit-playsinline x-webkit-airplay="allow"></video><button id="fsexit" type="button">✕ Esci da schermo intero</button><div id="stage"><video id="v" playsinline webkit-playsinline x-webkit-airplay="allow"></video><img id="ph" alt="" hidden><div id="audvis" hidden><div class="av-ico" id="audico">🎵</div><div class="av-nm" id="audnm"></div><div id="audsub" style="font-size:11px;opacity:.68;margin-top:2px" hidden>Traccia audio estratta da video</div></div><div id="wait"></div></div>
 <div id="prog" aria-label="Avanzamento"><div id="pf"></div></div>
 <div id="bar"><span id="now">Nessun video in riproduzione</span><span id="tm">0:00 / 0:00</span><button id="mu" type="button" aria-label="Audio">🔊</button></div>
-<div id="ctl"><button id="pp" type="button">Pausa</button><button id="cont" type="button" title="Riproduzione continua senza sosta">Senza sosta: Off</button><button id="pdur" type="button" title="Durata foto">Durata foto: ∞</button><button id="cap" type="button">Scegli miniatura</button><button id="fsbtn" type="button" title="Espandi il quadro di riproduzione a schermo intero" style="border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:0 10px;font-size:12px;font-family:inherit;height:38px;touch-action:manipulation;font-weight:600">Schermo intero</button><button id="delcur" type="button" aria-label="Elimina selezionato o trascina qui per eliminare" title="Elimina selezionato o trascina qui" disabled>🗑️</button></div>
+<div id="ctl"><button id="pp" type="button">Pausa</button><button id="tap1" type="button" title="Avvia una clip con un solo tocco sulla miniatura (altrimenti doppio tocco)">Avvio con un tocco: Off</button><button id="cont" type="button" title="Riproduzione continua senza sosta">Senza sosta: Off</button><button id="pdur" type="button" title="Durata foto">Durata foto: ∞</button><button id="cap" type="button">Scegli miniatura</button><button id="fsbtn" type="button" title="Espandi il quadro di riproduzione a schermo intero" style="border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:0 10px;font-size:12px;font-family:inherit;height:38px;touch-action:manipulation;font-weight:600">Schermo intero</button><button id="delcur" type="button" aria-label="Elimina selezionato o trascina qui per eliminare" title="Elimina selezionato o trascina qui" disabled>🗑️</button></div>
 <div id="listwrap">
   <div id="list"></div>
   <div id="zrail" role="slider" aria-label="Dimensione miniature" aria-valuemin="60" aria-valuemax="260" aria-valuenow="130" tabindex="0">
@@ -513,7 +514,7 @@ function pump(){
 function render(){
   if(drag){return;}
   updateGo();
-  delcur.disabled=(cur<0||cur>=items.length);
+  if(selIdx>=items.length)selIdx=-1;delcur.disabled=((cur<0||cur>=items.length)&&selIdx<0);
   list.innerHTML="";
   if(!items.length){
     var h=document.createElement("div");h.className="hint";
@@ -521,7 +522,7 @@ function render(){
     list.appendChild(h);return;
   }
   items.forEach(function(it,i){
-    var t=document.createElement("div");t.className="tile"+(i===cur?" on":"");t.dataset.i=i;
+    var t=document.createElement("div");t.className="tile"+(i===cur?" on":"")+(i===selIdx&&i!==cur?" sel":"");t.dataset.i=i;
     var th=document.createElement("div");th.className="th";
     if(it.thumb)th.style.backgroundImage="url("+it.thumb+")";
     if(!it.thumb){var hh=0;for(var q=0;q<it.name.length;q++)hh=(hh*31+it.name.charCodeAt(q))%360;th.style.backgroundColor="hsl("+hh+",35%,32%)";}
@@ -532,7 +533,7 @@ function render(){
       fv.src=it.url+"#t=0.5";th.textContent="";th.appendChild(fv);
     }
     var nm=document.createElement("div");nm.className="nm";nm.textContent=it.name;
-    t.onclick=function(){if(!justDragged)play(i);};
+    t.onclick=function(){if(!justDragged)tileTap(i);};
     t.appendChild(th);t.appendChild(nm);
     var nb=document.createElement("div");nb.className="num";nb.textContent=nums[it.id]||"";t.appendChild(nb);
     list.appendChild(t);
@@ -786,6 +787,13 @@ function play(i){
   syncHdmiState();
   var on=list.querySelector(".tile.on");if(on&&on.scrollIntoView)on.scrollIntoView({block:"nearest",behavior:"smooth"});
 }
+var selIdx=-1,lastTapI=-1,lastTapT=0,oneTap=false;
+try{oneTap=localStorage.getItem("vptap1")==="1";}catch(e){}
+function tileTap(i){
+  var n=Date.now();
+  if(oneTap||(i===lastTapI&&n-lastTapT<400)){lastTapI=-1;selIdx=-1;play(i);return;}
+  lastTapI=i;lastTapT=n;selIdx=i;render();
+}
 function fmt(s){if(!isFinite(s))s=0;var m=Math.floor(s/60),x=Math.floor(s%60);return m+":"+(x<10?"0":"")+x;}
 function updateGo(){
   var nextIdx=cur<0?0:cur+1;
@@ -878,6 +886,7 @@ function remove(i){
   items.splice(i,1);saveOrder(true);render();
 }
 delcur.addEventListener("click",function(){
+  if(selIdx>=0&&selIdx<items.length){var k=selIdx;selIdx=-1;remove(k);return;}
   if(cur>=0&&cur<items.length)remove(cur);
 });
 
@@ -1336,6 +1345,8 @@ pimp.addEventListener("change",function(){
 });
 
 
+(function(){var b=document.getElementById("tap1");function u(){b.textContent="Avvio con un tocco: "+(oneTap?"On":"Off");b.classList.toggle("on",oneTap);}u();
+  b.addEventListener("click",function(){oneTap=!oneTap;try{localStorage.setItem("vptap1",oneTap?"1":"0");}catch(e){}u();});})();
 // === BARRA DEI MENU (stile Mac) ===
 (function(){
   function $(id){return document.getElementById(id);}
@@ -1346,7 +1357,7 @@ pimp.addEventListener("change",function(){
     mfile:[hd("Progetto"),$("psel"),$("pnew"),$("pren"),$("pdel"),sep(),$("pexp"),$("pimpl"),sep(),hd("Aggiungi"),lab("file"),lab("filep"),lab("filea"),lab("fileva")],
     medit:[$("und"),sep(),$("cap"),$("delcur")],
     mview:[$("thm"),$("bgpick"),sep(),$("fsbtn")],
-    mplay:[$("cont"),$("pdur"),sep(),$("ap")]
+    mplay:[$("cont"),$("tap1"),$("pdur"),sep(),$("ap")]
   };
   var trashHome=$("delcur").parentNode,trashNext=$("delcur").nextSibling;
   M.medit=M.medit.filter(function(x){return x&&x.id!=="delcur";});
@@ -1365,7 +1376,7 @@ pimp.addEventListener("change",function(){
   document.addEventListener("pointerdown",function(e){if(!dd.hidden&&!dd.contains(e.target)&&!bar.contains(e.target))close();},true);
   dd.addEventListener("click",function(e){
     var t=e.target.closest("button,label");if(!t||t.tagName==="SELECT")return;
-    if(t.id==="pdel"||t.id==="pexp"||t.id==="pdur"||t.id==="cont"||t.id==="thm")return; // restano aperti per vedere l'effetto
+    if(t.id==="pdel"||t.id==="pexp"||t.id==="pdur"||t.id==="cont"||t.id==="thm"||t.id==="tap1")return; // restano aperti per vedere l'effetto
     setTimeout(close,0);
   });
   $("psel").addEventListener("change",close);
