@@ -1,0 +1,39 @@
+name: ArnoShow
+options:
+  bundleIdPrefix: it.arnone
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0.2"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  ArnoShow:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: it.arnone.arnoshow.prova
+        PRODUCT_NAME: ArnoShow
+        TARGETED_DEVICE_FAMILY: "1,2"
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: ArnoShow PROVA
+        UILaunchScreen: {}
+        ITSAppUsesNonExemptEncryption: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Main
+                UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).MainSceneDelegate
+            UIWindowSceneSessionRoleExternalDisplayNonInteractive:
+              - UISceneConfigurationName: Monitor
+                UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).MonitorSceneDelegate

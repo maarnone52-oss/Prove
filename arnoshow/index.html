@@ -208,6 +208,46 @@ body.fs-stage #fsexit{display:inline-flex;align-items:center;gap:6px}
 
 <script>
 (function(){
+if(!/[?&]monitor=1/.test(location.search))return;
+window.__MON__=true;
+var st=document.createElement("style");st.textContent="#provaBadge{display:none!important}html,body{background:#000!important}";document.head.appendChild(st);
+var ov=document.createElement("div");ov.style.cssText="position:fixed;left:0;top:0;right:0;bottom:0;background:#000;z-index:99999";
+var mv=document.createElement("video");mv.muted=true;mv.defaultMuted=true;mv.setAttribute("muted","");mv.setAttribute("playsinline","");mv.playsInline=true;
+mv.style.cssText="position:absolute;left:0;top:0;width:100%;height:100%;object-fit:contain;background:#000;display:none";
+var mi=document.createElement("img");mi.style.cssText="position:absolute;left:0;top:0;width:100%;height:100%;object-fit:contain;display:none";
+ov.appendChild(mv);ov.appendChild(mi);document.body.appendChild(ov);
+var db=null,loadedId=null,want=null,url=null;
+function black(){loadedId=null;want=null;try{mv.pause();}catch(e){}mv.style.display="none";mi.style.display="none";}
+function state(o){
+  if(mv.style.display!=="block")return;
+  if(Math.abs(mv.currentTime-(o.time||0))>0.35){try{mv.currentTime=o.time||0;}catch(e){}}
+  if(o.playing&&mv.paused){var p=mv.play();if(p&&p.catch)p.catch(function(){});}
+  else if(!o.playing&&!mv.paused)mv.pause();
+}
+function show(o){
+  if(o.id===loadedId){state(o);return;}
+  if(!db){want=o;return;}
+  var q=db.transaction("v").objectStore("v").get(o.id);
+  q.onsuccess=function(){
+    var b=q.result&&q.result.blob;if(!b)return;
+    if(url){try{URL.revokeObjectURL(url);}catch(e){}}
+    url=URL.createObjectURL(b);loadedId=o.id;
+    if(o.kind==="photo"){try{mv.pause();}catch(e){}mv.style.display="none";mi.src=url;mi.style.display="block";}
+    else{mi.style.display="none";mv.style.display="block";mv.onloadedmetadata=function(){state(o);};mv.src=url;}
+  };
+}
+window.monitorCmd=function(o){
+  if(!o)return;
+  if(o.t==="show")show(o);else if(o.t==="state")state(o);else black();
+};
+var r=indexedDB.open("videoplayer",1);
+r.onupgradeneeded=function(){try{r.result.createObjectStore("v",{keyPath:"id"});}catch(e){}};
+r.onsuccess=function(){db=r.result;if(want){var w=want;want=null;show(w);}};
+})();
+</script>
+<script>
+(function(){
+if(window.__MON__)return;
 document.addEventListener("gesturestart",function(e){e.preventDefault();},{passive:false});
 document.addEventListener("gesturechange",function(e){e.preventDefault();},{passive:false});
 document.addEventListener("gestureend",function(e){e.preventDefault();},{passive:false});
@@ -229,6 +269,20 @@ var list=document.getElementById("list"),v=document.getElementById("v"),now=docu
 var items=[],cur=-1,db=null,queue=[],busy=false,pendingOrder=false,imp={t:0,d:0},projs=[],pid="p1";
 var accord=document.getElementById("accord");
 var vout=document.getElementById("vout"),hdmiOn=false;
+var nat=(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.mon)||null,hdmiNative=false,monitorLive=false,lastSyncT=0;
+function mon(o){if(!nat)return;try{nat.postMessage(JSON.stringify(o));}catch(e){}}
+function sendMon(){
+  if(!nat||!hdmiNative)return;
+  var it=(cur>=0)?items[cur]:null;
+  if(!it||wait.classList.contains("on")||(it.kind!=="video"&&it.kind!=="photo")){mon({t:"black"});return;}
+  mon({t:"show",id:it.id,kind:it.kind,time:(it.kind==="video"?v.currentTime:0),playing:(it.kind==="video"&&!v.paused)});
+}
+function refreshHdmiBtn(){
+  if(!nat)return;
+  hdmiBtn.classList.toggle("on",hdmiNative&&monitorLive);
+  hdmit.textContent=!hdmiNative?"Invia su HDMI":(monitorLive?"Monitor: ON":"Collega il cavo");
+}
+window.nativeMonitor=function(on){monitorLive=!!on;refreshHdmiBtn();if(on)sendMon();};
 var photoDurs=[0,3,5,8],photoDurIdx=0,photoTimer=null,photoPaused=false,photoElapsed=0,photoStart=0;
 try{projs=JSON.parse(localStorage.getItem("vpprojects")||"[]");pid=localStorage.getItem("vpcur")||"p1";}catch(e){}
 if(!projs.length)projs=[{id:"p1",name:"Progetto 1"}];
@@ -613,6 +667,7 @@ function sendPhotoToHdmi(it){
 }
 
 function syncHdmiState(){
+  if(nat){sendMon();return;}
   if(!hdmiOn)return;
   var isWaiting=wait.classList.contains("on");
   if(isWaiting||cur<0||!items[cur]){
@@ -698,7 +753,7 @@ function setWait(on){
   document.body.classList.toggle("waiting",on);
   if(on){
     setStagePlaying(false);
-    if(hdmiOn)syncHdmiState();
+    if(hdmiOn||hdmiNative)syncHdmiState();
   }
 }
 v.addEventListener("ended",function(){setStagePlaying(false);if(continuous&&cur+1<items.length){play(cur+1);}else{setWait(true);}});
@@ -771,7 +826,7 @@ function remove(i){
   try{URL.revokeObjectURL(it.url);if(it._hdmiVideoUrl)URL.revokeObjectURL(it._hdmiVideoUrl);}catch(e){}
   it._hdmiVideoUrl=null;
   del(it.id);
-  if(i===cur){clearPhotoTimer();setStagePlaying(false);setWait(false);exitNativeExternalFullscreen(v);v.pause();v.removeAttribute("src");v.load();ph.hidden=true;ph.removeAttribute("src");audvis.hidden=true;v.hidden=false;pp.disabled=false;pp.textContent="Pausa";cur=-1;now.textContent="Nessun video in riproduzione";tm.textContent="0:00 / 0:00";pf.style.width="0%";if(hdmiOn)sendBlackToHdmi();}
+  if(i===cur){clearPhotoTimer();setStagePlaying(false);setWait(false);exitNativeExternalFullscreen(v);v.pause();v.removeAttribute("src");v.load();ph.hidden=true;ph.removeAttribute("src");audvis.hidden=true;v.hidden=false;pp.disabled=false;pp.textContent="Pausa";cur=-1;now.textContent="Nessun video in riproduzione";tm.textContent="0:00 / 0:00";pf.style.width="0%";if(hdmiOn)sendBlackToHdmi();if(hdmiNative)sendMon();}
   else if(i<cur)cur--;
   items.splice(i,1);saveOrder(true);render();
 }
@@ -833,7 +888,7 @@ function openProject(id){
   items=[];queue=[];cur=-1;setPendingOrder(false);undo=[];updUndo();
   v.pause();v.removeAttribute("src");v.load();ph.hidden=true;ph.removeAttribute("src");audvis.hidden=true;v.hidden=false;pp.disabled=false;pp.textContent="Pausa";now.textContent="Nessun video in riproduzione";tm.textContent="0:00 / 0:00";pf.style.width="0%";setWait(false);
   pid=id;saveProj();fillProj();render();loadAll();
-  if(hdmiOn)sendBlackToHdmi();
+  if(hdmiOn)sendBlackToHdmi();if(hdmiNative)sendMon();
 }
 function askName(mode,txt){pmode=mode;pname.value=txt;pedit.hidden=false;pname.focus();}
 psel.addEventListener("change",function(){openProject(psel.value);});
@@ -1111,10 +1166,15 @@ function stopHdmiOut(){
 }
 
 if(hdmiBtn)hdmiBtn.addEventListener("click",function(){
+  if(nat){hdmiNative=!hdmiNative;if(hdmiNative)sendMon();else mon({t:"black"});refreshHdmiBtn();return;}
   if(hdmiOn)stopHdmiOut();
   else startHdmiOut();
 });
 
+v.addEventListener("play",function(){if(hdmiNative)sendMon();});
+v.addEventListener("pause",function(){if(hdmiNative)mon({t:"state",time:v.currentTime,playing:false});});
+v.addEventListener("seeked",function(){if(hdmiNative)mon({t:"state",time:v.currentTime,playing:!v.paused});});
+v.addEventListener("timeupdate",function(){var n=Date.now();if(hdmiNative&&n-lastSyncT>1000){lastSyncT=n;mon({t:"state",time:v.currentTime,playing:!v.paused});}});
 fillProj();openDB(function(){loadBgPhotoDB();loadAll();});
 })();
 </script>

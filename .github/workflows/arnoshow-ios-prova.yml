@@ -1,0 +1,30 @@
+# ARNOSHOW PROVA iPhone: controlla che l'app nativa (con uscita sul monitor via cavo) si compili.
+# Non firma e non carica nulla su App Store Connect.
+name: ARNOSHOW PROVA iPhone compilazione
+
+on:
+  push:
+    branches: [main]
+    paths: ['arnoshow-ios/**', '.github/workflows/arnoshow-ios-prova.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Genera il progetto Xcode
+        working-directory: arnoshow-ios
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: Compila (senza firma)
+        working-directory: arnoshow-ios
+        run: |
+          set -o pipefail
+          xcodebuild -project ArnoShow.xcodeproj -scheme ArnoShow \
+            -destination 'generic/platform=iOS' -configuration Release \
+            CODE_SIGNING_ALLOWED=NO build | tail -n 40
