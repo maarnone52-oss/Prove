@@ -23,5 +23,10 @@
   "cartella": "arnocanvas",
   "nome": "ARNOCANVAS",
   "stato": "Prototipo 0.8.8 — schermi iPhone 15 e 15 Plus girati (orizzontale)"
+ },
+ {
+  "cartella": "arnoshow",
+  "nome": "ARNOSHOW",
+  "stato": "Prova 1.0.1: corretto avvio (errore HDMI), sfondo Foto, miniature video"
  }
 ]
