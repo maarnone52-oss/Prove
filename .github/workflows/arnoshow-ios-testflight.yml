@@ -1,0 +1,69 @@
+# ARNOSHOW PROVA iPhone: compila firmata e carica su TestFlight.
+# Si avvia a mano (Actions > questo flusso > Run workflow). Servono i 4 segreti del repository:
+# ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (contenuto del file .p8), TEAM_ID.
+name: ARNOSHOW PROVA iPhone TestFlight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testflight:
+    runs-on: macos-15
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      TEAM_ID: ${{ secrets.TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Controlla i segreti
+        run: |
+          for v in ASC_KEY_ID ASC_ISSUER_ID TEAM_ID; do
+            [ -n "${!v}" ] || { echo "::error::Manca il segreto $v"; exit 1; }
+          done
+          [ -n "${{ secrets.ASC_KEY_P8 }}" ] || { echo "::error::Manca il segreto ASC_KEY_P8"; exit 1; }
+      - name: Salva la chiave Apple
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s\n' "${{ secrets.ASC_KEY_P8 }}" > "$RUNNER_TEMP/keys/AuthKey_${ASC_KEY_ID}.p8"
+          echo "KEY_PATH=$RUNNER_TEMP/keys/AuthKey_${ASC_KEY_ID}.p8" >> "$GITHUB_ENV"
+      - name: Genera il progetto Xcode
+        working-directory: arnoshow-ios
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: Archivia (firma automatica)
+        working-directory: arnoshow-ios
+        run: |
+          set -o pipefail
+          xcodebuild archive -project ArnoShow.xcodeproj -scheme ArnoShow \
+            -destination 'generic/platform=iOS' -configuration Release \
+            -archivePath "$RUNNER_TEMP/ArnoShow.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tail -n 40
+      - name: Esporta e carica su TestFlight
+        run: |
+          cat > "$RUNNER_TEMP/export.plist" <<PL
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          PL
+          set -o pipefail
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/ArnoShow.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" -exportOptionsPlist "$RUNNER_TEMP/export.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tail -n 40
