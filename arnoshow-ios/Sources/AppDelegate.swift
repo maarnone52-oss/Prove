@@ -8,6 +8,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // L'audio esce anche con il tasto silenzioso attivo e passa dal cavo HDMI.
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
         try? AVAudioSession.sharedInstance().setActive(true)
+        Bridge.updatePage()
         return true
     }
 }

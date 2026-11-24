@@ -4,8 +4,23 @@ import WebKit
 /// Collega la pagina di controllo (iPhone) alla pagina "monitor" (schermo esterno).
 final class Bridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
     static let shared = Bridge()
-    /// Pagina ospitata (versione di prova). Per la definitiva si cambierà solo questo indirizzo.
-    static let base = URL(string: "https://maarnone52-oss.github.io/Prove/arnoshow/")!
+    /// Pagina servita dall'app stessa (funziona senza internet).
+    static let base = URL(string: "arnoshow://app/index.html")!
+    /// Da qui l'app scarica in silenzio l'ultima versione della pagina (prova).
+    static let remote = URL(string: "https://raw.githubusercontent.com/maarnone52-oss/Prove/main/arnoshow/index.html")!
+    static let local: URL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("index.html")
+
+    /// Scarica la pagina aggiornata: verrà usata dalla prossima apertura dell'app.
+    static func updatePage() {
+        var r = URLRequest(url: remote, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 20)
+        r.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        URLSession.shared.dataTask(with: r) { d, resp, _ in
+            guard let d = d, (resp as? HTTPURLResponse)?.statusCode == 200,
+                  let t = String(data: d, encoding: .utf8), t.contains("ArnoShow"), t.contains("</html>") else { return }
+            try? FileManager.default.createDirectory(at: local.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? d.write(to: local, options: .atomic)
+        }.resume()
+    }
 
     var control: WKWebView?
     var monitor: WKWebView?
@@ -17,6 +32,7 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
         c.allowsInlineMediaPlayback = true
         c.mediaTypesRequiringUserActionForPlayback = []
         c.websiteDataStore = WKWebsiteDataStore.default()
+        c.setURLSchemeHandler(PageScheme(), forURLScheme: "arnoshow")
         if !monitorMode { c.userContentController.add(self, name: "mon") }
         let w = WKWebView(frame: .zero, configuration: c)
         w.navigationDelegate = self
@@ -68,4 +84,18 @@ final class WebVC: UIViewController {
         web.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(web)
     }
+}
+
+/// Serve la pagina: copia scaricata se c'è, altrimenti quella inclusa nell'app.
+final class PageScheme: NSObject, WKURLSchemeHandler {
+    func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
+        let fm = FileManager.default
+        var data = fm.fileExists(atPath: Bridge.local.path) ? (try? Data(contentsOf: Bridge.local)) : nil
+        if data == nil, let b = Bundle.main.url(forResource: "index", withExtension: "html") { data = try? Data(contentsOf: b) }
+        let body = data ?? Data("<h1>Pagina mancante</h1>".utf8)
+        let resp = HTTPURLResponse(url: task.request.url!, statusCode: 200, httpVersion: "HTTP/1.1",
+                                   headerFields: ["Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"])!
+        task.didReceive(resp); task.didReceive(body); task.didFinish()
+    }
+    func webView(_ webView: WKWebView, stop task: WKURLSchemeTask) {}
 }

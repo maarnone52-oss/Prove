@@ -12,7 +12,10 @@ targets:
   ArnoShow:
     type: application
     platform: iOS
-    sources: [Sources]
+    sources:
+      - Sources
+      - path: ../arnoshow/index.html
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: it.arnone.arnoshow.prova
