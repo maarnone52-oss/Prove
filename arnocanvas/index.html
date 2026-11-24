@@ -216,7 +216,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.8.8';
+var VER='0.8.9';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -225,7 +225,9 @@ var APPS=[
  {k:'arnovideo',n:'ARNOCUT',u:'../arnovideo/',d:'versione di prova',panels:['main > .brand','main > section.rack','main > footer']},
  {k:'arnoclick',n:'ARNOCLICK',u:'../arnoclick/',d:'versione di prova',panels:['main .rack:not(#helpPanel)','main > footer']},
  {k:'arnodesign',n:'ARNODESIGN',u:'../arnodesign/',d:'versione di prova',fixed:true,panels:['#app > header','#canvasWrap','#palette','#props','#app > footer'],
-  names:{'#canvasWrap':'Area di lavoro','#palette':'Elementi','#props':'Proprietà','#app > footer':'Barra dei comandi'}}
+  names:{'#canvasWrap':'Area di lavoro','#palette':'Elementi','#props':'Proprietà','#app > footer':'Barra dei comandi'}},
+ {k:'arnoshow',n:'ARNOSHOW',u:'../arnoshow/',d:'versione di prova',fixed:true,panels:['body > header','#stage','#prog','#bar','#ctl','#listwrap','#foot'],
+  names:{'body > header':'Barra dei menu','#stage':'Schermo video','#prog':'Barra del tempo','#bar':'Titolo e audio','#ctl':'Pausa e cestino','#listwrap':'Miniature','#foot':'HDMI e Avvia'}}
 ];
 var DEVS=[
  {k:'iphone16e',n:'iPhone 16e',w:390,h:844,ic:'📱',x:'anche iPhone 13 e 14'},
