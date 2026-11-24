@@ -202,6 +202,23 @@ header .brand{flex:none;min-width:0}
 #dd select{display:block;width:calc(100% - 16px);margin:2px 8px 6px;height:38px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font-size:15px;padding:0 8px}
 #pedit{position:fixed!important;left:12px!important;right:12px!important;top:calc(var(--sat) + 50px)!important;width:auto!important;z-index:80!important;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px!important;box-shadow:0 10px 30px rgba(0,0,0,.5)}
 #prj{display:none!important}
+
+@media screen and (orientation:landscape) and (max-height:600px){#hdmiout{max-width:96px!important;font-size:11px!important;padding:3px!important}#hdmiout svg{width:16px!important;height:16px!important}#go{width:58px!important;height:58px!important;font-size:12px!important}#foot{padding-top:4px!important}}
+/* impaginazione verticale da ARNOCANVAS 0.9.0 (iPhone 15 Plus) */
+@media screen and (orientation:portrait){
+  header .brand-mark{width:50px;height:50px;border-radius:13px;margin-top:-20px}
+  header .brand-mark svg{width:28px;height:28px}
+  header .brand{height:32px}
+  #mbar{padding-left:24px}
+  #bar{padding-left:26px;padding-right:16px;font-size:12.5px}
+  #mu.cvfloat{position:absolute;z-index:31;transform:scale(1.17);transform-origin:center}
+  #ctl{display:none!important}
+  #foot{padding-top:2px!important;gap:6px!important}
+  #foot .fh:first-child{justify-content:flex-start;padding-left:4px}
+  #foot .fh:first-child #hdmiout{max-width:134px}
+  #foot #pp{flex:none;width:72px;min-width:72px;height:56px;border-radius:9px;font-size:13px}
+  #foot .fh:last-child #go{width:88px;height:88px}
+}
 </style>
 </head>
 <body>
@@ -1354,6 +1371,29 @@ pimp.addEventListener("change",function(){
   $("psel").addEventListener("change",close);
   ["bgfile","pimp"].forEach(function(id){var e=$(id);if(e)e.addEventListener("change",close);});
   window.addEventListener("resize",close);
+})();
+
+// impaginazione da ARNOCANVAS 0.9.0: Pausa tra HDMI e Avvia, audio accanto al video, cestino nel menu Modifica
+(function(){
+  var pp=document.getElementById("pp"),dc=document.getElementById("delcur"),mu=document.getElementById("mu"),ctl=document.getElementById("ctl"),foot=document.getElementById("foot"),bar=document.getElementById("bar"),st=document.getElementById("stage"),me=document.getElementById("medit");
+  var dcTxt=document.createElement("span");dcTxt.textContent=" Elimina elemento selezionato";
+  function por(){return window.matchMedia("(orientation:portrait)").matches;}
+  function place(){
+    if(por()){
+      if(pp.parentNode!==foot)foot.insertBefore(pp,foot.children[1]||null);
+      if(dc.parentNode!==me){me.appendChild(dc);dc.appendChild(dcTxt);}
+      if(mu.parentNode!==document.body)document.body.appendChild(mu);
+      mu.classList.add("cvfloat");
+      var r=st.getBoundingClientRect();mu.style.left=(r.right+16)+"px";mu.style.top=(r.top+62)+"px";
+    }else{
+      mu.classList.remove("cvfloat");mu.style.left=mu.style.top="";if(mu.parentNode!==bar)bar.appendChild(mu);
+      if(dcTxt.parentNode)dcTxt.remove();
+      if(dc.parentNode!==ctl)ctl.insertBefore(dc,ctl.firstChild);
+      if(pp.parentNode!==ctl)ctl.insertBefore(pp,dc.nextSibling);
+    }
+  }
+  place();window.addEventListener("resize",place);window.addEventListener("orientationchange",function(){setTimeout(place,250);});
+  setTimeout(place,400);
 })();
 fillProj();openDB(function(){loadBgPhotoDB();loadAll();});
 })();
