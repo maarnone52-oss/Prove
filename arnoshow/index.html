@@ -184,7 +184,7 @@ body.fs-stage #fsexit{display:inline-flex;align-items:center;gap:6px}
 <button class="btn sec" id="thm" type="button" title="Cambia tema sfondo">Sfondo: Nero</button>
 <label class="btn sec" id="bgpick" title="Scegli foto di sfondo dalla libreria"><input type="file" id="bgfile" accept="image/*" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><path d="M21 15l-5-5L5 21"/></svg><span>Foto sfondo</span></label>
 <button class="btn" id="hdmiout" type="button" title="Invia il solo video su monitor HDMI senza clonare l'iPhone"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span id="hdmit">Invia su HDMI</span></button>
-<button class="btn sec" id="ap" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-1"/><polygon points="12 15 17 21 7 21 12 15" fill="currentColor" stroke="none"/></svg><span>AirPlay</span></button>
+<button class="btn sec" id="ap" type="button" title="Invia il video alla TV con AirPlay: l'iPhone resta il telecomando"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-1"/><polygon points="12 15 17 21 7 21 12 15" fill="currentColor" stroke="none"/></svg><span id="apt">AirPlay</span></button>
 <label class="btn"><input type="file" id="file" accept="video/*" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Video</span></label>
 <label class="btn"><input type="file" id="filep" accept="image/*" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Foto</span></label>
 <label class="btn" title="Importa file audio nei vari formati (MP3, M4A, WAV, AAC, OGG, FLAC, ecc.)"><input type="file" id="filea" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac,.opus,.wma,.aiff,.aif,.caf,.alac,.amr,.3ga,.weba,.mka" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Audio</span></label>
@@ -747,8 +747,13 @@ function acceptOrder(){
   render();
 }
 accord.addEventListener("click",acceptOrder);
-v.addEventListener("webkitplaybacktargetavailabilitychanged",function(e){ap.hidden=e.availability!=="available";});
-ap.addEventListener("click",function(){try{v.webkitShowPlaybackTargetPicker();}catch(e){}});
+try{v.disableRemotePlayback=false;}catch(e){}
+v.addEventListener("webkitplaybacktargetavailabilitychanged",function(e){ap.classList.toggle("active",e.availability==="available");});
+function apMsg(t){var e=document.getElementById("apt");e.textContent=t;setTimeout(function(){e.textContent="AirPlay";},2200);}
+ap.addEventListener("click",function(){
+  if(cur<0||!items[cur]||items[cur].kind==="photo"){apMsg("Prima un video");return;}
+  try{v.webkitShowPlaybackTargetPicker();}catch(e){apMsg("Non disponibile");}
+});
 cap.addEventListener("click",function(){
   if(cur<0||!v.videoWidth)return;
   try{
