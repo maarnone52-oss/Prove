@@ -75,7 +75,7 @@ body.dragging #delcur.hot{background:var(--del);border-color:var(--del);color:#f
 #cont.on{background:var(--acc);border-color:var(--acc);color:#fff}
 #prj,#pedit{display:flex;gap:5px;padding:0 10px 5px;align-items:center;touch-action:none}
 #prj select,#pedit input{flex:1;min-width:0;padding:5px 7px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:14px;touch-action:manipulation}
-#prj button,#pedit button{padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:12px;font-family:inherit;touch-action:manipulation}
+#prj button,#prj label,#pedit button{padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:12px;font-family:inherit;touch-action:manipulation}
 #imp{padding:0 10px 5px;font-size:12px;color:var(--mut);touch-action:none}
 #impb{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:3px}
 #impf{height:100%;width:0;background:var(--acc)}
@@ -198,7 +198,7 @@ body.fs-stage #fsexit{display:inline-flex;align-items:center;gap:6px}
 <label class="btn" title="Carica un video ed estrae solo la sua traccia audio"><input type="file" id="fileva" accept="video/*" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Audio da video</span></label>
 </header>
 <div id="hdminote"><span id="hdminotetxt">Tocca "Apri su TV" per inviare il video puro al monitor HDMI senza clonare l'iPhone.</span><button id="hdmiforce" type="button">Apri su TV</button></div>
-<div id="prj"><select id="psel" aria-label="Progetto"></select><button id="pnew" type="button">Nuovo</button><button id="pren" type="button">Rinomina</button><button id="pdel" type="button">Elimina</button></div>
+<div id="prj"><select id="psel" aria-label="Progetto"></select><button id="pnew" type="button">Nuovo</button><button id="pren" type="button">Rinomina</button><button id="pdel" type="button">Elimina</button><button id="pexp" type="button" title="Salva il progetto (video, foto, audio e ordine) in un file">Salva file</button><label id="pimpl" title="Apri un progetto salvato in un file" style="padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:12px;white-space:nowrap">Apri file<input type="file" id="pimp" accept=".arnoshow,.zip,application/zip" hidden></label></div>
 <div id="pedit" hidden><input id="pname" maxlength="40" placeholder="Nome del progetto"><button id="pok" type="button">OK</button><button id="pno" type="button">Annulla</button></div>
 <div id="imp" hidden><div id="impt"></div><div id="impb"><div id="impf"></div></div></div>
 <video id="vout" playsinline webkit-playsinline x-webkit-airplay="allow"></video><button id="fsexit" type="button">✕ Esci da schermo intero</button><div id="stage"><video id="v" playsinline webkit-playsinline x-webkit-airplay="allow"></video><img id="ph" alt="" hidden><div id="audvis" hidden><div class="av-ico" id="audico">🎵</div><div class="av-nm" id="audnm"></div><div id="audsub" style="font-size:11px;opacity:.68;margin-top:2px" hidden>Traccia audio estratta da video</div></div><div id="wait"></div></div>
@@ -1182,6 +1182,118 @@ v.addEventListener("play",function(){if(hdmiNative)sendMon();});
 v.addEventListener("pause",function(){if(hdmiNative)mon({t:"state",time:v.currentTime,playing:false});});
 v.addEventListener("seeked",function(){if(hdmiNative)mon({t:"state",time:v.currentTime,playing:!v.paused});});
 v.addEventListener("timeupdate",function(){var n=Date.now();if(hdmiNative&&n-lastSyncT>1000){lastSyncT=n;mon({t:"state",time:v.currentTime,playing:!v.paused});}});
+
+// === SALVA / APRI PROGETTO IN UN FILE (.arnoshow = zip senza compressione) ===
+var pexp=document.getElementById("pexp"),pimp=document.getElementById("pimp"),readyFile=null;
+var CRCT=(function(){var t=new Uint32Array(256);for(var n=0;n<256;n++){var c=n;for(var k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crcBlob(b,cb){var c=0xFFFFFFFF,pos=0,CH=4*1024*1024;
+  function nx(){if(pos>=b.size){cb((c^0xFFFFFFFF)>>>0);return;}
+    b.slice(pos,pos+CH).arrayBuffer().then(function(ab){var u=new Uint8Array(ab);for(var i=0;i<u.length;i++)c=CRCT[(c^u[i])&255]^(c>>>8);pos+=CH;setTimeout(nx,0);},function(){cb(0);});}
+  nx();}
+function u16(v){return [v&255,(v>>>8)&255];}
+function u32(v){return [v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255];}
+function makeZip(entries,prog,cb){
+  var parts=[],cen=[],off=0,i=0,enc=new TextEncoder();
+  function nx(){
+    if(i>=entries.length){
+      var cs=0;cen.forEach(function(x){cs+=x.length;});
+      var end=new Uint8Array([].concat([0x50,0x4b,5,6,0,0,0,0],u16(entries.length),u16(entries.length),u32(cs),u32(off),[0,0]));
+      cb(new Blob(parts.concat(cen,[end]),{type:"application/zip"}));return;}
+    var e=entries[i++];prog(i,entries.length);
+    crcBlob(e.blob,function(crc){
+      var nm=enc.encode(e.name),sz=e.blob.size;
+      var lh=new Uint8Array([].concat([0x50,0x4b,3,4,20,0,0,8,0,0,0,0,0,0],u32(crc),u32(sz),u32(sz),u16(nm.length),[0,0]));
+      var ch=new Uint8Array([].concat([0x50,0x4b,1,2,20,0,20,0,0,8,0,0,0,0,0,0],u32(crc),u32(sz),u32(sz),u16(nm.length),[0,0,0,0,0,0,0,0,0,0,0,0],u32(off)));
+      parts.push(lh,nm,e.blob);
+      var c2=new Uint8Array(ch.length+nm.length);c2.set(ch);c2.set(nm,ch.length);cen.push(c2);
+      off+=lh.length+nm.length+sz;nx();
+    });
+  }
+  nx();
+}
+function readZip(file,cb,err){
+  var tail=Math.min(file.size,65557);
+  file.slice(file.size-tail).arrayBuffer().then(function(ab){
+    var d=new DataView(ab),e=-1;
+    for(var k=ab.byteLength-22;k>=0;k--){if(d.getUint32(k,true)===0x06054b50){e=k;break;}}
+    if(e<0){err();return;}
+    var n=d.getUint16(e+10,true),cs=d.getUint32(e+12,true),co=d.getUint32(e+16,true);
+    file.slice(co,co+cs).arrayBuffer().then(function(cb2){
+      var c=new DataView(cb2),p=0,list=[],dec=new TextDecoder();
+      for(var j=0;j<n;j++){
+        if(c.getUint32(p,true)!==0x02014b50)break;
+        var sz=c.getUint32(p+20,true),nl=c.getUint16(p+28,true),xl=c.getUint16(p+30,true),cl=c.getUint16(p+32,true),lo=c.getUint32(p+42,true);
+        list.push({name:dec.decode(new Uint8Array(cb2,p+46,nl)),size:sz,lo:lo});p+=46+nl+xl+cl;
+      }
+      var out={},q=0;
+      function nx(){
+        if(q>=list.length){cb(out);return;}
+        var x=list[q++];
+        file.slice(x.lo,x.lo+30).arrayBuffer().then(function(h){var hv=new DataView(h);var st=x.lo+30+hv.getUint16(26,true)+hv.getUint16(28,true);out[x.name]=file.slice(st,st+x.size);nx();},err);
+      }
+      nx();
+    },err);
+  },err);
+}
+function flash(el,t,orig,ms){el.textContent=t;setTimeout(function(){el.textContent=orig;},ms||2000);}
+function safeName(n){return (n||"Progetto").replace(/[\\\/:*?"<>|]+/g,"_").slice(0,60);}
+function shareReady(){
+  var f=readyFile;if(!f)return;
+  if(navigator.canShare&&navigator.canShare({files:[f]})){
+    navigator.share({files:[f],title:f.name}).then(function(){readyFile=null;pexp.textContent="Salva file";pexp.classList.remove("active");},function(){});
+  }else{
+    var a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},60000);
+    readyFile=null;pexp.textContent="Salva file";pexp.classList.remove("active");
+  }
+}
+pexp.addEventListener("click",function(){
+  if(readyFile){shareReady();return;}
+  if(!items.length){flash(pexp,"Progetto vuoto","Salva file");return;}
+  if(pexp.disabled)return;pexp.disabled=true;
+  var pr=projs.filter(function(x){return x.id===pid;})[0],pname0=pr?pr.name:"Progetto";
+  var meta={app:"ArnoShow",version:1,name:pname0,items:[]},entries=[];
+  items.forEach(function(it,k){
+    var ext=(it.blob&&it.blob.name&&/\.[^.]+$/.test(it.blob.name))?it.blob.name.match(/\.[^.]+$/)[0]:(it.kind==="photo"?".jpg":(it.kind==="audio"?".m4a":".mp4"));
+    var fn="media/"+(k+1)+ext;
+    meta.items.push({name:it.name,kind:it.kind,thumb:it.thumb||"",num:nums[it.id]||k+1,file:fn,type:it.blob.type||""});
+    entries.push({name:fn,blob:it.blob});
+  });
+  entries.unshift({name:"progetto.json",blob:new Blob([JSON.stringify(meta)],{type:"application/json"})});
+  makeZip(entries,function(i,n){pexp.textContent="Preparo "+i+"/"+n+"…";},function(z){
+    pexp.disabled=false;
+    readyFile=new File([z],safeName(pname0)+".arnoshow",{type:"application/zip"});
+    pexp.textContent="Condividi ✓";pexp.classList.add("active");
+    setTimeout(function(){if(readyFile){readyFile=null;pexp.textContent="Salva file";pexp.classList.remove("active");}},120000);
+  });
+});
+pimp.addEventListener("change",function(){
+  var f=pimp.files&&pimp.files[0];pimp.value="";if(!f)return;
+  var lab=document.getElementById("pimpl"),lt=lab.firstChild;
+  lt.textContent="Apro…";
+  readZip(f,function(files){
+    var mj=files["progetto.json"];
+    if(!mj){lt.textContent="File non valido";setTimeout(function(){lt.textContent="Apri file";},2000);return;}
+    mj.text().then(function(t){
+      var meta;try{meta=JSON.parse(t);}catch(e){meta=null;}
+      if(!meta||!meta.items){lt.textContent="File non valido";setTimeout(function(){lt.textContent="Apri file";},2000);return;}
+      var nm=meta.name||"Progetto",base=nm,c=2;
+      while(projs.some(function(p){return p.name===nm;}))nm=base+" ("+(c++)+")";
+      var npid="p"+Date.now(),now=Date.now(),order=[],nn={},left=0,done=false;
+      projs.push({id:npid,name:nm});saveProj();
+      function fin(){if(done||left>0)return;done=true;
+        try{localStorage.setItem("vporder-"+npid,JSON.stringify(order));localStorage.setItem("vpnums-"+npid,JSON.stringify(nn));}catch(e){}
+        lt.textContent="Apri file";openProject(npid);}
+      meta.items.forEach(function(m,k){
+        var b=files[m.file];if(!b)return;
+        if(m.type)b=new Blob([b],{type:m.type});
+        var id=now+"-"+k;order.push(id);nn[id]=m.num||k+1;left++;
+        put({id:id,name:m.name,blob:b,thumb:m.thumb||"",order:now+k,tv:m.thumb?3:0,pid:npid,kind:m.kind||"video"},function(){left--;fin();});
+      });
+      fin();
+    });
+  },function(){lt.textContent="File non valido";setTimeout(function(){lt.textContent="Apri file";},2000);});
+});
 fillProj();openDB(function(){loadBgPhotoDB();loadAll();});
 })();
 </script>
