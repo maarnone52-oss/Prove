@@ -216,7 +216,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.8.9';
+var VER='0.8.10';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -1119,15 +1119,36 @@ function stackList(){ // dal più sotto al più sopra, come li disegna il browse
   return BOXES.map(function(b,i){return {b:b,i:i,z:zOf(b)}}).sort(function(a,c){return a.z-c.z||a.i-c.i}).map(function(x){return x.b});
 }
 function levelOf(ref){var L=stackList();for(var i=0;i<L.length;i++)if(L[i].ref===ref)return {n:i+1,of:L.length};return null}
+function visKids(par){var a=[];if(!par)return a;for(var c=par.firstElementChild;c;c=c.nextElementSibling)if(!/^(SCRIPT|STYLE|TEMPLATE)$/.test(c.tagName)&&!c.hasAttribute('data-cvph')&&vis(c))a.push(c);return a}
+function overlapR(a,b){return a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+b.h&&b.y<a.y+a.h}
+function liftChain(el,k){ // alza i contenitori dell'oggetto (gruppi e riquadro) quanto serve
+  var changed=false,r0=rectOf(el);
+  for(var a=el.parentElement;a&&a!==D.body&&a!==D.documentElement;a=a.parentElement){
+    var isP=isPanelEl(a),sibs=isP?PANELS.map(function(p){return p.el}).filter(vis):visKids(a.parentElement);
+    var L=sibs.map(function(e,i){var r=refOf(e),it=M.I[r],P=M.P[r];return {e:e,r:r,i:i,z:it&&it.z!=null?it.z:(P&&P.z)||0}}).sort(function(x,y){return x.z-y.z||x.i-y.i});
+    var idx=-1;L.forEach(function(x,n){if(x.e===a)idx=n});
+    if(idx>=0){var t=idx;
+      if(k==='top')t=L.length-1;
+      else for(var j=idx+1;j<L.length;j++){var rr=isP?rectP(L[j].r,L[j].e):rectOf(L[j].e);if(overlapR(rr,r0))t=j}
+      if(t>idx){var it2=L.splice(idx,1)[0];L.splice(t,0,it2);L.forEach(function(x,n){var o=M.I[x.r]||(M.I[x.r]={});o.z=n+1;if(M.P[x.r])delete M.P[x.r].z});changed=true}}
+    if(isP)break;
+  }
+  return changed;
+}
 function zMove(k){
   if(!sel||S.lvl==='U')return;
   var L=stackList(),old=L.map(function(b){return b.ref}).join('|'),j;
   if(k==='top'||k==='bot'){var a=L.filter(function(b){return !isSel(b.ref)}),m=L.filter(function(b){return isSel(b.ref)});L=k==='top'?a.concat(m):m.concat(a)}
   else if(k==='up'){for(j=L.length-2;j>=0;j--)if(isSel(L[j].ref)&&!isSel(L[j+1].ref)){var t1=L[j];L[j]=L[j+1];L[j+1]=t1}}
   else{for(j=1;j<L.length;j++)if(isSel(L[j].ref)&&!isSel(L[j-1].ref)){var t2=L[j];L[j]=L[j-1];L[j-1]=t2}}
-  if(L.map(function(b){return b.ref}).join('|')===old){toast(k==='up'||k==='top'?'È già il più in alto':'È già il più in basso');return}
-  change(function(){L.forEach(function(b,n){var o=M.I[b.ref]||(M.I[b.ref]={});o.z=n+1;if(M.P[b.ref])delete M.P[b.ref].z})});
-  var lv=levelOf(sel);if(lv)toast('Livello '+lv.n+' di '+lv.of+(lv.n===lv.of?' · in primo piano':lv.n===1?' · in fondo':''));
+  var same=L.map(function(b){return b.ref}).join('|')===old,before=JSON.stringify(M),lifted=false;
+  if(!same)L.forEach(function(b,n){var o=M.I[b.ref]||(M.I[b.ref]={});o.z=n+1;if(M.P[b.ref])delete M.P[b.ref].z});
+  // un oggetto sta dentro il suo riquadro (e nei suoi gruppi): per portarlo davvero davanti si alzano anche loro
+  if(S.lvl==='O'&&(k==='top'||k==='up'))selList().forEach(function(r){var e=resolve(r);if(e&&liftChain(e,k))lifted=true});
+  if(same&&!lifted){toast(k==='up'||k==='top'?'È già il più in alto':'È già il più in basso');return}
+  hist.push(before);if(hist.length>80)hist.shift();redo=[];applyAll();commit();updBar();updCrumb();
+  if(lifted)toast('Portato davanti: alzato anche il suo riquadro'+(k==='top'?' (in primo piano)':' sopra quelli che lo coprivano'));
+  var lv=levelOf(sel);if(lifted)return;if(lv)toast('Livello '+lv.n+' di '+lv.of+(lv.n===lv.of?' · in primo piano':lv.n===1?' · in fondo':''));
 }
 $$('#zord [data-z]').forEach(function(b){b.onclick=function(){zMove(b.getAttribute('data-z'))}});
 
