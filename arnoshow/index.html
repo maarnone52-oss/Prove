@@ -182,42 +182,52 @@ body.fs-stage #fsexit{display:inline-flex;align-items:center;gap:6px}
 #hdmiout.on{background:linear-gradient(135deg,#22c55e 0%,#15803d 100%);border-color:#14532d;box-shadow:0 4px 14px rgba(22,163,74,.45),inset 0 0 0 2px rgba(255,255,255,.15)}
 @media screen and (orientation:landscape) and (max-height:600px){#hdmiout{max-width:128px;font-size:12px;gap:3px}#hdmiout svg{width:20px;height:20px}}
 
-#menubtn{order:5}
-#menu{position:fixed;left:8px;right:8px;top:calc(var(--sat) + 46px);z-index:60;max-height:calc(100vh - var(--sat) - 60px);overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.5);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
-#menu .mg{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-#menu .mg>*{width:100%;height:42px!important;font-size:13px!important;box-sizing:border-box;justify-content:center;padding:0 8px!important;margin:0;border-radius:10px!important}
-#menu .mt{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:12px 2px 6px}
-#menu #prj{display:flex;flex-wrap:wrap;gap:7px;padding:0}
-#menu #prj select{flex:1 1 100%;height:42px;font-size:15px}
-#menu #prj>button,#menu #prj>label{flex:1 1 30%;height:40px;display:inline-flex;align-items:center;justify-content:center}
-#menu #pedit{position:static;width:auto;box-shadow:none;margin-top:7px;padding:0}
-@media screen and (orientation:landscape) and (max-height:600px){#menu{left:auto;width:min(460px,60vw);top:40px;max-height:calc(100vh - 50px)}#menu .mg{grid-template-columns:1fr 1fr 1fr}}
+
+header .brand{flex:none;min-width:0}
+@media (max-width:520px){header .brand-text{display:none}}
+#mbar{display:flex;flex:1;gap:2px;min-width:0;overflow-x:auto;scrollbar-width:none}
+#mbar::-webkit-scrollbar{display:none}
+#mbar button{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:var(--fg);font:600 15px/1 -apple-system,system-ui,sans-serif;padding:8px 9px;border-radius:7px;white-space:nowrap;touch-action:manipulation}
+#mbar button.open{background:var(--acc);color:#fff}
+#dd{position:fixed;z-index:70;min-width:240px;max-width:calc(100vw - 16px);max-height:calc(100vh - var(--sat) - 70px);overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--line);border-radius:12px;padding:5px;box-shadow:0 12px 34px rgba(0,0,0,.5)}
+#dd .mm{display:none}
+#dd .mm.on{display:block}
+#dd .mm>*:not(.sep):not(.mhd):not(select){display:flex!important;width:100%;height:auto!important;min-height:40px;align-items:center;justify-content:flex-start!important;gap:10px;padding:0 12px!important;margin:0;border:0!important;border-radius:7px!important;background:transparent!important;color:var(--fg)!important;box-shadow:none!important;font:500 15px/1.2 -apple-system,system-ui,sans-serif!important;text-align:left;box-sizing:border-box;animation:none!important;order:0!important;transform:none!important}
+#dd .mm>*:active:not(.sep):not(.mhd){background:var(--acc)!important;color:#fff!important}
+#dd .mm>*[disabled]{opacity:.4}
+#dd .mm>* svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+#dd .mm>#cont.on{color:var(--acc)!important}
+#dd .sep{height:1px;background:var(--line);margin:4px 8px}
+#dd .mhd{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);padding:8px 12px 4px}
+#dd select{display:block;width:calc(100% - 16px);margin:2px 8px 6px;height:38px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font-size:15px;padding:0 8px}
+#pedit{position:fixed!important;left:12px!important;right:12px!important;top:calc(var(--sat) + 50px)!important;width:auto!important;z-index:80!important;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px!important;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+#prj{display:none!important}
 </style>
 </head>
 <body>
 <img id="bgimg" alt="" aria-hidden="true"><div id="bgdim" aria-hidden="true"></div>
 <header>
 <div class="brand" aria-label="ArnoShow"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17c2.2-1.8 4.4-1.8 6.6 0s4.4 1.8 7.4 0" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><polygon points="9.5 6.5 16.5 10.5 9.5 14.5" fill="#ffffff"/></svg></span><span class="brand-text">Arno<span>Show</span></span></div>
-<button class="btn" id="menubtn" type="button" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Menu</span></button>
+<nav id="mbar"><button type="button" data-m="mfile">File</button><button type="button" data-m="medit">Modifica</button><button type="button" data-m="mview">Vista</button><button type="button" data-m="mplay">Riproduzione</button></nav>
 <button class="btn danger" id="accord" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg><span>Accetta riordino</span></button>
 <button class="btn sec" id="und" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span id="undt">Annulla</span></button>
 <button class="btn sec" id="thm" type="button" title="Cambia tema sfondo">Sfondo: Nero</button>
-<label class="btn sec" id="bgpick" title="Scegli foto di sfondo dalla libreria"><input type="file" id="bgfile" accept="image/*" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><path d="M21 15l-5-5L5 21"/></svg><span>Foto sfondo</span></label>
+<label class="btn sec" id="bgpick" title="Scegli foto di sfondo dalla libreria"><input type="file" id="bgfile" accept="image/*" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><path d="M21 15l-5-5L5 21"/></svg><span>Foto di sfondo…</span></label>
 <button class="btn sec" id="ap" type="button" title="Invia il video alla TV con AirPlay: l'iPhone resta il telecomando"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-1"/><polygon points="12 15 17 21 7 21 12 15" fill="currentColor" stroke="none"/></svg><span id="apt">AirPlay</span></button>
-<label class="btn"><input type="file" id="file" accept="video/*" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Video</span></label>
-<label class="btn"><input type="file" id="filep" accept="image/*" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Foto</span></label>
-<label class="btn" title="Importa file audio nei vari formati (MP3, M4A, WAV, AAC, OGG, FLAC, ecc.)"><input type="file" id="filea" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac,.opus,.wma,.aiff,.aif,.caf,.alac,.amr,.3ga,.weba,.mka" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Audio</span></label>
-<label class="btn" title="Carica un video ed estrae solo la sua traccia audio"><input type="file" id="fileva" accept="video/*" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Audio da video</span></label>
+<label class="btn"><input type="file" id="file" accept="video/*" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Aggiungi video…</span></label>
+<label class="btn"><input type="file" id="filep" accept="image/*" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Aggiungi foto…</span></label>
+<label class="btn" title="Importa file audio nei vari formati (MP3, M4A, WAV, AAC, OGG, FLAC, ecc.)"><input type="file" id="filea" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac,.opus,.wma,.aiff,.aif,.caf,.alac,.amr,.3ga,.weba,.mka" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Aggiungi audio…</span></label>
+<label class="btn" title="Carica un video ed estrae solo la sua traccia audio"><input type="file" id="fileva" accept="video/*" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Audio da un video…</span></label>
 </header>
-<div id="menu" hidden><div class="mg" id="mg1"></div><div class="mt">Progetto</div><div id="mprj"></div><div class="mt">Riproduzione</div><div class="mg" id="mg2"></div></div>
+<div id="dd" hidden><div class="mm" id="mfile"></div><div class="mm" id="medit"></div><div class="mm" id="mview"></div><div class="mm" id="mplay"></div></div>
 <div id="hdminote"><span id="hdminotetxt">Tocca "Apri su TV" per inviare il video puro al monitor HDMI senza clonare l'iPhone.</span><button id="hdmiforce" type="button">Apri su TV</button></div>
-<div id="prj"><select id="psel" aria-label="Progetto"></select><button id="pnew" type="button">Nuovo</button><button id="pren" type="button">Rinomina</button><button id="pdel" type="button">Elimina</button><button id="pexp" type="button" title="Salva il progetto (video, foto, audio e ordine) in un file">Salva file</button><label id="pimpl" title="Apri un progetto salvato in un file" style="padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:12px;white-space:nowrap">Apri file<input type="file" id="pimp" accept=".arnoshow,.zip,application/zip" hidden></label></div>
+<div id="prj"><select id="psel" aria-label="Progetto"></select><button id="pnew" type="button">Nuovo progetto</button><button id="pren" type="button">Rinomina progetto…</button><button id="pdel" type="button">Elimina progetto</button><button id="pexp" type="button" title="Salva il progetto (video, foto, audio e ordine) in un file">Salva progetto su file…</button><label id="pimpl" title="Apri un progetto salvato in un file" style="padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:12px;white-space:nowrap">Apri progetto da file…<input type="file" id="pimp" accept=".arnoshow,.zip,application/zip" hidden></label></div>
 <div id="pedit" hidden><input id="pname" maxlength="40" placeholder="Nome del progetto"><button id="pok" type="button">OK</button><button id="pno" type="button">Annulla</button></div>
 <div id="imp" hidden><div id="impt"></div><div id="impb"><div id="impf"></div></div></div>
 <video id="vout" playsinline webkit-playsinline x-webkit-airplay="allow"></video><button id="fsexit" type="button">✕ Esci da schermo intero</button><div id="stage"><video id="v" playsinline webkit-playsinline x-webkit-airplay="allow"></video><img id="ph" alt="" hidden><div id="audvis" hidden><div class="av-ico" id="audico">🎵</div><div class="av-nm" id="audnm"></div><div id="audsub" style="font-size:11px;opacity:.68;margin-top:2px" hidden>Traccia audio estratta da video</div></div><div id="wait"></div></div>
 <div id="prog" aria-label="Avanzamento"><div id="pf"></div></div>
 <div id="bar"><span id="now">Nessun video in riproduzione</span><span id="tm">0:00 / 0:00</span><button id="mu" type="button" aria-label="Audio">🔊</button></div>
-<div id="ctl"><button id="pp" type="button">Pausa</button><button id="cont" type="button" title="Riproduzione continua senza sosta">Senza sosta: Off</button><button id="pdur" type="button" title="Durata foto">Durata foto: ∞</button><button id="cap" type="button">Scegli miniatura</button><button id="fsbtn" type="button" title="Espandi il quadro di riproduzione a schermo intero" style="border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:0 10px;font-size:12px;font-family:inherit;height:38px;touch-action:manipulation;font-weight:600">⛶ Schermo intero</button><button id="delcur" type="button" aria-label="Elimina selezionato o trascina qui per eliminare" title="Elimina selezionato o trascina qui" disabled>🗑️</button></div>
+<div id="ctl"><button id="pp" type="button">Pausa</button><button id="cont" type="button" title="Riproduzione continua senza sosta">Senza sosta: Off</button><button id="pdur" type="button" title="Durata foto">Durata foto: ∞</button><button id="cap" type="button">Scegli miniatura</button><button id="fsbtn" type="button" title="Espandi il quadro di riproduzione a schermo intero" style="border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:0 10px;font-size:12px;font-family:inherit;height:38px;touch-action:manipulation;font-weight:600">Schermo intero</button><button id="delcur" type="button" aria-label="Elimina selezionato o trascina qui per eliminare" title="Elimina selezionato o trascina qui" disabled>🗑️</button></div>
 <div id="listwrap">
   <div id="list"></div>
   <div id="zrail" role="slider" aria-label="Dimensione miniature" aria-valuemin="60" aria-valuemax="260" aria-valuenow="130" tabindex="0">
@@ -490,7 +500,7 @@ function render(){
   list.innerHTML="";
   if(!items.length){
     var h=document.createElement("div");h.className="hint";
-    h.textContent="Nessun elemento. Apri ☰ Menu e usa “+ Video”, “+ Foto”, “+ Audio” o “+ Audio da video”.";
+    h.textContent="Nessun elemento. Apri il menu File › Aggiungi video, foto o audio.";
     list.appendChild(h);return;
   }
   items.forEach(function(it,i){
@@ -922,9 +932,9 @@ document.getElementById("pok").addEventListener("click",function(){
   else{projs.forEach(function(p){if(p.id===pid)p.name=n;});saveProj();fillProj();}
 });
 pdel.addEventListener("click",function(){
-  if(projs.length<2){pdel.textContent="Serve un altro";setTimeout(function(){pdel.textContent="Elimina";},1500);return;}
-  if(!armed){armed=true;pdel.textContent="Conferma?";setTimeout(function(){armed=false;pdel.textContent="Elimina";},3000);return;}
-  armed=false;pdel.textContent="Elimina";
+  if(projs.length<2){pdel.textContent="Serve un altro";setTimeout(function(){pdel.textContent="Elimina progetto";},1500);return;}
+  if(!armed){armed=true;pdel.textContent="Conferma?";setTimeout(function(){armed=false;pdel.textContent="Elimina progetto";},3000);return;}
+  armed=false;pdel.textContent="Elimina progetto";
   var gone=pid;
   purgeProjectDB(gone);
   try{localStorage.removeItem("vporder-"+gone);localStorage.removeItem("vpnums-"+gone);}catch(e){}
@@ -1253,16 +1263,16 @@ function safeName(n){return (n||"Progetto").replace(/[\\\/:*?"<>|]+/g,"_").slice
 function shareReady(){
   var f=readyFile;if(!f)return;
   if(navigator.canShare&&navigator.canShare({files:[f]})){
-    navigator.share({files:[f],title:f.name}).then(function(){readyFile=null;pexp.textContent="Salva file";pexp.classList.remove("active");},function(){});
+    navigator.share({files:[f],title:f.name}).then(function(){readyFile=null;pexp.textContent="Salva progetto su file…";pexp.classList.remove("active");},function(){});
   }else{
     var a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();
     setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},60000);
-    readyFile=null;pexp.textContent="Salva file";pexp.classList.remove("active");
+    readyFile=null;pexp.textContent="Salva progetto su file…";pexp.classList.remove("active");
   }
 }
 pexp.addEventListener("click",function(){
   if(readyFile){shareReady();return;}
-  if(!items.length){flash(pexp,"Progetto vuoto","Salva file");return;}
+  if(!items.length){flash(pexp,"Progetto vuoto","Salva progetto su file…");return;}
   if(pexp.disabled)return;pexp.disabled=true;
   var pr=projs.filter(function(x){return x.id===pid;})[0],pname0=pr?pr.name:"Progetto";
   var meta={app:"ArnoShow",version:1,name:pname0,items:[]},entries=[];
@@ -1277,7 +1287,7 @@ pexp.addEventListener("click",function(){
     pexp.disabled=false;
     readyFile=new File([z],safeName(pname0)+".arnoshow",{type:"application/zip"});
     pexp.textContent="Condividi ✓";pexp.classList.add("active");
-    setTimeout(function(){if(readyFile){readyFile=null;pexp.textContent="Salva file";pexp.classList.remove("active");}},120000);
+    setTimeout(function(){if(readyFile){readyFile=null;pexp.textContent="Salva progetto su file…";pexp.classList.remove("active");}},120000);
   });
 });
 pimp.addEventListener("change",function(){
@@ -1286,17 +1296,17 @@ pimp.addEventListener("change",function(){
   lt.textContent="Apro…";
   readZip(f,function(files){
     var mj=files["progetto.json"];
-    if(!mj){lt.textContent="File non valido";setTimeout(function(){lt.textContent="Apri file";},2000);return;}
+    if(!mj){lt.textContent="File non valido";setTimeout(function(){lt.textContent="Apri progetto da file…";},2000);return;}
     mj.text().then(function(t){
       var meta;try{meta=JSON.parse(t);}catch(e){meta=null;}
-      if(!meta||!meta.items){lt.textContent="File non valido";setTimeout(function(){lt.textContent="Apri file";},2000);return;}
+      if(!meta||!meta.items){lt.textContent="File non valido";setTimeout(function(){lt.textContent="Apri progetto da file…";},2000);return;}
       var nm=meta.name||"Progetto",base=nm,c=2;
       while(projs.some(function(p){return p.name===nm;}))nm=base+" ("+(c++)+")";
       var npid="p"+Date.now(),now=Date.now(),order=[],nn={},left=0,done=false;
       projs.push({id:npid,name:nm});saveProj();
       function fin(){if(done||left>0)return;done=true;
         try{localStorage.setItem("vporder-"+npid,JSON.stringify(order));localStorage.setItem("vpnums-"+npid,JSON.stringify(nn));}catch(e){}
-        lt.textContent="Apri file";openProject(npid);}
+        lt.textContent="Apri progetto da file…";openProject(npid);}
       meta.items.forEach(function(m,k){
         var b=files[m.file];if(!b)return;
         if(m.type)b=new Blob([b],{type:m.type});
@@ -1305,22 +1315,45 @@ pimp.addEventListener("change",function(){
       });
       fin();
     });
-  },function(){lt.textContent="File non valido";setTimeout(function(){lt.textContent="Apri file";},2000);});
+  },function(){lt.textContent="File non valido";setTimeout(function(){lt.textContent="Apri progetto da file…";},2000);});
 });
 
-// === MENU A TENDINA ===
+
+// === BARRA DEI MENU (stile Mac) ===
 (function(){
-  var menu=document.getElementById("menu"),mb=document.getElementById("menubtn"),g1=document.getElementById("mg1"),g2=document.getElementById("mg2"),mp=document.getElementById("mprj");
-  ["und","thm","bgpick","ap"].forEach(function(id){var e=document.getElementById(id);if(e)g1.appendChild(e);});
-  ["file","filep","filea","fileva"].forEach(function(id){var e=document.getElementById(id);if(e&&e.parentNode)g1.insertBefore(e.parentNode,g1.firstChild?g1.children[0]:null);});
-  ["fileva","filea","filep","file"].forEach(function(id){var e=document.getElementById(id);if(e&&e.parentNode)g1.insertBefore(e.parentNode,g1.firstChild);});
-  mp.appendChild(document.getElementById("prj"));mp.appendChild(document.getElementById("pedit"));
-  ["cont","pdur","cap","fsbtn"].forEach(function(id){var e=document.getElementById(id);if(e)g2.appendChild(e);});
-  function setOpen(o){menu.hidden=!o;mb.classList.toggle("active",o);mb.setAttribute("aria-expanded",o?"true":"false");}
-  mb.addEventListener("click",function(e){e.stopPropagation();setOpen(menu.hidden);});
-  document.addEventListener("pointerdown",function(e){if(!menu.hidden&&!menu.contains(e.target)&&!mb.contains(e.target))setOpen(false);},true);
-  ["file","filep","filea","fileva","bgfile","pimp"].forEach(function(id){var e=document.getElementById(id);if(e)e.addEventListener("change",function(){setOpen(false);});});
-  ["fsbtn"].forEach(function(id){var e=document.getElementById(id);if(e)e.addEventListener("click",function(){setOpen(false);});});
+  function $(id){return document.getElementById(id);}
+  function sep(){var d=document.createElement("div");d.className="sep";return d;}
+  function hd(t){var d=document.createElement("div");d.className="mhd";d.textContent=t;return d;}
+  function lab(id){var e=$(id);return e?e.parentNode:null;}
+  var M={
+    mfile:[hd("Progetto"),$("psel"),$("pnew"),$("pren"),$("pdel"),sep(),$("pexp"),$("pimpl"),sep(),hd("Aggiungi"),lab("file"),lab("filep"),lab("filea"),lab("fileva")],
+    medit:[$("und"),sep(),$("cap"),$("delcur")],
+    mview:[$("thm"),$("bgpick"),sep(),$("fsbtn")],
+    mplay:[$("cont"),$("pdur"),sep(),$("ap")]
+  };
+  var trashHome=$("delcur").parentNode,trashNext=$("delcur").nextSibling;
+  M.medit=M.medit.filter(function(x){return x&&x.id!=="delcur";});
+  var dd=$("dd"),bar=$("mbar"),openId=null;
+  for(var k in M){M[k].forEach(function(e){if(e)$(k).appendChild(e);});}
+  function close(){dd.hidden=true;openId=null;[].forEach.call(bar.children,function(b){b.classList.remove("open");});}
+  function open(b){
+    var id=b.dataset.m;if(openId===id){close();return;}
+    [].forEach.call(dd.children,function(m){m.classList.toggle("on",m.id===id);});
+    [].forEach.call(bar.children,function(x){x.classList.toggle("open",x===b);});
+    dd.hidden=false;openId=id;
+    var r=b.getBoundingClientRect(),w=dd.offsetWidth;
+    dd.style.top=(r.bottom+6)+"px";dd.style.left=Math.max(8,Math.min(r.left,window.innerWidth-w-8))+"px";
+  }
+  [].forEach.call(bar.children,function(b){b.addEventListener("click",function(e){e.stopPropagation();open(b);});});
+  document.addEventListener("pointerdown",function(e){if(!dd.hidden&&!dd.contains(e.target)&&!bar.contains(e.target))close();},true);
+  dd.addEventListener("click",function(e){
+    var t=e.target.closest("button,label");if(!t||t.tagName==="SELECT")return;
+    if(t.id==="pdel"||t.id==="pexp"||t.id==="pdur"||t.id==="cont"||t.id==="thm")return; // restano aperti per vedere l'effetto
+    setTimeout(close,0);
+  });
+  $("psel").addEventListener("change",close);
+  ["bgfile","pimp"].forEach(function(id){var e=$(id);if(e)e.addEventListener("change",close);});
+  window.addEventListener("resize",close);
 })();
 fillProj();openDB(function(){loadBgPhotoDB();loadAll();});
 })();
