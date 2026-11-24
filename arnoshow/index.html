@@ -181,12 +181,24 @@ body.fs-stage #fsexit{display:inline-flex;align-items:center;gap:6px}
 #hdmiout svg{width:26px;height:26px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
 #hdmiout.on{background:linear-gradient(135deg,#22c55e 0%,#15803d 100%);border-color:#14532d;box-shadow:0 4px 14px rgba(22,163,74,.45),inset 0 0 0 2px rgba(255,255,255,.15)}
 @media screen and (orientation:landscape) and (max-height:600px){#hdmiout{max-width:128px;font-size:12px;gap:3px}#hdmiout svg{width:20px;height:20px}}
+
+#menubtn{order:5}
+#menu{position:fixed;left:8px;right:8px;top:calc(var(--sat) + 46px);z-index:60;max-height:calc(100vh - var(--sat) - 60px);overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.5);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+#menu .mg{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+#menu .mg>*{width:100%;height:42px!important;font-size:13px!important;box-sizing:border-box;justify-content:center;padding:0 8px!important;margin:0;border-radius:10px!important}
+#menu .mt{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:12px 2px 6px}
+#menu #prj{display:flex;flex-wrap:wrap;gap:7px;padding:0}
+#menu #prj select{flex:1 1 100%;height:42px;font-size:15px}
+#menu #prj>button,#menu #prj>label{flex:1 1 30%;height:40px;display:inline-flex;align-items:center;justify-content:center}
+#menu #pedit{position:static;width:auto;box-shadow:none;margin-top:7px;padding:0}
+@media screen and (orientation:landscape) and (max-height:600px){#menu{left:auto;width:min(460px,60vw);top:40px;max-height:calc(100vh - 50px)}#menu .mg{grid-template-columns:1fr 1fr 1fr}}
 </style>
 </head>
 <body>
 <img id="bgimg" alt="" aria-hidden="true"><div id="bgdim" aria-hidden="true"></div>
 <header>
 <div class="brand" aria-label="ArnoShow"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17c2.2-1.8 4.4-1.8 6.6 0s4.4 1.8 7.4 0" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><polygon points="9.5 6.5 16.5 10.5 9.5 14.5" fill="#ffffff"/></svg></span><span class="brand-text">Arno<span>Show</span></span></div>
+<button class="btn" id="menubtn" type="button" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Menu</span></button>
 <button class="btn danger" id="accord" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg><span>Accetta riordino</span></button>
 <button class="btn sec" id="und" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span id="undt">Annulla</span></button>
 <button class="btn sec" id="thm" type="button" title="Cambia tema sfondo">Sfondo: Nero</button>
@@ -197,6 +209,7 @@ body.fs-stage #fsexit{display:inline-flex;align-items:center;gap:6px}
 <label class="btn" title="Importa file audio nei vari formati (MP3, M4A, WAV, AAC, OGG, FLAC, ecc.)"><input type="file" id="filea" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac,.opus,.wma,.aiff,.aif,.caf,.alac,.amr,.3ga,.weba,.mka" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Audio</span></label>
 <label class="btn" title="Carica un video ed estrae solo la sua traccia audio"><input type="file" id="fileva" accept="video/*" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Audio da video</span></label>
 </header>
+<div id="menu" hidden><div class="mg" id="mg1"></div><div class="mt">Progetto</div><div id="mprj"></div><div class="mt">Riproduzione</div><div class="mg" id="mg2"></div></div>
 <div id="hdminote"><span id="hdminotetxt">Tocca "Apri su TV" per inviare il video puro al monitor HDMI senza clonare l'iPhone.</span><button id="hdmiforce" type="button">Apri su TV</button></div>
 <div id="prj"><select id="psel" aria-label="Progetto"></select><button id="pnew" type="button">Nuovo</button><button id="pren" type="button">Rinomina</button><button id="pdel" type="button">Elimina</button><button id="pexp" type="button" title="Salva il progetto (video, foto, audio e ordine) in un file">Salva file</button><label id="pimpl" title="Apri un progetto salvato in un file" style="padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:12px;white-space:nowrap">Apri file<input type="file" id="pimp" accept=".arnoshow,.zip,application/zip" hidden></label></div>
 <div id="pedit" hidden><input id="pname" maxlength="40" placeholder="Nome del progetto"><button id="pok" type="button">OK</button><button id="pno" type="button">Annulla</button></div>
@@ -477,7 +490,7 @@ function render(){
   list.innerHTML="";
   if(!items.length){
     var h=document.createElement("div");h.className="hint";
-    h.textContent="Nessun elemento. Usa “+ Video”, “+ Foto”, “+ Audio” o “+ Audio da video” per aggiungerne.";
+    h.textContent="Nessun elemento. Apri ☰ Menu e usa “+ Video”, “+ Foto”, “+ Audio” o “+ Audio da video”.";
     list.appendChild(h);return;
   }
   items.forEach(function(it,i){
@@ -1294,6 +1307,21 @@ pimp.addEventListener("change",function(){
     });
   },function(){lt.textContent="File non valido";setTimeout(function(){lt.textContent="Apri file";},2000);});
 });
+
+// === MENU A TENDINA ===
+(function(){
+  var menu=document.getElementById("menu"),mb=document.getElementById("menubtn"),g1=document.getElementById("mg1"),g2=document.getElementById("mg2"),mp=document.getElementById("mprj");
+  ["und","thm","bgpick","ap"].forEach(function(id){var e=document.getElementById(id);if(e)g1.appendChild(e);});
+  ["file","filep","filea","fileva"].forEach(function(id){var e=document.getElementById(id);if(e&&e.parentNode)g1.insertBefore(e.parentNode,g1.firstChild?g1.children[0]:null);});
+  ["fileva","filea","filep","file"].forEach(function(id){var e=document.getElementById(id);if(e&&e.parentNode)g1.insertBefore(e.parentNode,g1.firstChild);});
+  mp.appendChild(document.getElementById("prj"));mp.appendChild(document.getElementById("pedit"));
+  ["cont","pdur","cap","fsbtn"].forEach(function(id){var e=document.getElementById(id);if(e)g2.appendChild(e);});
+  function setOpen(o){menu.hidden=!o;mb.classList.toggle("active",o);mb.setAttribute("aria-expanded",o?"true":"false");}
+  mb.addEventListener("click",function(e){e.stopPropagation();setOpen(menu.hidden);});
+  document.addEventListener("pointerdown",function(e){if(!menu.hidden&&!menu.contains(e.target)&&!mb.contains(e.target))setOpen(false);},true);
+  ["file","filep","filea","fileva","bgfile","pimp"].forEach(function(id){var e=document.getElementById(id);if(e)e.addEventListener("change",function(){setOpen(false);});});
+  ["fsbtn"].forEach(function(id){var e=document.getElementById(id);if(e)e.addEventListener("click",function(){setOpen(false);});});
+})();
 fillProj();openDB(function(){loadBgPhotoDB();loadAll();});
 })();
 </script>
