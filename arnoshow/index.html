@@ -202,6 +202,22 @@ header .brand{flex:none;min-width:0}
 #dd select{display:block;width:calc(100% - 16px);margin:2px 8px 6px;height:38px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font-size:15px;padding:0 8px}
 #pedit{position:fixed!important;left:12px!important;right:12px!important;top:calc(var(--sat) + 50px)!important;width:auto!important;z-index:80!important;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px!important;box-shadow:0 10px 30px rgba(0,0,0,.5)}
 #prj{display:none!important}
+
+/* impaginazione verticale da ARNOCANVAS 0.8.9 (iPhone 15 Plus) */
+@media screen and (orientation:portrait){
+  #listwrap{position:relative}
+  #ctl{display:none!important}
+  #side{position:absolute;left:26%;bottom:50px;z-index:35;display:flex;flex-direction:column;align-items:center;gap:26px;pointer-events:none}
+  #side>*{pointer-events:auto}
+  #side #pp{flex:none;width:80px;min-width:80px;height:80px;border-radius:12px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.45)}
+  #side #delcur{order:0;width:30px;height:30px;padding:0;font-size:15px;border-radius:8px}
+  #list{padding-bottom:150px}
+  .hint{padding-left:70px}
+  #foot .fh:first-child #hdmiout{max-width:150px}
+  #foot .fh:last-child{justify-content:flex-end;padding-right:9%}
+}
+@media screen and (orientation:landscape){#side{display:contents}}
+@media screen and (orientation:landscape) and (max-height:600px){#hdmiout{max-width:96px!important;font-size:11px!important;padding:3px!important}#hdmiout svg{width:16px!important;height:16px!important}#go{width:58px!important;height:58px!important;font-size:12px!important}#foot{padding-top:4px!important}}
 </style>
 </head>
 <body>
@@ -1355,6 +1371,14 @@ pimp.addEventListener("change",function(){
   ["bgfile","pimp"].forEach(function(id){var e=$(id);if(e)e.addEventListener("change",close);});
   window.addEventListener("resize",close);
 })();
+
+// impaginazione da ARNOCANVAS: Pausa e cestino nella zona miniature
+(function(){var sd=document.createElement("div");sd.id="side";var pp=document.getElementById("pp"),dc=document.getElementById("delcur");
+  var ctl=document.getElementById("ctl"),lw=document.getElementById("listwrap");
+  function place(){var por=window.matchMedia("(orientation:portrait)").matches;
+    if(por){if(sd.parentNode!==lw)lw.appendChild(sd);sd.appendChild(pp);sd.appendChild(dc);}
+    else{ctl.insertBefore(dc,ctl.firstChild);ctl.insertBefore(pp,dc.nextSibling);}}
+  place();window.addEventListener("resize",place);window.addEventListener("orientationchange",function(){setTimeout(place,200);});})();
 fillProj();openDB(function(){loadBgPhotoDB();loadAll();});
 })();
 </script>
