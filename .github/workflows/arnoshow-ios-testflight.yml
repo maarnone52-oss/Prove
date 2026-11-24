@@ -1,10 +1,17 @@
 # ARNOSHOW PROVA iPhone: compila firmata e carica su TestFlight.
-# Si avvia a mano (Actions > questo flusso > Run workflow). Servono i 4 segreti del repository:
+# Parte da solo a ogni modifica di ArnoShow (o a mano: Actions > Run workflow). Servono i 4 segreti del repository:
 # ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (contenuto del file .p8), TEAM_ID.
 name: ARNOSHOW PROVA iPhone TestFlight
 
 on:
+  push:
+    branches: [main]
+    paths: ['arnoshow/**', 'arnoshow-ios/**', '.github/workflows/arnoshow-ios-testflight.yml']
   workflow_dispatch:
+
+concurrency:
+  group: arnoshow-testflight
+  cancel-in-progress: true
 
 permissions:
   contents: read
