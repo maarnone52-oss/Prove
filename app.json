@@ -27,6 +27,6 @@
  {
   "cartella": "arnoshow",
   "nome": "ARNOSHOW",
-  "stato": "Prova 1.0.15: passaggio istantaneo tra clip con precaricamento (anche sul monitor HDMI)"
+  "stato": "Prova 1.0.16: cambio clip senza scatti (resta l ultimo fotogramma finché la nuova è pronta)"
  }
 ]
