@@ -27,6 +27,6 @@
  {
   "cartella": "arnoshow",
   "nome": "ARNOSHOW",
-  "stato": "Prova 1.0.16: cambio clip senza scatti (resta l ultimo fotogramma finché la nuova è pronta)"
+  "stato": "Prova 1.0.17: passaggio tra clip su canvas come ARNOCUT, dissolvenza opzionale (anche monitor HDMI)"
  }
 ]
