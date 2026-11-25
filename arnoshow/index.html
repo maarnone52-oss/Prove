@@ -292,12 +292,13 @@ window.warmUp=function(el,cb){(function(){
 
 })();};
 window.ArnoMix=function(cv){
-  var x=cv.getContext("2d"),A=null,B=null,dur=0,t0=0,cb=null;
+  var x=cv.getContext("2d"),A=null,B=null,dur=0,t0=0,cb=null,lite=false,lastD=0;
   function has(v){return v&&v.readyState>=2&&v.videoWidth>0;}
   function draw(v,al){var W=cv.width,H=cv.height,k=Math.min(W/v.videoWidth,H/v.videoHeight),w=v.videoWidth*k,h=v.videoHeight*k;x.globalAlpha=al;try{x.drawImage(v,(W-w)/2,(H-h)/2,w,h);}catch(e){}x.globalAlpha=1;}
-  function fit(){var r=cv.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,1.5),w=Math.max(2,Math.round(r.width*d)),h=Math.max(2,Math.round(r.height*d));if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}}
+  function fit(){var r=cv.getBoundingClientRect(),d=lite?0.75:Math.min(window.devicePixelRatio||1,1.5),w=Math.max(2,Math.round(r.width*d)),h=Math.max(2,Math.round(r.height*d));if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}}
   function endFade(){if(!B)return;var b=B,c=cb;B=null;cb=null;if(c)try{c(b);}catch(e){}}
   function loop(){
+    if(lite&&!B){var t=performance.now();if(t-lastD<62){requestAnimationFrame(loop);return;}lastD=t;}   // anteprima leggera (16 fps) quando il monitor esterno lavora
     fit();
     if(A){
       if(!A._rdy){if(B&&has(B)){x.fillStyle="#000";x.fillRect(0,0,cv.width,cv.height);draw(B,1);}}
@@ -326,6 +327,7 @@ window.ArnoMix=function(cv){
   return {
     cut:function(el,ms,onDone){if(A===el)return;endFade();B=A;A=el;dur=ms||0;cb=onDone||null;armReady(el);if(!B){dur=0;}},
     busy:function(){return !!B;},
+    setLite:function(on){lite=!!on;},
     clear:function(){endFade();A=null;x.fillStyle="#000";x.fillRect(0,0,cv.width,cv.height);}
   };
 };
@@ -441,6 +443,7 @@ function sendMon(){
   var nx=items[qIdx()>=0?qIdx():cur+1];if(nx&&nx.kind==="video")mon({t:"pre",id:nx.id,kind:nx.kind});
 }
 function refreshHdmiBtn(){
+  if(MIX)MIX.setLite(hdmiNative&&monitorLive);
   if(!nat)return;
   hdmiBtn.classList.toggle("on",hdmiNative&&monitorLive);
   hdmit.textContent=!hdmiNative?"Invia su HDMI":(monitorLive?"Monitor: ON":"Collega il cavo");
