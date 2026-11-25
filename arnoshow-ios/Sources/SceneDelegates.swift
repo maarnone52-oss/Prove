@@ -20,16 +20,18 @@ class MonitorSceneDelegate: UIResponder, UIWindowSceneDelegate {
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options: UIScene.ConnectionOptions) {
         guard let ws = scene as? UIWindowScene else { return }
         let w = UIWindow(windowScene: ws)
-        let web = Bridge.shared.makeWebView(monitorMode: true)
-        Bridge.shared.monitor = web
+        let vc = MonitorVC()
+        Bridge.shared.monitorVC = vc
         Bridge.shared.monitorAttached = true
-        Bridge.shared.monitorReady = false
-        w.rootViewController = WebVC(web: web)
+        Bridge.shared.monitorReady = true
+        w.rootViewController = vc
         w.isHidden = false
         window = w
+        Bridge.shared.notifyControl()
     }
     func sceneDidDisconnect(_ scene: UIScene) {
         window = nil
+        Bridge.shared.monitorVC = nil
         Bridge.shared.monitorDidDisconnect()
     }
 }

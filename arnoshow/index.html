@@ -444,6 +444,32 @@ function sendMon(){
   mon({t:"show",id:it.id,kind:it.kind,xf:xfade,time:(it.kind==="video"?v.currentTime:0),playing:(it.kind==="video"&&!v.paused)});
   var nx=items[qIdx()>=0?qIdx():cur+1];if(nx&&nx.kind==="video")mon({t:"pre",id:nx.id,kind:nx.kind});
 }
+// === archivio per il monitor nativo (app iPhone): una copia di ogni video/foto, per il lettore Apple sul monitor ===
+var natStore=(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.store)||null,storeBusy=false,storeAgain=false;
+function extOf(it){var n=(it.blob&&it.blob.name)||"",m=n.match(/\.([A-Za-z0-9]{2,5})$/);if(m)return m[1].toLowerCase();
+  var t=(it.blob&&it.blob.type)||"";return t.indexOf("quicktime")>=0?"mov":t.indexOf("mp4")>=0?"mp4":t.indexOf("png")>=0?"png":t.indexOf("heic")>=0?"heic":(it.kind==="photo"?"jpg":"mov");}
+function b64Of(blob){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){var s=String(r.result);res(s.slice(s.indexOf(",")+1));};r.onerror=rej;r.readAsDataURL(blob);});}
+async function storeUpload(it,onp){
+  var CH=1536*1024,n=Math.max(1,Math.ceil(it.blob.size/CH)),ext=extOf(it);
+  for(var k=0;k<n;k++){var b=await b64Of(it.blob.slice(k*CH,(k+1)*CH));
+    await natStore.postMessage({op:"put",id:it.id,ext:ext,seq:k,last:k===n-1,b64:b});if(onp)onp((k+1)/n);}
+}
+async function syncStore(){
+  if(!natStore)return;if(storeBusy){storeAgain=true;return;}storeBusy=true;
+  try{
+    var list=items.filter(function(x){return (x.kind==="video"||x.kind==="photo")&&x.blob;});
+    var have=await natStore.postMessage({op:"has",ids:list.map(function(x){return x.id;})})||[];
+    var miss=list.filter(function(x){return have.indexOf(x.id)<0;});
+    var box=document.getElementById("imp"),bf=document.getElementById("impf"),bt=document.getElementById("impt");
+    for(var i=0;i<miss.length;i++){
+      if(miss[i].gone)continue;
+      box.hidden=false;
+      await storeUpload(miss[i],function(f){bf.style.width=((i+f)/miss.length*100)+"%";bt.textContent="Preparo i file per il monitor HDMI: "+(i+1)+" / "+miss.length;});
+    }
+    if(miss.length&&imp.t<=imp.d)box.hidden=true;
+  }catch(e){}
+  storeBusy=false;if(storeAgain){storeAgain=false;syncStore();}
+}
 function refreshHdmiBtn(){
   if(MIX)MIX.setLite(hdmiNative&&monitorLive);
   if(!nat)return;
@@ -554,7 +580,7 @@ function loadAll(){
         var it={id:r.id,name:r.name,blob:r.blob,thumb:r.thumb||"",order:r.order,tv:r.tv||0,pid:pid,kind:r.kind||"video",url:URL.createObjectURL(r.blob)};
         items.push(it);if(it.tv<3)queue.push(it);
       });
-      loadNums();render();pump();
+      loadNums();render();pump();setTimeout(syncStore,800);
     };
     q.onerror=render;
   }catch(e){render();}
@@ -1029,6 +1055,7 @@ function remove(i){
   try{URL.revokeObjectURL(it.url);if(it._hdmiVideoUrl)URL.revokeObjectURL(it._hdmiVideoUrl);}catch(e){}
   it._hdmiVideoUrl=null;
   del(it.id);
+  if(natStore){try{natStore.postMessage({op:"del",id:it.id});}catch(e){}}
   if(i===cur){clearPhotoTimer();setStagePlaying(false);setWait(false);exitNativeExternalFullscreen(v);v.pause();v.removeAttribute("src");v.load();ph.hidden=true;ph.removeAttribute("src");audvis.hidden=true;v.hidden=false;pp.disabled=false;pp.textContent="Pausa";cur=-1;now.textContent="Nessun video in riproduzione";tm.textContent="0:00 / 0:00";pf.style.width="0%";if(hdmiOn)sendBlackToHdmi();if(hdmiNative)sendMon();}
   else if(i<cur)cur--;
   items.splice(i,1);saveOrder(true);render();
@@ -1048,7 +1075,7 @@ function addFiles(inp,kind){
   });
   inp.value="";
   saveOrder(true);saveNums();
-  render();pump();
+  render();pump();setTimeout(syncStore,600);
 }
 inp.addEventListener("change",function(){addFiles(inp,"video");});
 var inpp=document.getElementById("filep");
@@ -1271,7 +1298,7 @@ function doUndo(){
   cur=curItem?items.indexOf(curItem):-1;
   saveOrder(!!e.order);
   if(e.order)setPendingOrder(undo.some(function(u){return !!u.order;}));
-  updUndo();render();
+  updUndo();render();if(e.del)setTimeout(syncStore,300);
 }
 und.addEventListener("click",doUndo);
 updUndo();

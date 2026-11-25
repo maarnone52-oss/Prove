@@ -2,7 +2,7 @@ import UIKit
 import WebKit
 
 /// Collega la pagina di controllo (iPhone) alla pagina "monitor" (schermo esterno).
-final class Bridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
+final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWithReply, WKNavigationDelegate {
     static let shared = Bridge()
     /// Pagina servita dall'app stessa (funziona senza internet).
     static let base = URL(string: "arnoshow://app/index.html")!
@@ -24,6 +24,7 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
 
     var control: WKWebView?
     var monitor: WKWebView?
+    var monitorVC: MonitorVC?
     var monitorAttached = false
     var monitorReady = false
 
@@ -33,7 +34,10 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
         c.mediaTypesRequiringUserActionForPlayback = []
         c.websiteDataStore = WKWebsiteDataStore.default()
         c.setURLSchemeHandler(PageScheme(), forURLScheme: "arnoshow")
-        if !monitorMode { c.userContentController.add(self, name: "mon") }
+        if !monitorMode {
+            c.userContentController.add(self, name: "mon")
+            c.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "store")
+        }
         let w = WKWebView(frame: .zero, configuration: c)
         w.navigationDelegate = self
         w.isOpaque = false
@@ -49,8 +53,34 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
 
     // Messaggio dalla pagina di controllo -> inoltrato alla pagina monitor
     func userContentController(_ ucc: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard let json = message.body as? String, monitorReady else { return }
-        monitor?.evaluateJavaScript("window.monitorCmd&&window.monitorCmd(\(json))", completionHandler: nil)
+        guard let json = message.body as? String, monitorReady,
+              let d = json.data(using: .utf8),
+              let m = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any] else { return }
+        monitorVC?.handle(m)
+    }
+
+    // Archivio dei file per il monitor: la pagina chiede quali file ci sono e manda quelli che mancano, a pezzi
+    func userContentController(_ ucc: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping (Any?, String?) -> Void) {
+        guard let m = message.body as? [String: Any], let op = m["op"] as? String else { replyHandler(nil, "messaggio non valido"); return }
+        switch op {
+        case "has":
+            let ids = (m["ids"] as? [String]) ?? []
+            replyHandler(ids.filter { MediaStore.has($0) }, nil)
+        case "put":
+            guard let id = m["id"] as? String, let b64 = m["b64"] as? String, let data = Data(base64Encoded: b64) else { replyHandler(nil, "dati non validi"); return }
+            let seq = (m["seq"] as? Int) ?? 0, last = (m["last"] as? Bool) ?? false, ext = (m["ext"] as? String) ?? "mov"
+            DispatchQueue.global(qos: .userInitiated).async {
+                let ok = MediaStore.append(id: id, ext: ext, seq: seq, last: last, data: data)
+                DispatchQueue.main.async {
+                    if ok && last { self.monitorVC?.fileArrived(id) }
+                    replyHandler(ok, ok ? nil : "scrittura non riuscita")
+                }
+            }
+        case "del":
+            if let id = m["id"] as? String { MediaStore.remove(id) }
+            replyHandler(true, nil)
+        default: replyHandler(nil, "operazione sconosciuta")
+        }
     }
 
     // Dice alla pagina di controllo se il monitor è collegato e pronto
