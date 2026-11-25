@@ -43,6 +43,8 @@ final class MonitorVC: UIViewController {
     private var pending: [String: Any]?
     private var obs: [NSKeyValueObservation] = []
     private var token = 0
+    private var transitioning = false
+    private var pendingPre: String?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -99,11 +101,13 @@ final class MonitorVC: UIViewController {
         players.forEach { $0.pause(); $0.replaceCurrentItem(with: nil) }
         setOpacity(layers[0], 0, 0); setOpacity(layers[1], 0, 0)
         img.isHidden = true; img.image = nil
-        curId = nil; preId = nil; pending = nil
+        curId = nil; preId = nil; pending = nil; pendingPre = nil; transitioning = false
         info.isHidden = true
     }
 
     private func preload(_ id: String) {
+        // durante un cambio il lettore libero è ancora quello uscente: si precarica appena il cambio è finito
+        if transitioning { pendingPre = id; return }
         guard id != curId, id != preId, let u = MediaStore.url(for: id) else { return }
         let idx = 1 - active
         let p = players[idx]
@@ -139,9 +143,12 @@ final class MonitorVC: UIViewController {
         if kind == "photo" {
             let old = players[active]
             img.alpha = 0; img.image = UIImage(contentsOfFile: u.path); img.isHidden = false
+            transitioning = true
             UIView.animate(withDuration: xf > 0 ? xf : 0.001, animations: { self.img.alpha = 1 }) { _ in
                 guard tk == self.token else { return }
                 old.pause(); self.setOpacity(self.layers[self.active], 0, 0)
+                self.transitioning = false
+                if let n = self.pendingPre { self.pendingPre = nil; self.preload(n) }
             }
             curId = id
             return
@@ -158,6 +165,7 @@ final class MonitorVC: UIViewController {
         if playing { p.play() }
         active = idx
         curId = id
+        transitioning = true
 
         // si passa alla nuova clip quando ha l'immagine pronta e (se suona) sta davvero scorrendo
         var done = false
@@ -174,6 +182,8 @@ final class MonitorVC: UIViewController {
                 self.setOpacity(self.layers[oldIdx], 0, 0)
                 self.players[oldIdx].replaceCurrentItem(with: nil)
                 if !self.img.isHidden { self.img.isHidden = true }
+                self.transitioning = false
+                if let n = self.pendingPre { self.pendingPre = nil; self.preload(n) }
             }
             if !self.img.isHidden { UIView.animate(withDuration: max(fade, 0.001)) { self.img.alpha = 0 } completion: { _ in if tk == self.token { self.img.isHidden = true; self.img.alpha = 1 } } }
         }
