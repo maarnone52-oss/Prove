@@ -64,6 +64,12 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
         notifyControl()
     }
 
+    // Se iOS chiude la pagina del monitor per mancanza di memoria, la si ricarica subito
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        if webView === monitor { monitorReady = false; notifyControl() }
+        webView.reload()
+    }
+
     func monitorDidDisconnect() {
         monitor = nil
         monitorAttached = false

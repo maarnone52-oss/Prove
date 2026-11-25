@@ -348,6 +348,7 @@ var MX=window.ArnoMix(mcv);
 var db=null,loadedId=null,want=null,url=null,preId=null,preUrl=null;
 function preload(o){
   if(!db||!o||o.kind!=="video"||o.id===preId||o.id===loadedId)return;
+  if(preUrl){try{mv2.removeAttribute("src");mv2.load();URL.revokeObjectURL(preUrl);}catch(e){}preUrl=null;preId=null;}
   var q=db.transaction("v").objectStore("v").get(o.id);
   q.onsuccess=function(){var b=q.result&&q.result.blob;if(!b)return;if(preUrl){try{URL.revokeObjectURL(preUrl);}catch(e){}}
     if(MX.busy())return;preUrl=URL.createObjectURL(b);preId=o.id;mv2.src=preUrl;mv2.load();window.warmUp(mv2);};
@@ -419,6 +420,7 @@ try{xfade=parseFloat(localStorage.getItem("vpxf")||"0")||0;}catch(e){}
 function preloadNext(){
   try{
     if(MIX&&MIX.busy())return;
+    if(hdmiNative&&monitorLive){if(pre.getAttribute("src")&&!pre._active){pre.removeAttribute("src");pre.load();}return;}
     var n=qIdx()>=0?qIdx():(cur+1);var it=items[n];
     if(!it||it.kind!=="video"){return;}
     if(pre.getAttribute("src")===it.url)return;
