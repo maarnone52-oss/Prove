@@ -1005,10 +1005,25 @@ function seek(e){
   var tt=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*v.duration;
   // con Senza sosta non si salta dentro la zona del passaggio: si atterra poco prima, così la clip scorre e il taglio è pulito
   if(continuous&&hasNextItem()){var zone=Math.max(xfade||0,0)+0.4+0.8;if(tt>v.duration-zone)tt=Math.max(0,v.duration-zone);}
-  v.currentTime=tt;window.__lastSeek=Date.now();
+  scrubT=tt;window.__lastSeek=Date.now();
+  if(scrubbing){if(v.fastSeek)v.fastSeek(tt);else v.currentTime=tt;}else v.currentTime=tt;
 }
-prog.addEventListener("pointerdown",function(e){prog.setPointerCapture(e.pointerId);seek(e);});
+// trascinando la barra il video resta fermo e mostra solo l'anteprima; al rilascio un solo spostamento preciso e riparte: niente scatti
+var scrubbing=false,scrubWas=false,scrubT=0;
+prog.addEventListener("pointerdown",function(e){prog.setPointerCapture(e.pointerId);
+  var vid=!(cur>=0&&items[cur]&&items[cur].kind==="photo");
+  if(vid&&v.getAttribute("src")){scrubbing=true;scrubWas=!v.paused;if(scrubWas)v.pause();}
+  seek(e);});
 prog.addEventListener("pointermove",function(e){if(prog.hasPointerCapture(e.pointerId))seek(e);});
+function endScrub(){
+  if(!scrubbing)return;scrubbing=false;
+  var t=scrubT;
+  v.addEventListener("seeked",function f(){v.removeEventListener("seeked",f);
+    if(hdmiNative)mon({t:"state",seek:true,time:v.currentTime,playing:scrubWas});
+    if(scrubWas){var p=v.play();if(p&&p.catch)p.catch(function(){});}window.__lastSeek=Date.now();});
+  try{v.currentTime=t;}catch(e){}
+}
+prog.addEventListener("pointerup",endScrub);prog.addEventListener("pointercancel",endScrub);
 go.addEventListener("click",function(){goNext();});
 function setPendingOrder(on){
   pendingOrder=!!on;
@@ -1408,7 +1423,7 @@ if(hdmiBtn)hdmiBtn.addEventListener("click",function(){
 
 onV("play",function(){if(hdmiNative)sendMon();});
 onV("pause",function(){if(hdmiNative)mon({t:"state",time:v.currentTime,playing:false});});
-onV("seeked",function(){if(hdmiNative)mon({t:"state",seek:true,time:v.currentTime,playing:!v.paused});});
+onV("seeked",function(){if(hdmiNative&&!scrubbing)mon({t:"state",seek:true,time:v.currentTime,playing:!v.paused});});
 onV("timeupdate",function(){var n=Date.now();if(hdmiNative&&n-lastSyncT>1000){lastSyncT=n;mon({t:"state",time:v.currentTime,playing:!v.paused});}});
 
 // === SALVA / APRI PROGETTO IN UN FILE (.arnoshow = zip senza compressione) ===
