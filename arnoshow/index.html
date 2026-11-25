@@ -271,6 +271,15 @@ header .plate .brand-mark svg,.plate .brand-mark svg{width:19px!important;height
 #about .ab-plate .brand-text{font-size:28px!important;font-weight:800;letter-spacing:-.03em}
 #about .ab-name{display:none}
 @media (max-width:400px){.plate .brand-text{font-size:15px!important}.plate{padding-right:8px}header .plate .brand-mark{width:26px!important;height:26px!important}}
+
+/* barra del tempo più in basso, con pallino rosso da trascinare; titolo e tempo sopra i pulsanti */
+#prog{margin:20px 22px 6px!important;height:10px!important;overflow:visible!important;border-radius:6px}
+#pf{position:relative;border-radius:6px}
+#pf:after{content:"";position:absolute;right:-13px;top:50%;width:26px;height:26px;margin-top:-13px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff8a8a 0%,#ef4444 45%,#b91c1c 100%);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.6);box-sizing:border-box}
+#prog:before{content:"";position:absolute;left:-14px;right:-14px;top:-16px;bottom:-16px}
+#prog{position:relative}
+#bar{padding:4px 14px 0!important}
+@media screen and (orientation:landscape) and (max-height:600px){body{grid-template-areas:"hdr prj" ". list" "stage list" "prog list" ". bar" ". foot" ". foot"!important}#bar{padding:2px 6px 0!important}#prog{margin:14px 14px 4px!important}#pf:after{width:22px;height:22px;margin-top:-11px;right:-11px}}
 </style>
 </head>
 <body>
@@ -295,7 +304,6 @@ header .plate .brand-mark svg,.plate .brand-mark svg{width:19px!important;height
 <div id="imp" hidden><div id="impt"></div><div id="impb"><div id="impf"></div></div></div>
 <video id="vout" playsinline webkit-playsinline x-webkit-airplay="allow"></video><button id="fsexit" type="button">✕ Esci da schermo intero</button><div id="curnum" hidden></div><div id="stage"><video id="v" playsinline webkit-playsinline x-webkit-airplay="allow"></video><canvas id="scr"></canvas><video id="v2" playsinline webkit-playsinline x-webkit-airplay="allow" muted preload="auto"></video><img id="ph" alt="" hidden><div id="audvis" hidden><div class="av-ico" id="audico">🎵</div><div class="av-nm" id="audnm"></div><div id="audsub" style="font-size:11px;opacity:.68;margin-top:2px" hidden>Traccia audio estratta da video</div></div><div id="wait"></div><div id="diag" hidden></div><div id="qprev" hidden><div class="qth"></div><div class="qn"></div><div class="ql">IN CODA</div></div></div>
 <div id="prog" aria-label="Avanzamento"><div id="pf"></div></div>
-<div id="bar"><span id="now">Nessun video in riproduzione</span><span id="tm">0:00 / 0:00</span><button id="mu" type="button" aria-label="Audio">🔊</button></div>
 <div id="ctl"><button id="pp" type="button">Pausa</button><button id="xfb" type="button" title="Passaggio tra una clip e l altra">Passaggio: stacco netto</button><button id="seqm" type="button" title="Sequenza numerica oppure manuale on air">Sequenza: numerica</button><button id="tap1" type="button" title="Avvia una clip con un solo tocco sulla miniatura (altrimenti doppio tocco)">Avvio con un tocco: Off</button><button id="cont" type="button" title="Riproduzione continua senza sosta">Senza sosta: Off</button><button id="pdur" type="button" title="Durata foto">Durata foto: ∞</button><button id="cap" type="button">Scegli miniatura</button><button id="prevb" type="button" title="Risoluzione dell'anteprima sullo schermo dell'iPhone">Anteprima iPhone: piena</button><button id="diagb" type="button">Diagnostica: Off</button><button id="fsbtn" type="button" title="Espandi il quadro di riproduzione a schermo intero" style="border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:0 10px;font-size:12px;font-family:inherit;height:38px;touch-action:manipulation;font-weight:600">Schermo intero</button><button id="delcur" type="button" aria-label="Elimina selezionato o trascina qui per eliminare" title="Elimina selezionato o trascina qui" disabled>🗑️</button></div>
 <div id="listwrap"><button class="btn danger" id="accord" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg><span>Accetta riordino</span></button>
   <div id="list"></div>
@@ -303,6 +311,7 @@ header .plate .brand-mark svg,.plate .brand-mark svg{width:19px!important;height
     <div id="ztrack"><div id="zfill"></div><div id="zthumb"></div></div>
   </div>
 </div>
+<div id="bar"><span id="now">Nessun video in riproduzione</span><span id="tm">0:00 / 0:00</span><button id="mu" type="button" aria-label="Audio">🔊</button></div>
 <div id="foot"><div class="fh"><button id="hdmiout" type="button" title="Invia il solo video su monitor HDMI senza clonare l'iPhone"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span id="hdmit">Invia su HDMI</span></button></div><div class="fh"><button id="go" type="button">Avvia</button></div></div>
 
 <script>
@@ -1585,7 +1594,7 @@ pimp.addEventListener("change",function(){
 function sweepLogo(el){var w=el&&el.querySelector(".sweep");if(!w)return;w.classList.remove("go");void w.offsetWidth;w.classList.add("go");}
 setTimeout(function(){sweepLogo(document.querySelector("header .plate"));},500);
 // Informazioni: versione e copyright
-var APPVER="1.1.12";
+var APPVER="1.1.13";
 (function(){var box=document.getElementById("about");
   document.getElementById("abtn").addEventListener("click",function(){
     document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;setTimeout(function(){sweepLogo(box.querySelector(".plate"));},150);});
