@@ -316,12 +316,12 @@ window.ArnoMix=function(cv){
   requestAnimationFrame(loop);
   function armReady(el){
     el._rdy=false;el._t0=0;
-    var ok=function(){el._rdy=true;};
-    if(el.requestVideoFrameCallback)el.requestVideoFrameCallback(ok);
-    el.addEventListener("playing",function f(){el.removeEventListener("playing",f);setTimeout(ok,40);});
-    el.addEventListener("timeupdate",function f(){if(el.currentTime>0.02){el.removeEventListener("timeupdate",f);ok();}});
-    if(el.paused)el.addEventListener("seeked",function f(){el.removeEventListener("seeked",f);ok();});
-    setTimeout(function(){if(el.readyState>=2)ok();},500);
+    // si passa alla nuova clip solo quando scorre davvero (alcuni fotogrammi già mostrati): niente incertezze all'ingresso
+    var ok=function(){el._rdy=true;},n=0;
+    if(el.requestVideoFrameCallback){var cb2=function(){if(++n>=4)ok();else if(!el._rdy)el.requestVideoFrameCallback(cb2);};el.requestVideoFrameCallback(cb2);}
+    else el.addEventListener("timeupdate",function f(){if(el.currentTime>0.15){el.removeEventListener("timeupdate",f);ok();}});
+    setTimeout(function(){if(el.paused&&el.readyState>=2)ok();},300);
+    setTimeout(function(){if(el.readyState>=2)ok();},900);
   }
   return {
     cut:function(el,ms,onDone){if(A===el)return;endFade();B=A;A=el;dur=ms||0;cb=onDone||null;armReady(el);if(!B){dur=0;}},
@@ -363,7 +363,6 @@ function goVideo(o,newUrl){
   if(nw.getAttribute("src")!==newUrl){nw.src=newUrl;nw.load();}
   try{if(Math.abs(nw.currentTime-(o.time||0))>0.3)nw.currentTime=o.time||0;}catch(e){}
   if(o.playing){var pz=nw.play();if(pz&&pz.catch)pz.catch(function(){});}
-  if(!(o.xf>0)){try{old.pause();}catch(e){}}
   MX.cut(nw,(o.xf||0)*1000,function(b){try{b.pause();}catch(e){}b.removeAttribute("src");b.load();if(oldUrl&&oldUrl!==url){try{URL.revokeObjectURL(oldUrl);}catch(e){}}});
 }
 function show(o){
@@ -428,8 +427,7 @@ function startVideo(it){
   var old=v,nw=pre;v=nw;pre=old;nw._active=true;old._active=false;
   if(nw.getAttribute("src")!==it.url){nw.src=it.url;nw.load();}
   nw.hidden=false;nw.muted=muteWanted;old.muted=true;
-  if(!(xfade>0)){try{old.pause();}catch(e){}}
-  var p=nw.play();if(p&&p.then){p.then(function(){if(hdmiOn)enterNativeExternalFullscreen(nw);},function(){});}
+  var p=nw.play();   // l'uscente continua a scorrere finché la nuova non è pronta: niente fermo immagineif(p&&p.then){p.then(function(){if(hdmiOn)enterNativeExternalFullscreen(nw);},function(){});}
   MIX.cut(nw,xfade*1000,function(b){if(b===v)return;try{b.pause();}catch(e){}b.removeAttribute("src");b.load();setTimeout(preloadNext,60);});
 }
 var vout=document.getElementById("vout"),hdmiOn=false;

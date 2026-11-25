@@ -27,6 +27,6 @@
  {
   "cartella": "arnoshow",
   "nome": "ARNOSHOW",
-  "stato": "Prova 1.0.18: lettore successivo «scaldato» come ARNOCUT, passaggi senza fermo immagine"
+  "stato": "Prova 1.0.19: la clip uscente scorre finché l entrante è fluida (stacco e dissolvenza)"
  }
 ]
