@@ -113,6 +113,8 @@ body.isplaying #curnum{color:var(--del)}
 @keyframes numBlink{0%,100%{color:#ef4444;opacity:1}50%{color:#ef4444;opacity:.15}}
 @keyframes tileBlinkW{0%,100%{border-color:#ffffff;box-shadow:0 0 0 3px #ffffff,0 0 18px rgba(255,255,255,.7)}50%{border-color:var(--mut);box-shadow:0 0 0 0 transparent}}
 body.ispaused .tile.on{animation:tileBlinkW 1s ease-in-out infinite}
+@keyframes ppBlinkW{0%,100%{box-shadow:0 0 0 3px #ffffff,0 0 14px rgba(255,255,255,.7)}50%{box-shadow:0 0 0 3px rgba(255,255,255,0)}}
+body.ispaused #pp:not(:disabled){animation:ppBlinkW 1s ease-in-out infinite}
 body.isplaying .tile.on .num{animation:numBlink 1s ease-in-out infinite}
 .tile.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}
 .tile.drag{z-index:40;pointer-events:none;opacity:.92;box-shadow:0 10px 26px rgba(0,0,0,.5);transition:border-color .12s ease,opacity .12s ease}
