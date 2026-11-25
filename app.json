@@ -27,6 +27,6 @@
  {
   "cartella": "arnoshow",
   "nome": "ARNOSHOW",
-  "stato": "Prova 1.1.8: diagnostica (temperatura, memoria, fotogrammi persi), sincronia monitor più tranquilla"
+  "stato": "Prova 1.1.9: stacco netto in automatico senza fotogramma congelato"
  }
 ]

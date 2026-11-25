@@ -171,7 +171,8 @@ final class MonitorVC: UIViewController {
         let idx = 1 - active
         let p = players[idx], l = layers[idx]
         let oldIdx = active
-        if preId != id { p.replaceCurrentItem(with: MonitorVC.silentItem(u)) }
+        let warm = (preId == id)          // già caricata e «scaldata» (preroll): può entrare subito
+        if !warm { p.replaceCurrentItem(with: MonitorVC.silentItem(u)) }
         preId = nil
         let t = (m["time"] as? Double) ?? 0
         if t > 0.3 { p.seek(to: CMTime(seconds: t, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) }
@@ -208,7 +209,7 @@ final class MonitorVC: UIViewController {
             guard l.isReadyForDisplay else { return }
             if !playing { DispatchQueue.main.async(execute: go); return }
             let c = p.currentTime().seconds
-            if p.timeControlStatus == .playing, c.isFinite, c - start > 0.12 { DispatchQueue.main.async(execute: go) }
+            if p.timeControlStatus == .playing, c.isFinite, warm || c - start > 0.12 { DispatchQueue.main.async(execute: go) }
         }
         tobs = p.addPeriodicTimeObserver(forInterval: CMTime(value: 1, timescale: 60), queue: .main) { _ in check() }
         let cleanupObs = { if let o = tobs { p.removeTimeObserver(o); tobs = nil } }
@@ -216,7 +217,7 @@ final class MonitorVC: UIViewController {
                p.observe(\.timeControlStatus, options: [.new]) { _, _ in check() }]
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { cleanupObs() }
         check()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: go)
+        DispatchQueue.main.asyncAfter(deadline: .now() + (warm ? 0.6 : 1.2), execute: go)
     }
 
     /// Fotogrammi persi dal lettore del monitor (somma della sessione)

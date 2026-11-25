@@ -1622,7 +1622,7 @@ pimp.addEventListener("change",function(){
     if(!continuous||cur<0||!items[cur]||items[cur].kind==="photo"||v.paused||!isFinite(v.duration)||!v.duration)return;
     if(advFor===items[cur])return;
     if(window.__lastSeek&&Date.now()-window.__lastSeek<700)return;   // dopo uno spostamento con la barra si aspetta che la clip riprenda a scorrere
-    var lead=Math.max(xfade||0,0)+0.4;
+    var lead=Math.max(xfade||0,0)+(xfade>0?0.4:0.6);   // nello stacco un po' più di margine: l'uscente scorre finché l'entrante è in onda
     if(v.duration-v.currentTime<=lead&&hasNextItem()){advFor=items[cur];goNext();}
   },50);
 })();
