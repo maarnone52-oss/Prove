@@ -319,7 +319,7 @@ window.ArnoMix=function(cv){
     // si passa alla nuova clip solo quando scorre davvero (alcuni fotogrammi già mostrati): niente incertezze all'ingresso
     // si passa solo quando la clip entrante scorre regolare (8 fotogrammi di fila senza intoppi); intanto l'uscente continua a muoversi
     var ok=function(){el._rdy=true;},streak=0,last=0;
-    if(el.requestVideoFrameCallback){var cb2=function(now){streak=(last&&now-last<70)?streak+1:0;last=now;if(streak>=8)ok();else if(!el._rdy)el.requestVideoFrameCallback(cb2);};el.requestVideoFrameCallback(cb2);}
+    if(el.requestVideoFrameCallback){var cb2=function(now){streak=(last&&now-last<70)?streak+1:0;last=now;if(streak>=8||(B&&B.paused&&streak>=1))ok();else if(!el._rdy)el.requestVideoFrameCallback(cb2);};el.requestVideoFrameCallback(cb2);}
     else el.addEventListener("timeupdate",function f(){if(el.currentTime>0.35){el.removeEventListener("timeupdate",f);ok();}});
     setTimeout(function(){if(el.paused&&el.readyState>=2)ok();},300);
     setTimeout(function(){if(el.readyState>=2)ok();},1500);

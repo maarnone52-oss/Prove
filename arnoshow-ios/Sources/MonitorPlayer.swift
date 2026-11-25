@@ -111,10 +111,16 @@ final class MonitorVC: UIViewController {
         guard id != curId, id != preId, let u = MediaStore.url(for: id) else { return }
         let idx = 1 - active
         let p = players[idx]
-        p.replaceCurrentItem(with: MonitorVC.silentItem(u))
+        let item = MonitorVC.silentItem(u)
+        p.replaceCurrentItem(with: item)
         p.pause()
         setOpacity(layers[idx], 0, 0)
         preId = id
+        // «scalda» il decodificatore: preroll quando l'elemento è pronto
+        var so: NSKeyValueObservation?
+        so = item.observe(\.status, options: [.new]) { it, _ in
+            if it.status == .readyToPlay { so?.invalidate(); so = nil; DispatchQueue.main.async { if p.currentItem === it, p.rate == 0 { p.preroll(atRate: 1, completionHandler: nil) } } }
+        }
     }
 
     private func state(_ m: [String: Any]) {
@@ -123,10 +129,15 @@ final class MonitorVC: UIViewController {
         let t = (m["time"] as? Double) ?? 0
         let playing = (m["playing"] as? Bool) ?? false
         let now = p.currentTime().seconds
-        if now.isFinite, abs(now - t) > 0.6 {
+        if !playing { if p.rate != 0 { p.pause() }; if now.isFinite, abs(now - t) > 0.15 { p.seek(to: CMTime(seconds: t, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) }; return }
+        guard now.isFinite else { return }
+        let d = now - t
+        if abs(d) > 2.0 {   // solo se molto fuori tempo si salta
             p.seek(to: CMTime(seconds: t, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
-        }
-        if playing { if p.rate == 0 { p.play() } } else if p.rate != 0 { p.pause() }
+            p.rate = 1
+        } else if abs(d) > 0.08 {   // altrimenti si recupera piano, senza scatti
+            p.rate = Float(1 - max(-0.06, min(0.06, d * 0.5)))
+        } else if p.rate != 1 { p.rate = 1 }
     }
 
     private func show(_ m: [String: Any]) {
@@ -187,13 +198,21 @@ final class MonitorVC: UIViewController {
             }
             if !self.img.isHidden { UIView.animate(withDuration: max(fade, 0.001)) { self.img.alpha = 0 } completion: { _ in if tk == self.token { self.img.isHidden = true; self.img.alpha = 1 } } }
         }
+        let start = p.currentTime().seconds.isFinite ? p.currentTime().seconds : 0
+        var tobs: Any?
         let check: () -> Void = {
-            if l.isReadyForDisplay && (!playing || p.timeControlStatus == .playing) { DispatchQueue.main.async(execute: go) }
+            guard l.isReadyForDisplay else { return }
+            if !playing { DispatchQueue.main.async(execute: go); return }
+            let c = p.currentTime().seconds
+            if p.timeControlStatus == .playing, c.isFinite, c - start > 0.12 { DispatchQueue.main.async(execute: go) }
         }
+        tobs = p.addPeriodicTimeObserver(forInterval: CMTime(value: 1, timescale: 60), queue: .main) { _ in check() }
+        let cleanupObs = { if let o = tobs { p.removeTimeObserver(o); tobs = nil } }
         obs = [l.observe(\.isReadyForDisplay, options: [.new]) { _, _ in check() },
                p.observe(\.timeControlStatus, options: [.new]) { _, _ in check() }]
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { cleanupObs() }
         check()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: go)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: go)
     }
 
     /// Elemento senza traccia audio: il monitor non tocca mai l'audio (che esce dall'iPhone)
