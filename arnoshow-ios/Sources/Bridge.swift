@@ -126,8 +126,13 @@ final class WebVC: UIViewController {
 final class PageScheme: NSObject, WKURLSchemeHandler {
     func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
         let fm = FileManager.default
-        var data = fm.fileExists(atPath: Bridge.local.path) ? (try? Data(contentsOf: Bridge.local)) : nil
-        if data == nil, let b = Bundle.main.url(forResource: "index", withExtension: "html") { data = try? Data(contentsOf: b) }
+        // si usa la copia scaricata solo se è più recente di quella dentro l'app (dopo un aggiornamento TestFlight vale quella nuova)
+        let bundled = Bundle.main.url(forResource: "index", withExtension: "html")
+        func mdate(_ u: URL?) -> Date { guard let u = u, let a = try? fm.attributesOfItem(atPath: u.path) else { return .distantPast }; return (a[.modificationDate] as? Date) ?? .distantPast }
+        let appDate = max(mdate(bundled), mdate(Bundle.main.executableURL))
+        var data: Data? = nil
+        if fm.fileExists(atPath: Bridge.local.path), mdate(Bridge.local) > appDate { data = try? Data(contentsOf: Bridge.local) }
+        if data == nil, let b = bundled { data = try? Data(contentsOf: b) }
         let body = data ?? Data("<h1>Pagina mancante</h1>".utf8)
         let resp = HTTPURLResponse(url: task.request.url!, statusCode: 200, httpVersion: "HTTP/1.1",
                                    headerFields: ["Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"])!

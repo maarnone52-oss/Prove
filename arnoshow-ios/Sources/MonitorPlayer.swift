@@ -36,6 +36,7 @@ final class MonitorVC: UIViewController {
     private let players = [AVPlayer(), AVPlayer()]
     private var layers: [AVPlayerLayer] = []
     private let img = UIImageView()
+    private let info = UILabel()
     private var active = 0
     private var curId: String?
     private var preId: String?
@@ -62,6 +63,14 @@ final class MonitorVC: UIViewController {
         img.frame = view.bounds
         img.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(img)
+        info.textColor = UIColor(white: 1, alpha: 0.55)
+        info.font = .systemFont(ofSize: 22, weight: .semibold)
+        info.textAlignment = .center
+        info.numberOfLines = 0
+        info.frame = view.bounds
+        info.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        info.text = "ArnoShow · monitor collegato\nTocca «Invia su HDMI» sull'iPhone"
+        view.addSubview(info)
     }
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
@@ -91,6 +100,7 @@ final class MonitorVC: UIViewController {
         setOpacity(layers[0], 0, 0); setOpacity(layers[1], 0, 0)
         img.isHidden = true; img.image = nil
         curId = nil; preId = nil; pending = nil
+        info.isHidden = true
     }
 
     private func preload(_ id: String) {
@@ -119,8 +129,9 @@ final class MonitorVC: UIViewController {
         guard let id = m["id"] as? String else { return }
         let kind = m["kind"] as? String ?? "video"
         if id == curId { state(m); return }
-        guard let u = MediaStore.url(for: id) else { pending = m; return }   // file non ancora copiato: arriva tra poco
+        guard let u = MediaStore.url(for: id) else { pending = m; info.text = "Preparo il file per il monitor…"; info.isHidden = false; return }   // file non ancora copiato: arriva tra poco
         pending = nil
+        info.isHidden = true
         token += 1
         let tk = token
         let xf = max(0, (m["xf"] as? Double) ?? 0)
