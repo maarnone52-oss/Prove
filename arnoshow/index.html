@@ -56,6 +56,9 @@ header{position:relative;z-index:20;display:flex;flex-wrap:wrap;align-items:cent
 .btn:disabled{background:var(--line);color:var(--mut);border:1px solid transparent;box-shadow:none;cursor:default}
 
 video,#ph{width:100%;height:100%;object-fit:contain;background:#000;display:block;pointer-events:auto}
+#stage video{position:absolute;inset:0;z-index:1}
+#stage video.vpre{z-index:0;opacity:0;pointer-events:none}
+#stage #ph,#stage #audvis{position:absolute;inset:0;z-index:2}
 #audvis{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:radial-gradient(circle at 50% 42%,color-mix(in srgb,var(--acc) 32%,#121216) 0%,#08080a 85%);color:#fff;padding:12px;box-sizing:border-box;text-align:center}
 #audvis .av-ico{font-size:38px;line-height:1;filter:drop-shadow(0 2px 8px rgba(0,0,0,.6))}
 #audvis .av-nm{font-size:13px;font-weight:700;max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.92}
@@ -259,7 +262,7 @@ header .brand-text{display:inline-flex}
 <div id="prj"><select id="psel" aria-label="Progetto"></select><button id="pnew" type="button">Nuovo progetto</button><button id="pren" type="button">Rinomina progetto…</button><button id="pdel" type="button">Elimina progetto</button><button id="pexp" type="button" title="Salva il progetto (video, foto, audio e ordine) in un file">Salva progetto su file…</button><label id="pimpl" title="Apri un progetto salvato in un file" style="padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:12px;white-space:nowrap">Apri progetto da file…<input type="file" id="pimp" accept=".arnoshow,.zip,application/zip" hidden></label></div>
 <div id="pedit" hidden><input id="pname" maxlength="40" placeholder="Nome del progetto"><button id="pok" type="button">OK</button><button id="pno" type="button">Annulla</button></div>
 <div id="imp" hidden><div id="impt"></div><div id="impb"><div id="impf"></div></div></div>
-<video id="vout" playsinline webkit-playsinline x-webkit-airplay="allow"></video><button id="fsexit" type="button">✕ Esci da schermo intero</button><div id="curnum" hidden></div><div id="stage"><video id="v" playsinline webkit-playsinline x-webkit-airplay="allow"></video><img id="ph" alt="" hidden><div id="audvis" hidden><div class="av-ico" id="audico">🎵</div><div class="av-nm" id="audnm"></div><div id="audsub" style="font-size:11px;opacity:.68;margin-top:2px" hidden>Traccia audio estratta da video</div></div><div id="wait"></div><div id="qprev" hidden><div class="qth"></div><div class="qn"></div><div class="ql">IN CODA</div></div></div>
+<video id="vout" playsinline webkit-playsinline x-webkit-airplay="allow"></video><button id="fsexit" type="button">✕ Esci da schermo intero</button><div id="curnum" hidden></div><div id="stage"><video id="v" playsinline webkit-playsinline x-webkit-airplay="allow"></video><video id="v2" class="vpre" playsinline webkit-playsinline x-webkit-airplay="allow" muted preload="auto"></video><img id="ph" alt="" hidden><div id="audvis" hidden><div class="av-ico" id="audico">🎵</div><div class="av-nm" id="audnm"></div><div id="audsub" style="font-size:11px;opacity:.68;margin-top:2px" hidden>Traccia audio estratta da video</div></div><div id="wait"></div><div id="qprev" hidden><div class="qth"></div><div class="qn"></div><div class="ql">IN CODA</div></div></div>
 <div id="prog" aria-label="Avanzamento"><div id="pf"></div></div>
 <div id="bar"><span id="now">Nessun video in riproduzione</span><span id="tm">0:00 / 0:00</span><button id="mu" type="button" aria-label="Audio">🔊</button></div>
 <div id="ctl"><button id="pp" type="button">Pausa</button><button id="seqm" type="button" title="Sequenza numerica oppure manuale on air">Sequenza: numerica</button><button id="tap1" type="button" title="Avvia una clip con un solo tocco sulla miniatura (altrimenti doppio tocco)">Avvio con un tocco: Off</button><button id="cont" type="button" title="Riproduzione continua senza sosta">Senza sosta: Off</button><button id="pdur" type="button" title="Durata foto">Durata foto: ∞</button><button id="cap" type="button">Scegli miniatura</button><button id="fsbtn" type="button" title="Espandi il quadro di riproduzione a schermo intero" style="border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:0 10px;font-size:12px;font-family:inherit;height:38px;touch-action:manipulation;font-weight:600">Schermo intero</button><button id="delcur" type="button" aria-label="Elimina selezionato o trascina qui per eliminare" title="Elimina selezionato o trascina qui" disabled>🗑️</button></div>
@@ -280,8 +283,15 @@ var ov=document.createElement("div");ov.style.cssText="position:fixed;left:0;top
 var mv=document.createElement("video");mv.muted=true;mv.defaultMuted=true;mv.setAttribute("muted","");mv.setAttribute("playsinline","");mv.playsInline=true;
 mv.style.cssText="position:absolute;left:0;top:0;width:100%;height:100%;object-fit:contain;background:#000;display:none";
 var mi=document.createElement("img");mi.style.cssText="position:absolute;left:0;top:0;width:100%;height:100%;object-fit:contain;display:none";
-ov.appendChild(mv);ov.appendChild(mi);document.body.appendChild(ov);
-var db=null,loadedId=null,want=null,url=null;
+var mv2=mv.cloneNode();mv2.muted=true;mv2.style.display="block";mv2.style.opacity="0";
+ov.appendChild(mv2);ov.appendChild(mv);ov.appendChild(mi);document.body.appendChild(ov);
+var db=null,loadedId=null,want=null,url=null,preId=null,preUrl=null;
+function preload(o){
+  if(!db||!o||o.kind!=="video"||o.id===preId||o.id===loadedId)return;
+  var q=db.transaction("v").objectStore("v").get(o.id);
+  q.onsuccess=function(){var b=q.result&&q.result.blob;if(!b)return;if(preUrl){try{URL.revokeObjectURL(preUrl);}catch(e){}}
+    preUrl=URL.createObjectURL(b);preId=o.id;mv2.style.opacity="0";mv2.src=preUrl;mv2.load();};
+}
 function black(){loadedId=null;want=null;try{mv.pause();}catch(e){}mv.style.display="none";mi.style.display="none";}
 function state(o){
   if(mv.style.display!=="block")return;
@@ -292,6 +302,13 @@ function state(o){
 function show(o){
   if(o.id===loadedId){state(o);return;}
   if(!db){want=o;return;}
+  if(o.kind!=="photo"&&o.id===preId&&mv2.readyState>=2){
+    var a=mv,b2=mv2;mv=b2;mv2=a;
+    mv.style.display="block";mv.style.opacity="1";mi.style.display="none";
+    a.style.opacity="0";try{a.pause();}catch(e){}
+    if(url){try{URL.revokeObjectURL(url);}catch(e){}}url=preUrl;preUrl=null;loadedId=o.id;preId=null;
+    try{mv.currentTime=o.time||0;}catch(e){}state(o);return;
+  }
   var q=db.transaction("v").objectStore("v").get(o.id);
   q.onsuccess=function(){
     var b=q.result&&q.result.blob;if(!b)return;
@@ -303,7 +320,7 @@ function show(o){
 }
 window.monitorCmd=function(o){
   if(!o)return;
-  if(o.t==="show")show(o);else if(o.t==="state")state(o);else black();
+  if(o.t==="show")show(o);else if(o.t==="state")state(o);else if(o.t==="pre")preload(o);else black();
 };
 var r=indexedDB.open("videoplayer",1);
 r.onupgradeneeded=function(){try{r.result.createObjectStore("v",{keyPath:"id"});}catch(e){}};
@@ -333,6 +350,26 @@ document.addEventListener("wheel",function(e){if(e.ctrlKey||e.metaKey)e.preventD
 var list=document.getElementById("list"),v=document.getElementById("v"),now=document.getElementById("now"),inp=document.getElementById("file"),prog=document.getElementById("prog"),pf=document.getElementById("pf"),tm=document.getElementById("tm"),go=document.getElementById("go"),wait=document.getElementById("wait"),cap=document.getElementById("cap"),pp=document.getElementById("pp"),ph=document.getElementById("ph"),audvis=document.getElementById("audvis"),audico=document.getElementById("audico"),audnm=document.getElementById("audnm"),audsub=document.getElementById("audsub"),ap=document.getElementById("ap"),pdur=document.getElementById("pdur"),cont=document.getElementById("cont"),delcur=document.getElementById("delcur"),stage=document.getElementById("stage");
 var items=[],cur=-1,db=null,queue=[],busy=false,pendingOrder=false,imp={t:0,d:0},projs=[],pid="p1";
 var accord=document.getElementById("accord");
+var vA=v,vB=document.getElementById("v2"),pre=vB,muteWanted=false;
+function onV(t,fn,o){[vA,vB].forEach(function(el){el.addEventListener(t,function(e){if(el!==v)return;fn.call(el,e);},o);});}
+function preloadNext(){
+  try{
+    var n=qIdx()>=0?qIdx():(cur+1);var it=items[n];
+    if(!it||it.kind!=="video"){return;}
+    if(pre.getAttribute("src")===it.url)return;
+    pre.muted=true;pre.preload="auto";pre.src=it.url;pre.load();
+    pre.addEventListener("loadeddata",function f(){pre.removeEventListener("loadeddata",f);try{pre.currentTime=0;}catch(e){}},{once:true});
+  }catch(e){}
+}
+function swapTo(it){
+  if(!(pre.getAttribute("src")===it.url&&pre.readyState>=2))return false;
+  var old=v;v=pre;pre=old;
+  v.classList.remove("vpre");v.hidden=false;v.muted=muteWanted;
+  try{v.currentTime=0;}catch(e){}
+  var p=v.play();if(p&&p.then){p.then(function(){if(hdmiOn)enterNativeExternalFullscreen(v);},function(){});}
+  old.classList.add("vpre");try{old.pause();}catch(e){}old.muted=true;old.removeAttribute("src");old.load();
+  return true;
+}
 var vout=document.getElementById("vout"),hdmiOn=false;
 var nat=(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.mon)||null,hdmiNative=false,monitorLive=false,lastSyncT=0;
 function mon(o){if(!nat)return;try{nat.postMessage(JSON.stringify(o));}catch(e){}}
@@ -341,6 +378,7 @@ function sendMon(){
   var it=(cur>=0)?items[cur]:null;
   if(!it||wait.classList.contains("on")||(it.kind!=="video"&&it.kind!=="photo")){mon({t:"black"});return;}
   mon({t:"show",id:it.id,kind:it.kind,time:(it.kind==="video"?v.currentTime:0),playing:(it.kind==="video"&&!v.paused)});
+  var nx=items[qIdx()>=0?qIdx():cur+1];if(nx&&nx.kind==="video")mon({t:"pre",id:nx.id,kind:nx.kind});
 }
 function refreshHdmiBtn(){
   if(!nat)return;
@@ -532,7 +570,7 @@ function pump(){
 
 function render(){
   if(drag){return;}
-  updCurNum();updQ();
+  updCurNum();updQ();if(cur>=0){setTimeout(preloadNext,200);if(typeof hdmiNative!=="undefined"&&hdmiNative)setTimeout(sendMon,250);}
   updateGo();
   if(selIdx>=items.length)selIdx=-1;delcur.disabled=((cur<0||cur>=items.length)&&selIdx<0);
   list.innerHTML="";
@@ -629,7 +667,7 @@ function exitNativeExternalFullscreen(videoEl){
   if(activeExternalVideo===videoEl)activeExternalVideo=null;
 }
 
-[v,vout].forEach(function(el){
+[vA,vB,vout].forEach(function(el){
   el.addEventListener("webkitendfullscreen",function(){
     if(activeExternalVideo===el)activeExternalVideo=null;
     if(hdmiOn){
@@ -751,7 +789,7 @@ function syncHdmiState(){
     if(v.readyState>=1){
       enterNativeExternalFullscreen(v);
     }else{
-      v.addEventListener("loadedmetadata",function onMeta(){
+      onV("loadedmetadata",function onMeta(){
         v.removeEventListener("loadedmetadata",onMeta);
         enterNativeExternalFullscreen(v);
       });
@@ -798,13 +836,15 @@ function play(i){
     var pa=v.play();if(pa&&pa.catch)pa.catch(function(){});
   }else{
     exitNativeExternalFullscreen(vout);
-    ph.hidden=true;ph.removeAttribute("src");audvis.hidden=true;v.hidden=false;pp.disabled=false;
-    v.src=items[i].url;
-    var p=v.play();
+    ph.hidden=true;ph.removeAttribute("src");audvis.hidden=true;pp.disabled=false;
+    if(swapTo(items[i])){var p=null;}else{
+    v.hidden=false;v.src=items[i].url;
+    var p=v.play();}
     if(p&&p.then){p.then(function(){if(hdmiOn)enterNativeExternalFullscreen(v);},function(){});}
   }
   now.textContent="In riproduzione: "+items[i].name;
   render();
+  setTimeout(preloadNext,300);
   syncHdmiState();
   var on=list.querySelector(".tile.on");if(on&&on.scrollIntoView)on.scrollIntoView({block:"nearest",behavior:"smooth"});
 }
@@ -855,8 +895,8 @@ function setWait(on){
     if(hdmiOn||hdmiNative)syncHdmiState();
   }
 }
-v.addEventListener("ended",function(){setStagePlaying(false);if(continuous&&hasNextItem()){goNext();}else{setWait(true);}});
-v.addEventListener("timeupdate",function(){
+onV("ended",function(){setStagePlaying(false);if(continuous&&hasNextItem()){goNext();}else{setWait(true);}});
+onV("timeupdate",function(){
   pf.style.width=(v.duration?v.currentTime/v.duration*100:0)+"%";
   tm.textContent=fmt(v.currentTime)+" / "+fmt(v.duration);
 });
@@ -902,7 +942,7 @@ function acceptOrder(){
 }
 accord.addEventListener("click",acceptOrder);
 try{v.disableRemotePlayback=false;}catch(e){}
-v.addEventListener("webkitplaybacktargetavailabilitychanged",function(e){ap.classList.toggle("active",e.availability==="available");});
+onV("webkitplaybacktargetavailabilitychanged",function(e){ap.classList.toggle("active",e.availability==="available");});
 function apMsg(t){var e=document.getElementById("apt");e.textContent=t;setTimeout(function(){e.textContent="AirPlay";},2200);}
 ap.addEventListener("click",function(){
   if(cur<0||!items[cur]||items[cur].kind==="photo"){apMsg("Prima un video");return;}
@@ -975,9 +1015,9 @@ pp.addEventListener("click",function(){
   if(!v.getAttribute("src"))return;
   if(v.paused){var p=v.play();if(p&&p.catch)p.catch(function(){});}else v.pause();
 });
-v.addEventListener("play",function(){if(!(cur>=0&&items[cur]&&items[cur].kind==="photo")){pp.textContent="Pausa";setStagePlaying(true);if(hdmiOn&&items[cur]&&items[cur].kind==="video")enterNativeExternalFullscreen(v);}});
-v.addEventListener("pause",function(){if(!(cur>=0&&items[cur]&&items[cur].kind==="photo")){pp.textContent="Riprendi";setStagePlaying(false);}});
-v.addEventListener("ended",function(){pp.textContent="Pausa";setStagePlaying(false);});
+onV("play",function(){if(!(cur>=0&&items[cur]&&items[cur].kind==="photo")){pp.textContent="Pausa";setStagePlaying(true);if(hdmiOn&&items[cur]&&items[cur].kind==="video")enterNativeExternalFullscreen(v);}});
+onV("pause",function(){if(!(cur>=0&&items[cur]&&items[cur].kind==="photo")){pp.textContent="Riprendi";setStagePlaying(false);}});
+onV("ended",function(){pp.textContent="Pausa";setStagePlaying(false);});
 var psel=document.getElementById("psel"),pedit=document.getElementById("pedit"),pname=document.getElementById("pname"),pdel=document.getElementById("pdel"),pmode="",armed=false;
 function saveProj(){try{localStorage.setItem("vpprojects",JSON.stringify(projs));localStorage.setItem("vpcur",pid);}catch(e){}}
 function fillProj(){psel.innerHTML="";projs.forEach(function(p){var o=document.createElement("option");o.value=p.id;o.textContent=p.name;psel.appendChild(o);});psel.value=pid;}
@@ -1142,9 +1182,10 @@ function loadNums(){
 var mu=document.getElementById("mu");
 function applyMute(){mu.textContent=v.muted?"🔇":"🔊";mu.classList.toggle("on",v.muted);}
 try{v.muted=localStorage.getItem("vpmute")==="1";}catch(e){}
+muteWanted=v.muted;
 applyMute();
-mu.addEventListener("click",function(){v.muted=!v.muted;try{localStorage.setItem("vpmute",v.muted?"1":"0");}catch(e){}applyMute();});
-v.addEventListener("volumechange",applyMute);
+mu.addEventListener("click",function(){v.muted=!v.muted;muteWanted=v.muted;try{localStorage.setItem("vpmute",v.muted?"1":"0");}catch(e){}applyMute();});
+onV("volumechange",applyMute);
 var undo=[],und=document.getElementById("und"),undt=document.getElementById("undt");
 function updUndo(){und.disabled=!undo.length;undt.textContent="Annulla"+(undo.length?" ("+undo.length+")":"");}
 function pushUndo(e){undo.push(e);if(undo.length>50){var dropped=undo.shift();if(dropped&&dropped.del&&dropped.del.gone&&dropped.del.url){try{URL.revokeObjectURL(dropped.del.url);}catch(err){}}}updUndo();}
@@ -1272,10 +1313,10 @@ if(hdmiBtn)hdmiBtn.addEventListener("click",function(){
   else startHdmiOut();
 });
 
-v.addEventListener("play",function(){if(hdmiNative)sendMon();});
-v.addEventListener("pause",function(){if(hdmiNative)mon({t:"state",time:v.currentTime,playing:false});});
-v.addEventListener("seeked",function(){if(hdmiNative)mon({t:"state",time:v.currentTime,playing:!v.paused});});
-v.addEventListener("timeupdate",function(){var n=Date.now();if(hdmiNative&&n-lastSyncT>1000){lastSyncT=n;mon({t:"state",time:v.currentTime,playing:!v.paused});}});
+onV("play",function(){if(hdmiNative)sendMon();});
+onV("pause",function(){if(hdmiNative)mon({t:"state",time:v.currentTime,playing:false});});
+onV("seeked",function(){if(hdmiNative)mon({t:"state",time:v.currentTime,playing:!v.paused});});
+onV("timeupdate",function(){var n=Date.now();if(hdmiNative&&n-lastSyncT>1000){lastSyncT=n;mon({t:"state",time:v.currentTime,playing:!v.paused});}});
 
 // === SALVA / APRI PROGETTO IN UN FILE (.arnoshow = zip senza compressione) ===
 var pexp=document.getElementById("pexp"),pimp=document.getElementById("pimp"),readyFile=null;
