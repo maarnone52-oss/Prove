@@ -219,7 +219,7 @@ header .brand-text{display:inline-flex}
 #dd .mm>*:active:not(.sep):not(.mhd){background:var(--acc)!important;color:#fff!important}
 #dd .mm>*[disabled]{opacity:.4}
 #dd .mm>* svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
-#dd .mm>#cont.on,#dd .mm>#tap1.on,#dd .mm>#seqm.on,#dd .mm>#xfb.on{color:var(--acc)!important}
+#dd .mm>#prevb.on,#dd .mm>#cont.on,#dd .mm>#tap1.on,#dd .mm>#seqm.on,#dd .mm>#xfb.on{color:var(--acc)!important}
 #dd .sep{height:1px;background:var(--line);margin:4px 8px}
 #dd .mhd{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);padding:8px 12px 4px}
 #dd select{display:block;width:calc(100% - 16px);margin:2px 8px 6px;height:38px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font-size:15px;padding:0 8px}
@@ -267,7 +267,7 @@ header .brand-text{display:inline-flex}
 <video id="vout" playsinline webkit-playsinline x-webkit-airplay="allow"></video><button id="fsexit" type="button">✕ Esci da schermo intero</button><div id="curnum" hidden></div><div id="stage"><video id="v" playsinline webkit-playsinline x-webkit-airplay="allow"></video><canvas id="scr"></canvas><video id="v2" playsinline webkit-playsinline x-webkit-airplay="allow" muted preload="auto"></video><img id="ph" alt="" hidden><div id="audvis" hidden><div class="av-ico" id="audico">🎵</div><div class="av-nm" id="audnm"></div><div id="audsub" style="font-size:11px;opacity:.68;margin-top:2px" hidden>Traccia audio estratta da video</div></div><div id="wait"></div><div id="diag" hidden></div><div id="qprev" hidden><div class="qth"></div><div class="qn"></div><div class="ql">IN CODA</div></div></div>
 <div id="prog" aria-label="Avanzamento"><div id="pf"></div></div>
 <div id="bar"><span id="now">Nessun video in riproduzione</span><span id="tm">0:00 / 0:00</span><button id="mu" type="button" aria-label="Audio">🔊</button></div>
-<div id="ctl"><button id="pp" type="button">Pausa</button><button id="xfb" type="button" title="Passaggio tra una clip e l altra">Passaggio: stacco netto</button><button id="seqm" type="button" title="Sequenza numerica oppure manuale on air">Sequenza: numerica</button><button id="tap1" type="button" title="Avvia una clip con un solo tocco sulla miniatura (altrimenti doppio tocco)">Avvio con un tocco: Off</button><button id="cont" type="button" title="Riproduzione continua senza sosta">Senza sosta: Off</button><button id="pdur" type="button" title="Durata foto">Durata foto: ∞</button><button id="cap" type="button">Scegli miniatura</button><button id="diagb" type="button">Diagnostica: Off</button><button id="fsbtn" type="button" title="Espandi il quadro di riproduzione a schermo intero" style="border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:0 10px;font-size:12px;font-family:inherit;height:38px;touch-action:manipulation;font-weight:600">Schermo intero</button><button id="delcur" type="button" aria-label="Elimina selezionato o trascina qui per eliminare" title="Elimina selezionato o trascina qui" disabled>🗑️</button></div>
+<div id="ctl"><button id="pp" type="button">Pausa</button><button id="xfb" type="button" title="Passaggio tra una clip e l altra">Passaggio: stacco netto</button><button id="seqm" type="button" title="Sequenza numerica oppure manuale on air">Sequenza: numerica</button><button id="tap1" type="button" title="Avvia una clip con un solo tocco sulla miniatura (altrimenti doppio tocco)">Avvio con un tocco: Off</button><button id="cont" type="button" title="Riproduzione continua senza sosta">Senza sosta: Off</button><button id="pdur" type="button" title="Durata foto">Durata foto: ∞</button><button id="cap" type="button">Scegli miniatura</button><button id="prevb" type="button" title="Risoluzione dell'anteprima sullo schermo dell'iPhone">Anteprima iPhone: piena</button><button id="diagb" type="button">Diagnostica: Off</button><button id="fsbtn" type="button" title="Espandi il quadro di riproduzione a schermo intero" style="border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:0 10px;font-size:12px;font-family:inherit;height:38px;touch-action:manipulation;font-weight:600">Schermo intero</button><button id="delcur" type="button" aria-label="Elimina selezionato o trascina qui per eliminare" title="Elimina selezionato o trascina qui" disabled>🗑️</button></div>
 <div id="listwrap">
   <div id="list"></div>
   <div id="zrail" role="slider" aria-label="Dimensione miniature" aria-valuemin="60" aria-valuemax="260" aria-valuenow="130" tabindex="0">
@@ -415,7 +415,7 @@ var list=document.getElementById("list"),v=document.getElementById("v"),now=docu
 var items=[],cur=-1,db=null,queue=[],busy=false,pendingOrder=false,imp={t:0,d:0},projs=[],pid="p1";
 var accord=document.getElementById("accord");
 var vA=v,vB=document.getElementById("v2"),pre=vB,muteWanted=false;
-setTimeout(function(){MIX=window.ArnoMix(document.getElementById("scr"));},0);
+setTimeout(function(){MIX=window.ArnoMix(document.getElementById("scr"));applyPrev();},0);
 function onV(t,fn,o){[vA,vB].forEach(function(el){el.addEventListener(t,function(e){if(el!==v)return;fn.call(el,e);},o);});}
 var MIX=null,xfade=0;
 try{xfade=parseFloat(localStorage.getItem("vpxf")||"0")||0;}catch(e){}
@@ -472,8 +472,10 @@ async function syncStore(){
   }catch(e){}
   storeBusy=false;if(storeAgain){storeAgain=false;syncStore();}
 }
+var prevMode="piena";try{prevMode=localStorage.getItem("vpprev")||"piena";}catch(e){}
+function applyPrev(){if(MIX)MIX.setLite(prevMode==="leggera"||(prevMode==="auto"&&hdmiNative&&monitorLive));}
 function refreshHdmiBtn(){
-  if(MIX)MIX.setLite(hdmiNative&&monitorLive);
+  applyPrev();
   if(!nat)return;
   hdmiBtn.classList.toggle("on",hdmiNative&&monitorLive);
   hdmit.textContent=!hdmiNative?"Invia su HDMI":(monitorLive?"Monitor: ON":"Collega il cavo");
@@ -1547,6 +1549,9 @@ pimp.addEventListener("change",function(){
   b.addEventListener("click",function(){seqManual=!seqManual;if(!seqManual)qItem=null;try{localStorage.setItem("vpseq",seqManual?"manual":"num");}catch(e){}u();render();});})();
 (function(){var b=document.getElementById("xfb"),L=[0,0.5,1,2];function u(){b.textContent="Passaggio: "+(xfade?"dissolvenza "+String(xfade).replace(".",",")+" s":"stacco netto");b.classList.toggle("on",xfade>0);}u();
   b.addEventListener("click",function(){var k=L.indexOf(xfade);xfade=L[(k+1)%L.length];try{localStorage.setItem("vpxf",String(xfade));}catch(e){}u();});})();
+(function(){var b=document.getElementById("prevb"),L=["piena","leggera","auto"],N={piena:"piena (originale)",leggera:"leggera (bassa)",auto:"automatica (leggera con HDMI)"};
+  function u(){b.textContent="Anteprima iPhone: "+N[prevMode];b.classList.toggle("on",prevMode!=="piena");}u();
+  b.addEventListener("click",function(){prevMode=L[(L.indexOf(prevMode)+1)%L.length];try{localStorage.setItem("vpprev",prevMode);}catch(e){}u();applyPrev();});})();
 // Diagnostica: temperatura, memoria, fotogrammi persi (iPhone e monitor)
 (function(){var on=false,b=document.getElementById("diagb"),box=document.getElementById("diag"),ns=null,TH=["normale","tiepido","caldo","molto caldo"];
   window.nativeStats=function(o){ns=o;if(MIX)MIX.setHot(o.th>=2);draw();};
@@ -1565,7 +1570,7 @@ pimp.addEventListener("change",function(){
   var M={
     mfile:[hd("Progetto"),$("psel"),$("pnew"),$("pren"),$("pdel"),sep(),$("pexp"),$("pimpl"),sep(),hd("Aggiungi"),lab("file"),lab("filep"),lab("filea"),lab("fileva")],
     medit:[$("und"),sep(),$("cap"),$("delcur")],
-    mview:[$("thm"),$("bgpick"),sep(),$("fsbtn"),$("diagb")],
+    mview:[$("thm"),$("bgpick"),sep(),$("fsbtn"),$("prevb"),$("diagb")],
     mplay:[$("seqm"),$("xfb"),$("cont"),$("tap1"),$("pdur"),sep(),$("ap")]
   };
   var trashHome=$("delcur").parentNode,trashNext=$("delcur").nextSibling;
@@ -1585,7 +1590,7 @@ pimp.addEventListener("change",function(){
   document.addEventListener("pointerdown",function(e){if(!dd.hidden&&!dd.contains(e.target)&&!bar.contains(e.target))close();},true);
   dd.addEventListener("click",function(e){
     var t=e.target.closest("button,label");if(!t||t.tagName==="SELECT")return;
-    if(t.id==="pdel"||t.id==="pexp"||t.id==="pdur"||t.id==="cont"||t.id==="thm"||t.id==="tap1"||t.id==="seqm"||t.id==="xfb"||t.id==="diagb")return; // restano aperti per vedere l'effetto
+    if(t.id==="pdel"||t.id==="pexp"||t.id==="pdur"||t.id==="cont"||t.id==="thm"||t.id==="tap1"||t.id==="seqm"||t.id==="xfb"||t.id==="diagb"||t.id==="prevb")return; // restano aperti per vedere l'effetto
     setTimeout(close,0);
   });
   $("psel").addEventListener("change",close);
