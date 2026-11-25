@@ -115,6 +115,12 @@ body.isplaying #curnum{color:var(--del)}
 body.ispaused .tile.on{animation:tileBlinkW 1s ease-in-out infinite}
 @keyframes ppBlinkW{0%,100%{box-shadow:0 0 0 3px #ffffff,0 0 14px rgba(255,255,255,.7)}50%{box-shadow:0 0 0 3px rgba(255,255,255,0)}}
 body.ispaused #pp:not(:disabled){animation:ppBlinkW 1s ease-in-out infinite}
+body.isplaying #go:not(:disabled){animation:ppBlinkW 1s ease-in-out infinite}
+#qprev{position:absolute;left:0;bottom:0;width:33.333%;height:33.333%;z-index:3;background:#000;border:2px solid #fff;border-radius:6px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.6);pointer-events:none}
+#qprev .qth{position:absolute;inset:0;background:#2a2a2a center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px}
+#qprev .qn{position:absolute;left:4px;top:1px;font-weight:800;font-size:clamp(14px,30%,30px);line-height:1.1;color:#ef4444;text-shadow:0 0 4px rgba(0,0,0,.95);animation:numBlink 1s ease-in-out infinite}
+#qprev .ql{position:absolute;right:3px;bottom:2px;font-size:8px;font-weight:800;letter-spacing:.05em;color:#fff;background:rgba(239,68,68,.85);padding:1px 4px;border-radius:3px}
+.tile.q{outline:3px dashed #ef4444;outline-offset:2px}
 body.isplaying .tile.on .num{animation:numBlink 1s ease-in-out infinite}
 .tile.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}
 .tile.drag{z-index:40;pointer-events:none;opacity:.92;box-shadow:0 10px 26px rgba(0,0,0,.5);transition:border-color .12s ease,opacity .12s ease}
@@ -208,7 +214,7 @@ header .brand-text{display:inline-flex}
 #dd .mm>*:active:not(.sep):not(.mhd){background:var(--acc)!important;color:#fff!important}
 #dd .mm>*[disabled]{opacity:.4}
 #dd .mm>* svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
-#dd .mm>#cont.on,#dd .mm>#tap1.on{color:var(--acc)!important}
+#dd .mm>#cont.on,#dd .mm>#tap1.on,#dd .mm>#seqm.on{color:var(--acc)!important}
 #dd .sep{height:1px;background:var(--line);margin:4px 8px}
 #dd .mhd{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);padding:8px 12px 4px}
 #dd select{display:block;width:calc(100% - 16px);margin:2px 8px 6px;height:38px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font-size:15px;padding:0 8px}
@@ -253,10 +259,10 @@ header .brand-text{display:inline-flex}
 <div id="prj"><select id="psel" aria-label="Progetto"></select><button id="pnew" type="button">Nuovo progetto</button><button id="pren" type="button">Rinomina progetto…</button><button id="pdel" type="button">Elimina progetto</button><button id="pexp" type="button" title="Salva il progetto (video, foto, audio e ordine) in un file">Salva progetto su file…</button><label id="pimpl" title="Apri un progetto salvato in un file" style="padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:12px;white-space:nowrap">Apri progetto da file…<input type="file" id="pimp" accept=".arnoshow,.zip,application/zip" hidden></label></div>
 <div id="pedit" hidden><input id="pname" maxlength="40" placeholder="Nome del progetto"><button id="pok" type="button">OK</button><button id="pno" type="button">Annulla</button></div>
 <div id="imp" hidden><div id="impt"></div><div id="impb"><div id="impf"></div></div></div>
-<video id="vout" playsinline webkit-playsinline x-webkit-airplay="allow"></video><button id="fsexit" type="button">✕ Esci da schermo intero</button><div id="curnum" hidden></div><div id="stage"><video id="v" playsinline webkit-playsinline x-webkit-airplay="allow"></video><img id="ph" alt="" hidden><div id="audvis" hidden><div class="av-ico" id="audico">🎵</div><div class="av-nm" id="audnm"></div><div id="audsub" style="font-size:11px;opacity:.68;margin-top:2px" hidden>Traccia audio estratta da video</div></div><div id="wait"></div></div>
+<video id="vout" playsinline webkit-playsinline x-webkit-airplay="allow"></video><button id="fsexit" type="button">✕ Esci da schermo intero</button><div id="curnum" hidden></div><div id="stage"><video id="v" playsinline webkit-playsinline x-webkit-airplay="allow"></video><img id="ph" alt="" hidden><div id="audvis" hidden><div class="av-ico" id="audico">🎵</div><div class="av-nm" id="audnm"></div><div id="audsub" style="font-size:11px;opacity:.68;margin-top:2px" hidden>Traccia audio estratta da video</div></div><div id="wait"></div><div id="qprev" hidden><div class="qth"></div><div class="qn"></div><div class="ql">IN CODA</div></div></div>
 <div id="prog" aria-label="Avanzamento"><div id="pf"></div></div>
 <div id="bar"><span id="now">Nessun video in riproduzione</span><span id="tm">0:00 / 0:00</span><button id="mu" type="button" aria-label="Audio">🔊</button></div>
-<div id="ctl"><button id="pp" type="button">Pausa</button><button id="tap1" type="button" title="Avvia una clip con un solo tocco sulla miniatura (altrimenti doppio tocco)">Avvio con un tocco: Off</button><button id="cont" type="button" title="Riproduzione continua senza sosta">Senza sosta: Off</button><button id="pdur" type="button" title="Durata foto">Durata foto: ∞</button><button id="cap" type="button">Scegli miniatura</button><button id="fsbtn" type="button" title="Espandi il quadro di riproduzione a schermo intero" style="border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:0 10px;font-size:12px;font-family:inherit;height:38px;touch-action:manipulation;font-weight:600">Schermo intero</button><button id="delcur" type="button" aria-label="Elimina selezionato o trascina qui per eliminare" title="Elimina selezionato o trascina qui" disabled>🗑️</button></div>
+<div id="ctl"><button id="pp" type="button">Pausa</button><button id="seqm" type="button" title="Sequenza numerica oppure manuale on air">Sequenza: numerica</button><button id="tap1" type="button" title="Avvia una clip con un solo tocco sulla miniatura (altrimenti doppio tocco)">Avvio con un tocco: Off</button><button id="cont" type="button" title="Riproduzione continua senza sosta">Senza sosta: Off</button><button id="pdur" type="button" title="Durata foto">Durata foto: ∞</button><button id="cap" type="button">Scegli miniatura</button><button id="fsbtn" type="button" title="Espandi il quadro di riproduzione a schermo intero" style="border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:0 10px;font-size:12px;font-family:inherit;height:38px;touch-action:manipulation;font-weight:600">Schermo intero</button><button id="delcur" type="button" aria-label="Elimina selezionato o trascina qui per eliminare" title="Elimina selezionato o trascina qui" disabled>🗑️</button></div>
 <div id="listwrap">
   <div id="list"></div>
   <div id="zrail" role="slider" aria-label="Dimensione miniature" aria-valuemin="60" aria-valuemax="260" aria-valuenow="130" tabindex="0">
@@ -390,7 +396,7 @@ function startPhotoMode(){
       clearPhotoTimer();
       setStagePlaying(false);
       pf.style.width="100%";tm.textContent=fmt(d)+" / "+fmt(d);
-      if(continuous&&cur+1<items.length){play(cur+1);}else{setWait(true);}
+      if(continuous&&hasNextItem()){goNext();}else{setWait(true);}
       return;
     }
     pf.style.width=(photoElapsed/d*100)+"%";
@@ -526,7 +532,7 @@ function pump(){
 
 function render(){
   if(drag){return;}
-  updCurNum();
+  updCurNum();updQ();
   updateGo();
   if(selIdx>=items.length)selIdx=-1;delcur.disabled=((cur<0||cur>=items.length)&&selIdx<0);
   list.innerHTML="";
@@ -536,7 +542,7 @@ function render(){
     list.appendChild(h);return;
   }
   items.forEach(function(it,i){
-    var t=document.createElement("div");t.className="tile"+(i===cur?" on":"")+(i===selIdx&&i!==cur?" sel":"");t.dataset.i=i;
+    var t=document.createElement("div");t.className="tile"+(i===cur?" on":"")+(i===selIdx&&i!==cur?" sel":"")+(qItem&&it===qItem?" q":"");t.dataset.i=i;
     var th=document.createElement("div");th.className="th";
     if(it.thumb)th.style.backgroundImage="url("+it.thumb+")";
     if(!it.thumb){var hh=0;for(var q=0;q<it.name.length;q++)hh=(hh*31+it.name.charCodeAt(q))%360;th.style.backgroundColor="hsl("+hh+",35%,32%)";}
@@ -770,6 +776,7 @@ if(hdmiForceBtn)hdmiForceBtn.addEventListener("click",function(){
 
 function play(i){
   if(i<0||i>=items.length)return;
+  if(qItem&&items[i]===qItem)qItem=null;
   cur=i;
   clearPhotoTimer();
   setWait(false);
@@ -801,10 +808,24 @@ function play(i){
   syncHdmiState();
   var on=list.querySelector(".tile.on");if(on&&on.scrollIntoView)on.scrollIntoView({block:"nearest",behavior:"smooth"});
 }
-var selIdx=-1,lastTapI=-1,lastTapT=0,oneTap=false;
+var selIdx=-1,lastTapI=-1,lastTapT=0,oneTap=false,seqManual=false,qItem=null;
+try{seqManual=localStorage.getItem("vpseq")==="manual";}catch(e){}
+function qIdx(){return qItem?items.indexOf(qItem):-1;}
+function hasNextItem(){return qIdx()>=0||cur+1<items.length;}
+function goNext(){var q=qIdx();if(q>=0){play(q);return;}play(cur<0?0:cur+1);}
+function updQ(){
+  var box=document.getElementById("qprev");if(!box)return;var q=qIdx();
+  if(q<0){qItem=null;box.hidden=true;return;}
+  var it=items[q];box.hidden=false;
+  var th=box.querySelector(".qth");th.style.backgroundImage=it.thumb?"url("+it.thumb+")":"";th.textContent=it.thumb?"":(it.kind==="photo"?"🖼":(it.kind==="video"?"▶":"🎵"));
+  box.querySelector(".qn").textContent=nums[it.id]||q+1;
+}
 try{oneTap=localStorage.getItem("vptap1")==="1";}catch(e){}
 function tileTap(i){
   var n=Date.now();
+  if(seqManual&&cur>=0&&items[cur]&&!wait.classList.contains("on")&&i!==cur){
+    qItem=(qItem===items[i])?null:items[i];selIdx=-1;render();return;
+  }
   if(oneTap||(i===lastTapI&&n-lastTapT<350)){lastTapI=-1;selIdx=-1;play(i);return;}
   lastTapI=i;lastTapT=n;selIdx=i;render();
 }
@@ -817,12 +838,13 @@ function placeCurNum(){var e=document.getElementById("curnum");if(!e||e.hidden)r
 window.addEventListener("resize",function(){setTimeout(placeCurNum,60);});
 function fmt(s){if(!isFinite(s))s=0;var m=Math.floor(s/60),x=Math.floor(s%60);return m+":"+(x<10?"0":"")+x;}
 function updateGo(){
-  var nextIdx=cur<0?0:cur+1;
+  var nextIdx=qIdx()>=0?qIdx():(cur<0?0:cur+1);
   var hasNext=items.length>0&&nextIdx<items.length;
   go.disabled=!hasNext;
   if(!items.length){go.textContent="Avvia";return;}
   if(!hasNext){go.innerHTML='<span>Fine</span><span class="go-sub">'+items.length+"/"+items.length+"</span>";return;}
-  go.innerHTML="<span>"+(cur<0?"Avvia":"Continua")+'</span><span class="go-sub">'+(nextIdx+1)+"/"+items.length+"</span>";
+  var nn=items[nextIdx]?(nums[items[nextIdx].id]||nextIdx+1):nextIdx+1;
+  go.innerHTML="<span>"+(cur<0?"Avvia":"Continua")+'</span><span class="go-sub">'+(qIdx()>=0?"→ "+nn:(nextIdx+1)+"/"+items.length)+"</span>";
 }
 function setWait(on){
   wait.classList.toggle("on",on);
@@ -833,7 +855,7 @@ function setWait(on){
     if(hdmiOn||hdmiNative)syncHdmiState();
   }
 }
-v.addEventListener("ended",function(){setStagePlaying(false);if(continuous&&cur+1<items.length){play(cur+1);}else{setWait(true);}});
+v.addEventListener("ended",function(){setStagePlaying(false);if(continuous&&hasNextItem()){goNext();}else{setWait(true);}});
 v.addEventListener("timeupdate",function(){
   pf.style.width=(v.duration?v.currentTime/v.duration*100:0)+"%";
   tm.textContent=fmt(v.currentTime)+" / "+fmt(v.duration);
@@ -855,7 +877,7 @@ function seek(e){
 }
 prog.addEventListener("pointerdown",function(e){prog.setPointerCapture(e.pointerId);seek(e);});
 prog.addEventListener("pointermove",function(e){if(prog.hasPointerCapture(e.pointerId))seek(e);});
-go.addEventListener("click",function(){play(cur<0?0:cur+1);});
+go.addEventListener("click",function(){goNext();});
 function setPendingOrder(on){
   pendingOrder=!!on;
   accord.hidden=!pendingOrder;
@@ -899,6 +921,7 @@ cap.addEventListener("click",function(){
 function remove(i){
   if(i<0||i>=items.length)return;
   var it=items[i];
+  if(it===qItem)qItem=null;
   pushUndo({del:it,index:i});it.gone=true;
   try{URL.revokeObjectURL(it.url);if(it._hdmiVideoUrl)URL.revokeObjectURL(it._hdmiVideoUrl);}catch(e){}
   it._hdmiVideoUrl=null;
@@ -1369,6 +1392,8 @@ pimp.addEventListener("change",function(){
 
 (function(){var b=document.getElementById("tap1");function u(){b.textContent="Avvio con un tocco: "+(oneTap?"On":"Off");b.classList.toggle("on",oneTap);}u();
   b.addEventListener("click",function(){oneTap=!oneTap;try{localStorage.setItem("vptap1",oneTap?"1":"0");}catch(e){}u();});})();
+(function(){var b=document.getElementById("seqm");function u(){b.textContent="Sequenza: "+(seqManual?"manuale on air":"numerica");b.classList.toggle("on",seqManual);}u();
+  b.addEventListener("click",function(){seqManual=!seqManual;if(!seqManual)qItem=null;try{localStorage.setItem("vpseq",seqManual?"manual":"num");}catch(e){}u();render();});})();
 // === BARRA DEI MENU (stile Mac) ===
 (function(){
   function $(id){return document.getElementById(id);}
@@ -1379,7 +1404,7 @@ pimp.addEventListener("change",function(){
     mfile:[hd("Progetto"),$("psel"),$("pnew"),$("pren"),$("pdel"),sep(),$("pexp"),$("pimpl"),sep(),hd("Aggiungi"),lab("file"),lab("filep"),lab("filea"),lab("fileva")],
     medit:[$("und"),sep(),$("cap"),$("delcur")],
     mview:[$("thm"),$("bgpick"),sep(),$("fsbtn")],
-    mplay:[$("cont"),$("tap1"),$("pdur"),sep(),$("ap")]
+    mplay:[$("seqm"),$("cont"),$("tap1"),$("pdur"),sep(),$("ap")]
   };
   var trashHome=$("delcur").parentNode,trashNext=$("delcur").nextSibling;
   M.medit=M.medit.filter(function(x){return x&&x.id!=="delcur";});
@@ -1398,7 +1423,7 @@ pimp.addEventListener("change",function(){
   document.addEventListener("pointerdown",function(e){if(!dd.hidden&&!dd.contains(e.target)&&!bar.contains(e.target))close();},true);
   dd.addEventListener("click",function(e){
     var t=e.target.closest("button,label");if(!t||t.tagName==="SELECT")return;
-    if(t.id==="pdel"||t.id==="pexp"||t.id==="pdur"||t.id==="cont"||t.id==="thm"||t.id==="tap1")return; // restano aperti per vedere l'effetto
+    if(t.id==="pdel"||t.id==="pexp"||t.id==="pdur"||t.id==="cont"||t.id==="thm"||t.id==="tap1"||t.id==="seqm")return; // restano aperti per vedere l'effetto
     setTimeout(close,0);
   });
   $("psel").addEventListener("change",close);
