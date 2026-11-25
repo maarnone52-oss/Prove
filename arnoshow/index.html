@@ -111,6 +111,8 @@ body.dragging #delcur.hot{background:var(--del);border-color:var(--del);color:#f
 #curnum.in{font-size:34px;color:#fff;text-shadow:0 0 6px rgba(0,0,0,.95)}
 body.isplaying #curnum{color:var(--del)}
 @keyframes numBlink{0%,100%{color:#ef4444;opacity:1}50%{color:#ef4444;opacity:.15}}
+@keyframes tileBlinkW{0%,100%{border-color:#ffffff;box-shadow:0 0 0 3px #ffffff,0 0 18px rgba(255,255,255,.7)}50%{border-color:var(--mut);box-shadow:0 0 0 0 transparent}}
+body.ispaused .tile.on{animation:tileBlinkW 1s ease-in-out infinite}
 body.isplaying .tile.on .num{animation:numBlink 1s ease-in-out infinite}
 .tile.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}
 .tile.drag{z-index:40;pointer-events:none;opacity:.92;box-shadow:0 10px 26px rgba(0,0,0,.5);transition:border-color .12s ease,opacity .12s ease}
@@ -365,6 +367,7 @@ pdur.addEventListener("click",function(){
 function setStagePlaying(on){
   stage.classList.toggle("playing",!!on);
   document.body.classList.toggle("isplaying",!!on);
+  updPause();
 }
 
 function clearPhotoTimer(){
@@ -803,7 +806,8 @@ function tileTap(i){
   if(oneTap||(i===lastTapI&&n-lastTapT<350)){lastTapI=-1;selIdx=-1;play(i);return;}
   lastTapI=i;lastTapT=n;selIdx=i;render();
 }
-function updCurNum(){var e=document.getElementById("curnum");if(!e)return;var it=cur>=0?items[cur]:null;e.textContent=it?(nums[it.id]||cur+1):"";e.hidden=!it;placeCurNum();}
+function updPause(){document.body.classList.toggle("ispaused",cur>=0&&!!items[cur]&&!stage.classList.contains("playing")&&!wait.classList.contains("on"));}
+function updCurNum(){updPause();var e=document.getElementById("curnum");if(!e)return;var it=cur>=0?items[cur]:null;e.textContent=it?(nums[it.id]||cur+1):"";e.hidden=!it;placeCurNum();}
 function placeCurNum(){var e=document.getElementById("curnum");if(!e||e.hidden)return;var r=stage.getBoundingClientRect();
   var por=window.matchMedia("(orientation:portrait)").matches;
   if(por&&r.left>40){e.classList.remove("in");e.style.left=Math.max(4,r.left-e.offsetWidth-10)+"px";e.style.top=(r.top+r.height/2-e.offsetHeight/2)+"px";}
@@ -820,6 +824,7 @@ function updateGo(){
 }
 function setWait(on){
   wait.classList.toggle("on",on);
+  updPause();
   document.body.classList.toggle("waiting",on);
   if(on){
     setStagePlaying(false);
