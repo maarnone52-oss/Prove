@@ -91,6 +91,11 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWith
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        if webView === control {
+            let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+            let b = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
+            webView.evaluateJavaScript("window.nativeVer='\(v) (\(b))'", completionHandler: nil)
+        }
         if webView === monitor { monitorReady = true }
         notifyControl()
     }

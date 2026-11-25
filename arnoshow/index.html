@@ -125,6 +125,17 @@ body.isplaying #go:not(:disabled){animation:ppBlinkW 1s ease-in-out infinite}
 #qprev .qn{position:absolute;left:4px;top:1px;font-weight:800;font-size:clamp(14px,30%,30px);line-height:1.1;color:#ef4444;text-shadow:0 0 4px rgba(0,0,0,.95);animation:numBlink 1s ease-in-out infinite}
 #qprev .ql{position:absolute;right:3px;bottom:2px;font-size:8px;font-weight:800;letter-spacing:.05em;color:#fff;background:rgba(239,68,68,.85);padding:1px 4px;border-radius:3px}
 #diag{position:absolute;right:4px;top:4px;z-index:6;background:rgba(0,0,0,.7);color:#fff;font:600 10px/1.35 -apple-system,system-ui,sans-serif;padding:4px 6px;border-radius:6px;pointer-events:none;white-space:pre}
+#listwrap{position:relative}
+#accord{position:absolute;left:50%;top:6px;transform:translateX(-50%);z-index:45;height:36px;padding:0 14px;font-size:14px}
+#accord:active:not(:disabled){transform:translateX(-50%) scale(.96)}
+#about{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#about .ab{width:min(300px,84vw);background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 18px 16px;text-align:center;box-shadow:0 14px 40px rgba(0,0,0,.5)}
+#about .brand-mark{width:64px;height:64px;border-radius:16px;margin:0 auto}#about .brand-mark svg{width:36px;height:36px}
+#about .ab-name{font-size:24px;font-weight:800;letter-spacing:-.03em;margin-top:10px}#about .ab-name span{color:var(--acc)}
+#about .ab-ver{font-size:13px;color:var(--mut);margin-top:3px}
+#about .ab-txt{font-size:13px;margin:12px 0 10px;line-height:1.35}
+#about .ab-copy{font-size:12px;color:var(--mut);line-height:1.45;margin-bottom:14px}
+#about .btn{width:100%;height:38px}
 .tile.q{outline:3px dashed #ef4444;outline-offset:2px}
 body.isplaying .tile.on .num{animation:numBlink 1s ease-in-out infinite}
 .tile.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}
@@ -226,7 +237,7 @@ header .brand-text{display:inline-flex}
 #pedit{position:fixed!important;left:12px!important;right:12px!important;top:calc(var(--sat) + 50px)!important;width:auto!important;z-index:80!important;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px!important;box-shadow:0 10px 30px rgba(0,0,0,.5)}
 #prj{display:none!important}
 
-@media screen and (orientation:landscape) and (max-height:600px){#hdmiout{max-width:96px!important;font-size:11px!important;padding:3px!important}#hdmiout svg{width:16px!important;height:16px!important}#go{width:58px!important;height:58px!important;font-size:12px!important}#foot{padding-top:4px!important}}
+@media screen and (orientation:landscape) and (max-height:600px){#ctl{display:none!important}#foot{gap:8px!important}#foot #pp{flex:none;width:64px!important;min-width:64px!important;height:46px!important;border-radius:9px!important;font-size:12px!important;padding:0!important}#hdmiout{max-width:96px!important;font-size:11px!important;padding:3px!important}#hdmiout svg{width:16px!important;height:16px!important}#go{width:58px!important;height:58px!important;font-size:12px!important}#foot{padding-top:4px!important}}
 /* impaginazione verticale da ARNOCANVAS 0.9.0 (iPhone 15 Plus) */
 @media screen and (orientation:portrait){
   header .brand-mark{width:50px;height:50px;border-radius:13px;margin-top:-20px}
@@ -249,7 +260,6 @@ header .brand-text{display:inline-flex}
 <header>
 <div class="brand" aria-label="ArnoShow"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17c2.2-1.8 4.4-1.8 6.6 0s4.4 1.8 7.4 0" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><polygon points="9.5 6.5 16.5 10.5 9.5 14.5" fill="#ffffff"/></svg></span><span class="brand-text">Arno<span>Show</span></span></div>
 <nav id="mbar"><button type="button" data-m="mfile">File</button><button type="button" data-m="medit">Modifica</button><button type="button" data-m="mview">Vista</button><button type="button" data-m="mplay">Riproduci</button></nav>
-<button class="btn danger" id="accord" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg><span>Accetta riordino</span></button>
 <button class="btn sec" id="und" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span id="undt">Annulla</span></button>
 <button class="btn sec" id="thm" type="button" title="Cambia tema sfondo">Sfondo: Nero</button>
 <label class="btn sec" id="bgpick" title="Scegli foto di sfondo dalla libreria"><input type="file" id="bgfile" accept="image/*" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><path d="M21 15l-5-5L5 21"/></svg><span>Foto di sfondo…</span></label>
@@ -260,15 +270,16 @@ header .brand-text{display:inline-flex}
 <label class="btn" title="Carica un video ed estrae solo la sua traccia audio"><input type="file" id="fileva" accept="video/*" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Audio da un video…</span></label>
 </header>
 <div id="dd" hidden><div class="mm" id="mfile"></div><div class="mm" id="medit"></div><div class="mm" id="mview"></div><div class="mm" id="mplay"></div></div>
+<div id="about" hidden><div class="ab"><div class="ab-logo"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17c2.2-1.8 4.4-1.8 6.6 0s4.4 1.8 7.4 0" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><polygon points="9.5 6.5 16.5 10.5 9.5 14.5" fill="#ffffff"/></svg></span></div><div class="ab-name">Arno<span>Show</span></div><div class="ab-ver" id="abver"></div><div class="ab-txt">Video, foto e audio in sequenza, con uscita sul monitor HDMI.</div><div class="ab-copy">© 2026 Maurizio Arnone<br>Tutti i diritti riservati</div><button id="abok" type="button" class="btn">OK</button></div></div>
 <div id="hdminote"><span id="hdminotetxt">Tocca "Apri su TV" per inviare il video puro al monitor HDMI senza clonare l'iPhone.</span><button id="hdmiforce" type="button">Apri su TV</button></div>
-<div id="prj"><select id="psel" aria-label="Progetto"></select><button id="pnew" type="button">Nuovo progetto</button><button id="pren" type="button">Rinomina progetto…</button><button id="pdel" type="button">Elimina progetto</button><button id="pexp" type="button" title="Salva il progetto (video, foto, audio e ordine) in un file">Salva progetto su file…</button><label id="pimpl" title="Apri un progetto salvato in un file" style="padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:12px;white-space:nowrap">Apri progetto da file…<input type="file" id="pimp" accept=".arnoshow,.zip,application/zip" hidden></label></div>
+<div id="prj"><select id="psel" aria-label="Progetto"></select><button id="abtn" type="button">Informazioni su ArnoShow…</button><button id="pnew" type="button">Nuovo progetto</button><button id="pren" type="button">Rinomina progetto…</button><button id="pdel" type="button">Elimina progetto</button><button id="pexp" type="button" title="Salva il progetto (video, foto, audio e ordine) in un file">Salva progetto su file…</button><label id="pimpl" title="Apri un progetto salvato in un file" style="padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:12px;white-space:nowrap">Apri progetto da file…<input type="file" id="pimp" accept=".arnoshow,.zip,application/zip" hidden></label></div>
 <div id="pedit" hidden><input id="pname" maxlength="40" placeholder="Nome del progetto"><button id="pok" type="button">OK</button><button id="pno" type="button">Annulla</button></div>
 <div id="imp" hidden><div id="impt"></div><div id="impb"><div id="impf"></div></div></div>
 <video id="vout" playsinline webkit-playsinline x-webkit-airplay="allow"></video><button id="fsexit" type="button">✕ Esci da schermo intero</button><div id="curnum" hidden></div><div id="stage"><video id="v" playsinline webkit-playsinline x-webkit-airplay="allow"></video><canvas id="scr"></canvas><video id="v2" playsinline webkit-playsinline x-webkit-airplay="allow" muted preload="auto"></video><img id="ph" alt="" hidden><div id="audvis" hidden><div class="av-ico" id="audico">🎵</div><div class="av-nm" id="audnm"></div><div id="audsub" style="font-size:11px;opacity:.68;margin-top:2px" hidden>Traccia audio estratta da video</div></div><div id="wait"></div><div id="diag" hidden></div><div id="qprev" hidden><div class="qth"></div><div class="qn"></div><div class="ql">IN CODA</div></div></div>
 <div id="prog" aria-label="Avanzamento"><div id="pf"></div></div>
 <div id="bar"><span id="now">Nessun video in riproduzione</span><span id="tm">0:00 / 0:00</span><button id="mu" type="button" aria-label="Audio">🔊</button></div>
 <div id="ctl"><button id="pp" type="button">Pausa</button><button id="xfb" type="button" title="Passaggio tra una clip e l altra">Passaggio: stacco netto</button><button id="seqm" type="button" title="Sequenza numerica oppure manuale on air">Sequenza: numerica</button><button id="tap1" type="button" title="Avvia una clip con un solo tocco sulla miniatura (altrimenti doppio tocco)">Avvio con un tocco: Off</button><button id="cont" type="button" title="Riproduzione continua senza sosta">Senza sosta: Off</button><button id="pdur" type="button" title="Durata foto">Durata foto: ∞</button><button id="cap" type="button">Scegli miniatura</button><button id="prevb" type="button" title="Risoluzione dell'anteprima sullo schermo dell'iPhone">Anteprima iPhone: piena</button><button id="diagb" type="button">Diagnostica: Off</button><button id="fsbtn" type="button" title="Espandi il quadro di riproduzione a schermo intero" style="border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:0 10px;font-size:12px;font-family:inherit;height:38px;touch-action:manipulation;font-weight:600">Schermo intero</button><button id="delcur" type="button" aria-label="Elimina selezionato o trascina qui per eliminare" title="Elimina selezionato o trascina qui" disabled>🗑️</button></div>
-<div id="listwrap">
+<div id="listwrap"><button class="btn danger" id="accord" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg><span>Accetta riordino</span></button>
   <div id="list"></div>
   <div id="zrail" role="slider" aria-label="Dimensione miniature" aria-valuemin="60" aria-valuemax="260" aria-valuenow="130" tabindex="0">
     <div id="ztrack"><div id="zfill"></div><div id="zthumb"></div></div>
@@ -1552,6 +1563,13 @@ pimp.addEventListener("change",function(){
 (function(){var b=document.getElementById("prevb"),L=["piena","leggera","auto"],N={piena:"piena (originale)",leggera:"leggera (bassa)",auto:"automatica (leggera con HDMI)"};
   function u(){b.textContent="Anteprima iPhone: "+N[prevMode];b.classList.toggle("on",prevMode!=="piena");}u();
   b.addEventListener("click",function(){prevMode=L[(L.indexOf(prevMode)+1)%L.length];try{localStorage.setItem("vpprev",prevMode);}catch(e){}u();applyPrev();});})();
+// Informazioni: versione e copyright
+var APPVER="1.1.11";
+(function(){var box=document.getElementById("about");
+  document.getElementById("abtn").addEventListener("click",function(){
+    document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;});
+  document.getElementById("abok").addEventListener("click",function(){box.hidden=true;});
+  box.addEventListener("click",function(e){if(e.target===box)box.hidden=true;});})();
 // Diagnostica: temperatura, memoria, fotogrammi persi (iPhone e monitor)
 (function(){var on=false,b=document.getElementById("diagb"),box=document.getElementById("diag"),ns=null,TH=["normale","tiepido","caldo","molto caldo"];
   window.nativeStats=function(o){ns=o;if(MIX)MIX.setHot(o.th>=2);draw();};
@@ -1568,7 +1586,7 @@ pimp.addEventListener("change",function(){
   function hd(t){var d=document.createElement("div");d.className="mhd";d.textContent=t;return d;}
   function lab(id){var e=$(id);return e?e.parentNode:null;}
   var M={
-    mfile:[hd("Progetto"),$("psel"),$("pnew"),$("pren"),$("pdel"),sep(),$("pexp"),$("pimpl"),sep(),hd("Aggiungi"),lab("file"),lab("filep"),lab("filea"),lab("fileva")],
+    mfile:[$("abtn"),sep(),hd("Progetto"),$("psel"),$("pnew"),$("pren"),$("pdel"),sep(),$("pexp"),$("pimpl"),sep(),hd("Aggiungi"),lab("file"),lab("filep"),lab("filea"),lab("fileva")],
     medit:[$("und"),sep(),$("cap"),$("delcur")],
     mview:[$("thm"),$("bgpick"),sep(),$("fsbtn"),$("prevb"),$("diagb")],
     mplay:[$("seqm"),$("xfb"),$("cont"),$("tap1"),$("pdur"),sep(),$("ap")]
@@ -1612,9 +1630,8 @@ pimp.addEventListener("change",function(){
       var r=st.getBoundingClientRect();mu.style.left=(r.right+16)+"px";mu.style.top=(r.top+62)+"px";
     }else{
       mu.classList.remove("cvfloat");mu.style.left=mu.style.top="";if(mu.parentNode!==bar)bar.appendChild(mu);
-      if(dcTxt.parentNode)dcTxt.remove();
-      if(dc.parentNode!==ctl)ctl.insertBefore(dc,ctl.firstChild);
-      if(pp.parentNode!==ctl)ctl.insertBefore(pp,dc.nextSibling);
+      if(pp.parentNode!==foot)foot.insertBefore(pp,foot.children[1]||null);
+      if(dc.parentNode!==me){me.appendChild(dc);dc.appendChild(dcTxt);}
     }
   }
   place();window.addEventListener("resize",place);window.addEventListener("orientationchange",function(){setTimeout(place,250);});
