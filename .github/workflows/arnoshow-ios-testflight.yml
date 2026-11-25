@@ -46,7 +46,7 @@ jobs:
         run: |
           brew install xcodegen
           xcodegen generate
-      - name: Archivia (firma automatica)
+      - name: Archivia (senza firma: firma Apple nel cloud all'esportazione, nessun certificato nuovo)
         working-directory: arnoshow-ios
         run: |
           set -o pipefail
@@ -54,11 +54,8 @@ jobs:
             -destination 'generic/platform=iOS' -configuration Release \
             -archivePath "$RUNNER_TEMP/ArnoShow.xcarchive" \
             DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
-            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$KEY_PATH" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tail -n 40
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" | tail -n 40
       - name: Esporta e carica su TestFlight
         run: |
           cat > "$RUNNER_TEMP/export.plist" <<PL
