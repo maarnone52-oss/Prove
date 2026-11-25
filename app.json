@@ -27,6 +27,6 @@
  {
   "cartella": "arnoshow",
   "nome": "ARNOSHOW",
-  "stato": "Prova 1.0.19: la clip uscente scorre finché l entrante è fluida (stacco e dissolvenza)"
+  "stato": "Prova 1.0.20: il passaggio aspetta che la clip entrante scorra regolare; l uscente non si ferma"
  }
 ]

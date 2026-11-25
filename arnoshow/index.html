@@ -282,9 +282,8 @@ window.warmUp=function(el,cb){(function(){
  // come ARNOCUT: avvio muto per un istante e ritorno all'inizio, così il primo fotogramma è già decodificato
   var tag=el.getAttribute("src");el._warm=false;
   function go(){if(el.getAttribute("src")!==tag||el._active)return;el.muted=true;
-    var fin=false;function end(){if(fin)return;fin=true;if(el._active){el._warm=true;return;}try{el.pause();}catch(e){}try{el.currentTime=0;}catch(e){}
-      el.addEventListener("seeked",function f(){el.removeEventListener("seeked",f);if(el.getAttribute("src")===tag){el._warm=true;if(cb)cb();}});
-      setTimeout(function(){if(el.getAttribute("src")===tag&&!el._warm){el._warm=true;if(cb)cb();}},600);}
+    var fin=false;function end(){if(fin)return;fin=true;if(el._active){el._warm=true;return;}try{el.pause();}catch(e){}
+      if(el.getAttribute("src")===tag){el._warm=true;if(cb)cb();}}
     var pr;try{pr=el.play();}catch(e){}if(pr&&pr.catch)pr.catch(end);
     if(el.requestVideoFrameCallback)el.requestVideoFrameCallback(function(){setTimeout(end,30);});
     el.addEventListener("timeupdate",function f(){if(el.currentTime>0.04){el.removeEventListener("timeupdate",f);end();}});
@@ -296,7 +295,7 @@ window.ArnoMix=function(cv){
   var x=cv.getContext("2d"),A=null,B=null,dur=0,t0=0,cb=null;
   function has(v){return v&&v.readyState>=2&&v.videoWidth>0;}
   function draw(v,al){var W=cv.width,H=cv.height,k=Math.min(W/v.videoWidth,H/v.videoHeight),w=v.videoWidth*k,h=v.videoHeight*k;x.globalAlpha=al;try{x.drawImage(v,(W-w)/2,(H-h)/2,w,h);}catch(e){}x.globalAlpha=1;}
-  function fit(){var r=cv.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,2),w=Math.max(2,Math.round(r.width*d)),h=Math.max(2,Math.round(r.height*d));if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}}
+  function fit(){var r=cv.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,1.5),w=Math.max(2,Math.round(r.width*d)),h=Math.max(2,Math.round(r.height*d));if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}}
   function endFade(){if(!B)return;var b=B,c=cb;B=null;cb=null;if(c)try{c(b);}catch(e){}}
   function loop(){
     fit();
@@ -317,11 +316,12 @@ window.ArnoMix=function(cv){
   function armReady(el){
     el._rdy=false;el._t0=0;
     // si passa alla nuova clip solo quando scorre davvero (alcuni fotogrammi già mostrati): niente incertezze all'ingresso
-    var ok=function(){el._rdy=true;},n=0;
-    if(el.requestVideoFrameCallback){var cb2=function(){if(++n>=4)ok();else if(!el._rdy)el.requestVideoFrameCallback(cb2);};el.requestVideoFrameCallback(cb2);}
-    else el.addEventListener("timeupdate",function f(){if(el.currentTime>0.15){el.removeEventListener("timeupdate",f);ok();}});
+    // si passa solo quando la clip entrante scorre regolare (8 fotogrammi di fila senza intoppi); intanto l'uscente continua a muoversi
+    var ok=function(){el._rdy=true;},streak=0,last=0;
+    if(el.requestVideoFrameCallback){var cb2=function(now){streak=(last&&now-last<70)?streak+1:0;last=now;if(streak>=8)ok();else if(!el._rdy)el.requestVideoFrameCallback(cb2);};el.requestVideoFrameCallback(cb2);}
+    else el.addEventListener("timeupdate",function f(){if(el.currentTime>0.35){el.removeEventListener("timeupdate",f);ok();}});
     setTimeout(function(){if(el.paused&&el.readyState>=2)ok();},300);
-    setTimeout(function(){if(el.readyState>=2)ok();},900);
+    setTimeout(function(){if(el.readyState>=2)ok();},1500);
   }
   return {
     cut:function(el,ms,onDone){if(A===el)return;endFade();B=A;A=el;dur=ms||0;cb=onDone||null;armReady(el);if(!B){dur=0;}},
