@@ -253,12 +253,30 @@ header .brand-text{display:inline-flex}
   #foot #pp{flex:none;width:72px;min-width:72px;height:56px;border-radius:9px;font-size:13px}
   #foot .fh:last-child #go{width:88px;height:88px}
 }
+
+/* logo: placca blu lucida 3D con riflesso all'apertura */
+.plate{position:relative;overflow:hidden;display:inline-flex!important;align-items:center;flex:none!important;gap:7px!important;height:auto!important;padding:4px 11px 4px 4px;border-radius:13px;background:linear-gradient(180deg,#3a6df0 0%,#1d3fae 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 -2px 4px rgba(0,0,0,.35),0 3px 0 #122a78,0 5px 10px rgba(0,0,0,.55);margin-bottom:3px}
+.plate:before{content:"";position:absolute;left:3px;right:3px;top:1px;height:45%;border-radius:10px 10px 40% 40%;background:linear-gradient(180deg,rgba(255,255,255,.33),rgba(255,255,255,0));pointer-events:none}
+header .plate .brand-mark,.plate .brand-mark{width:30px!important;height:30px!important;margin:0!important;border-radius:8px!important;background:#fff!important;box-shadow:inset 0 -2px 3px rgba(0,0,0,.22),0 2px 3px rgba(0,0,0,.4)!important}
+header .plate .brand-mark svg,.plate .brand-mark svg{width:19px!important;height:19px!important}
+.plate .brand-mark svg path{stroke:#1d4ed8}.plate .brand-mark svg polygon{fill:#1d4ed8}
+.plate .brand-text{display:inline-flex!important;color:#fff!important;font-size:17px!important;text-shadow:0 2px 0 #122a78,0 3px 4px rgba(0,0,0,.5)}
+.plate .brand-text span{color:#cfe0ff!important}
+.plate .sweep{position:absolute;top:-30%;bottom:-30%;left:-70px;width:40px;transform:skewX(-22deg);background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.75),rgba(255,255,255,0));mix-blend-mode:screen;pointer-events:none}
+.plate .sweep.go{animation:plateSweep 1.1s ease-in-out forwards}
+@keyframes plateSweep{from{left:-70px}to{left:calc(100% + 40px)}}
+#about .ab-plate{padding:8px 18px 8px 8px;border-radius:18px}
+#about .ab-plate .brand-mark{width:52px!important;height:52px!important;border-radius:13px!important}
+#about .ab-plate .brand-mark svg{width:32px!important;height:32px!important}
+#about .ab-plate .brand-text{font-size:28px!important;font-weight:800;letter-spacing:-.03em}
+#about .ab-name{display:none}
+@media (max-width:400px){.plate .brand-text{font-size:15px!important}.plate{padding-right:8px}header .plate .brand-mark{width:26px!important;height:26px!important}}
 </style>
 </head>
 <body>
 <img id="bgimg" alt="" aria-hidden="true"><div id="bgdim" aria-hidden="true"></div>
 <header>
-<div class="brand" aria-label="ArnoShow"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17c2.2-1.8 4.4-1.8 6.6 0s4.4 1.8 7.4 0" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><polygon points="9.5 6.5 16.5 10.5 9.5 14.5" fill="#ffffff"/></svg></span><span class="brand-text">Arno<span>Show</span></span></div>
+<div class="brand plate" aria-label="ArnoShow"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17c2.2-1.8 4.4-1.8 6.6 0s4.4 1.8 7.4 0" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><polygon points="9.5 6.5 16.5 10.5 9.5 14.5" fill="#ffffff"/></svg></span><span class="brand-text">Arno<span>Show</span></span><i class="sweep"></i></div>
 <nav id="mbar"><button type="button" data-m="mfile">File</button><button type="button" data-m="medit">Modifica</button><button type="button" data-m="mview">Vista</button><button type="button" data-m="mplay">Riproduci</button></nav>
 <button class="btn sec" id="und" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span id="undt">Annulla</span></button>
 <button class="btn sec" id="thm" type="button" title="Cambia tema sfondo">Sfondo: Nero</button>
@@ -270,7 +288,7 @@ header .brand-text{display:inline-flex}
 <label class="btn" title="Carica un video ed estrae solo la sua traccia audio"><input type="file" id="fileva" accept="video/*" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Audio da un video…</span></label>
 </header>
 <div id="dd" hidden><div class="mm" id="mfile"></div><div class="mm" id="medit"></div><div class="mm" id="mview"></div><div class="mm" id="mplay"></div></div>
-<div id="about" hidden><div class="ab"><div class="ab-logo"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17c2.2-1.8 4.4-1.8 6.6 0s4.4 1.8 7.4 0" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><polygon points="9.5 6.5 16.5 10.5 9.5 14.5" fill="#ffffff"/></svg></span></div><div class="ab-name">Arno<span>Show</span></div><div class="ab-ver" id="abver"></div><div class="ab-txt">Video, foto e audio in sequenza, con uscita sul monitor HDMI.</div><div class="ab-copy">© 2026 Maurizio Arnone<br>Tutti i diritti riservati</div><button id="abok" type="button" class="btn">OK</button></div></div>
+<div id="about" hidden><div class="ab"><div class="ab-logo"><span class="plate ab-plate"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17c2.2-1.8 4.4-1.8 6.6 0s4.4 1.8 7.4 0" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><polygon points="9.5 6.5 16.5 10.5 9.5 14.5" fill="#ffffff"/></svg></span><span class="brand-text">Arno<span>Show</span></span><i class="sweep"></i></span></div><div class="ab-ver" id="abver"></div><div class="ab-txt">Video, foto e audio in sequenza, con uscita sul monitor HDMI.</div><div class="ab-copy">© 2026 Maurizio Arnone<br>Tutti i diritti riservati</div><button id="abok" type="button" class="btn">OK</button></div></div>
 <div id="hdminote"><span id="hdminotetxt">Tocca "Apri su TV" per inviare il video puro al monitor HDMI senza clonare l'iPhone.</span><button id="hdmiforce" type="button">Apri su TV</button></div>
 <div id="prj"><select id="psel" aria-label="Progetto"></select><button id="abtn" type="button">Informazioni su ArnoShow…</button><button id="pnew" type="button">Nuovo progetto</button><button id="pren" type="button">Rinomina progetto…</button><button id="pdel" type="button">Elimina progetto</button><button id="pexp" type="button" title="Salva il progetto (video, foto, audio e ordine) in un file">Salva progetto su file…</button><label id="pimpl" title="Apri un progetto salvato in un file" style="padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:12px;white-space:nowrap">Apri progetto da file…<input type="file" id="pimp" accept=".arnoshow,.zip,application/zip" hidden></label></div>
 <div id="pedit" hidden><input id="pname" maxlength="40" placeholder="Nome del progetto"><button id="pok" type="button">OK</button><button id="pno" type="button">Annulla</button></div>
@@ -1563,11 +1581,14 @@ pimp.addEventListener("change",function(){
 (function(){var b=document.getElementById("prevb"),L=["piena","leggera","auto"],N={piena:"piena (originale)",leggera:"leggera (bassa)",auto:"automatica (leggera con HDMI)"};
   function u(){b.textContent="Anteprima iPhone: "+N[prevMode];b.classList.toggle("on",prevMode!=="piena");}u();
   b.addEventListener("click",function(){prevMode=L[(L.indexOf(prevMode)+1)%L.length];try{localStorage.setItem("vpprev",prevMode);}catch(e){}u();applyPrev();});})();
+// riflesso di luce sul logo all'apertura (e nella finestra Informazioni)
+function sweepLogo(el){var w=el&&el.querySelector(".sweep");if(!w)return;w.classList.remove("go");void w.offsetWidth;w.classList.add("go");}
+setTimeout(function(){sweepLogo(document.querySelector("header .plate"));},500);
 // Informazioni: versione e copyright
-var APPVER="1.1.11";
+var APPVER="1.1.12";
 (function(){var box=document.getElementById("about");
   document.getElementById("abtn").addEventListener("click",function(){
-    document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;});
+    document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;setTimeout(function(){sweepLogo(box.querySelector(".plate"));},150);});
   document.getElementById("abok").addEventListener("click",function(){box.hidden=true;});
   box.addEventListener("click",function(e){if(e.target===box)box.hidden=true;});})();
 // Diagnostica: temperatura, memoria, fotogrammi persi (iPhone e monitor)
