@@ -137,9 +137,10 @@ final class MonitorVC: UIViewController {
             p.seek(to: CMTime(seconds: t, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) { _ in
                 DispatchQueue.main.async { p.preroll(atRate: 1) { _ in DispatchQueue.main.async { p.rate = 1 } } }
             }
-        } else if abs(d) > 0.08 {   // altrimenti si recupera piano, senza scatti
-            p.rate = Float(1 - max(-0.06, min(0.06, d * 0.5)))
-        } else if p.rate != 1 { p.rate = 1 }
+        } else if abs(d) > 0.25 {   // altrimenti si recupera piano, senza scatti (sotto 0,25 s non si tocca nulla)
+            let r = Float(1 - max(-0.04, min(0.04, d * 0.3)))
+            if abs(p.rate - r) > 0.01 { p.rate = r }
+        } else if abs(d) < 0.06 && p.rate != 1 { p.rate = 1 }
     }
 
     private func show(_ m: [String: Any]) {
@@ -193,6 +194,7 @@ final class MonitorVC: UIViewController {
                 guard tk == self.token else { return }
                 self.players[oldIdx].pause()
                 self.setOpacity(self.layers[oldIdx], 0, 0)
+                if let ev = self.players[oldIdx].currentItem?.accessLog()?.events { self.droppedBase += ev.reduce(0) { $0 + max(0, $1.numberOfDroppedVideoFrames) } }
                 self.players[oldIdx].replaceCurrentItem(with: nil)
                 if !self.img.isHidden { self.img.isHidden = true }
                 self.transitioning = false
@@ -215,6 +217,14 @@ final class MonitorVC: UIViewController {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { cleanupObs() }
         check()
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: go)
+    }
+
+    /// Fotogrammi persi dal lettore del monitor (somma della sessione)
+    private var droppedBase = 0
+    func droppedFrames() -> Int {
+        var n = droppedBase
+        for p in players { if let ev = p.currentItem?.accessLog()?.events { n += ev.reduce(0) { $0 + max(0, $1.numberOfDroppedVideoFrames) } } }
+        return n
     }
 
     /// Elemento senza traccia audio: il monitor non tocca mai l'audio (che esce dall'iPhone)

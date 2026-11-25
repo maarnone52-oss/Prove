@@ -48,6 +48,7 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWith
         var u = URLComponents(url: Bridge.base, resolvingAgainstBaseURL: false)!
         if monitorMode { u.queryItems = [URLQueryItem(name: "monitor", value: "1")] }
         w.load(URLRequest(url: u.url!))
+        if !monitorMode { startStats() }
         return w
     }
 
@@ -98,6 +99,22 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWith
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         if webView === monitor { monitorReady = false; notifyControl() }
         webView.reload()
+    }
+
+    // Diagnostica: ogni 3 secondi temperatura, memoria e fotogrammi persi sul monitor
+    private var statsTimer: Timer?
+    func startStats() {
+        statsTimer?.invalidate()
+        statsTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            let th: Int
+            switch ProcessInfo.processInfo.thermalState { case .nominal: th = 0; case .fair: th = 1; case .serious: th = 2; case .critical: th = 3; @unknown default: th = 0 }
+            var info = task_vm_info_data_t(); var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
+            let kr = withUnsafeMutablePointer(to: &info) { $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count) } }
+            let mem = kr == KERN_SUCCESS ? Int(info.phys_footprint / 1_048_576) : -1
+            let dropped = self.monitorVC?.droppedFrames() ?? -1
+            self.control?.evaluateJavaScript("window.nativeStats&&window.nativeStats({th:\(th),mem:\(mem),mdrop:\(dropped)})", completionHandler: nil)
+        }
     }
 
     func monitorDidDisconnect() {

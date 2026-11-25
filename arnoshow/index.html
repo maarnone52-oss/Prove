@@ -124,6 +124,7 @@ body.isplaying #go:not(:disabled){animation:ppBlinkW 1s ease-in-out infinite}
 #qprev .qth{position:absolute;inset:0;background:#2a2a2a center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px}
 #qprev .qn{position:absolute;left:4px;top:1px;font-weight:800;font-size:clamp(14px,30%,30px);line-height:1.1;color:#ef4444;text-shadow:0 0 4px rgba(0,0,0,.95);animation:numBlink 1s ease-in-out infinite}
 #qprev .ql{position:absolute;right:3px;bottom:2px;font-size:8px;font-weight:800;letter-spacing:.05em;color:#fff;background:rgba(239,68,68,.85);padding:1px 4px;border-radius:3px}
+#diag{position:absolute;right:4px;top:4px;z-index:6;background:rgba(0,0,0,.7);color:#fff;font:600 10px/1.35 -apple-system,system-ui,sans-serif;padding:4px 6px;border-radius:6px;pointer-events:none;white-space:pre}
 .tile.q{outline:3px dashed #ef4444;outline-offset:2px}
 body.isplaying .tile.on .num{animation:numBlink 1s ease-in-out infinite}
 .tile.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}
@@ -263,10 +264,10 @@ header .brand-text{display:inline-flex}
 <div id="prj"><select id="psel" aria-label="Progetto"></select><button id="pnew" type="button">Nuovo progetto</button><button id="pren" type="button">Rinomina progetto…</button><button id="pdel" type="button">Elimina progetto</button><button id="pexp" type="button" title="Salva il progetto (video, foto, audio e ordine) in un file">Salva progetto su file…</button><label id="pimpl" title="Apri un progetto salvato in un file" style="padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:12px;white-space:nowrap">Apri progetto da file…<input type="file" id="pimp" accept=".arnoshow,.zip,application/zip" hidden></label></div>
 <div id="pedit" hidden><input id="pname" maxlength="40" placeholder="Nome del progetto"><button id="pok" type="button">OK</button><button id="pno" type="button">Annulla</button></div>
 <div id="imp" hidden><div id="impt"></div><div id="impb"><div id="impf"></div></div></div>
-<video id="vout" playsinline webkit-playsinline x-webkit-airplay="allow"></video><button id="fsexit" type="button">✕ Esci da schermo intero</button><div id="curnum" hidden></div><div id="stage"><video id="v" playsinline webkit-playsinline x-webkit-airplay="allow"></video><canvas id="scr"></canvas><video id="v2" playsinline webkit-playsinline x-webkit-airplay="allow" muted preload="auto"></video><img id="ph" alt="" hidden><div id="audvis" hidden><div class="av-ico" id="audico">🎵</div><div class="av-nm" id="audnm"></div><div id="audsub" style="font-size:11px;opacity:.68;margin-top:2px" hidden>Traccia audio estratta da video</div></div><div id="wait"></div><div id="qprev" hidden><div class="qth"></div><div class="qn"></div><div class="ql">IN CODA</div></div></div>
+<video id="vout" playsinline webkit-playsinline x-webkit-airplay="allow"></video><button id="fsexit" type="button">✕ Esci da schermo intero</button><div id="curnum" hidden></div><div id="stage"><video id="v" playsinline webkit-playsinline x-webkit-airplay="allow"></video><canvas id="scr"></canvas><video id="v2" playsinline webkit-playsinline x-webkit-airplay="allow" muted preload="auto"></video><img id="ph" alt="" hidden><div id="audvis" hidden><div class="av-ico" id="audico">🎵</div><div class="av-nm" id="audnm"></div><div id="audsub" style="font-size:11px;opacity:.68;margin-top:2px" hidden>Traccia audio estratta da video</div></div><div id="wait"></div><div id="diag" hidden></div><div id="qprev" hidden><div class="qth"></div><div class="qn"></div><div class="ql">IN CODA</div></div></div>
 <div id="prog" aria-label="Avanzamento"><div id="pf"></div></div>
 <div id="bar"><span id="now">Nessun video in riproduzione</span><span id="tm">0:00 / 0:00</span><button id="mu" type="button" aria-label="Audio">🔊</button></div>
-<div id="ctl"><button id="pp" type="button">Pausa</button><button id="xfb" type="button" title="Passaggio tra una clip e l altra">Passaggio: stacco netto</button><button id="seqm" type="button" title="Sequenza numerica oppure manuale on air">Sequenza: numerica</button><button id="tap1" type="button" title="Avvia una clip con un solo tocco sulla miniatura (altrimenti doppio tocco)">Avvio con un tocco: Off</button><button id="cont" type="button" title="Riproduzione continua senza sosta">Senza sosta: Off</button><button id="pdur" type="button" title="Durata foto">Durata foto: ∞</button><button id="cap" type="button">Scegli miniatura</button><button id="fsbtn" type="button" title="Espandi il quadro di riproduzione a schermo intero" style="border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:0 10px;font-size:12px;font-family:inherit;height:38px;touch-action:manipulation;font-weight:600">Schermo intero</button><button id="delcur" type="button" aria-label="Elimina selezionato o trascina qui per eliminare" title="Elimina selezionato o trascina qui" disabled>🗑️</button></div>
+<div id="ctl"><button id="pp" type="button">Pausa</button><button id="xfb" type="button" title="Passaggio tra una clip e l altra">Passaggio: stacco netto</button><button id="seqm" type="button" title="Sequenza numerica oppure manuale on air">Sequenza: numerica</button><button id="tap1" type="button" title="Avvia una clip con un solo tocco sulla miniatura (altrimenti doppio tocco)">Avvio con un tocco: Off</button><button id="cont" type="button" title="Riproduzione continua senza sosta">Senza sosta: Off</button><button id="pdur" type="button" title="Durata foto">Durata foto: ∞</button><button id="cap" type="button">Scegli miniatura</button><button id="diagb" type="button">Diagnostica: Off</button><button id="fsbtn" type="button" title="Espandi il quadro di riproduzione a schermo intero" style="border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:0 10px;font-size:12px;font-family:inherit;height:38px;touch-action:manipulation;font-weight:600">Schermo intero</button><button id="delcur" type="button" aria-label="Elimina selezionato o trascina qui per eliminare" title="Elimina selezionato o trascina qui" disabled>🗑️</button></div>
 <div id="listwrap">
   <div id="list"></div>
   <div id="zrail" role="slider" aria-label="Dimensione miniature" aria-valuemin="60" aria-valuemax="260" aria-valuenow="130" tabindex="0">
@@ -292,13 +293,13 @@ window.warmUp=function(el,cb){(function(){
 
 })();};
 window.ArnoMix=function(cv){
-  var x=cv.getContext("2d"),A=null,B=null,dur=0,t0=0,cb=null,lite=false,lastD=0;
+  var x=cv.getContext("2d"),A=null,B=null,dur=0,t0=0,cb=null,lite=false,hot=false,lastD=0;
   function has(v){return v&&v.readyState>=2&&v.videoWidth>0;}
   function draw(v,al){var W=cv.width,H=cv.height,k=Math.min(W/v.videoWidth,H/v.videoHeight),w=v.videoWidth*k,h=v.videoHeight*k;x.globalAlpha=al;try{x.drawImage(v,(W-w)/2,(H-h)/2,w,h);}catch(e){}x.globalAlpha=1;}
   function fit(){var r=cv.getBoundingClientRect(),d=lite?0.75:Math.min(window.devicePixelRatio||1,1.5),w=Math.max(2,Math.round(r.width*d)),h=Math.max(2,Math.round(r.height*d));if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}}
   function endFade(){if(!B)return;var b=B,c=cb;B=null;cb=null;if(c)try{c(b);}catch(e){}}
   function loop(){
-    if(lite&&!B){var t=performance.now();if(t-lastD<62){requestAnimationFrame(loop);return;}lastD=t;}   // anteprima leggera (16 fps) quando il monitor esterno lavora
+    if((lite||hot)&&!B){var t=performance.now();if(t-lastD<(hot?125:62)){requestAnimationFrame(loop);return;}lastD=t;}   // anteprima leggera (16 fps) quando il monitor esterno lavora
     fit();
     if(A){
       if(!A._rdy){if(B&&has(B)){x.fillStyle="#000";x.fillRect(0,0,cv.width,cv.height);draw(B,1);}}
@@ -328,6 +329,7 @@ window.ArnoMix=function(cv){
     cut:function(el,ms,onDone){if(A===el)return;endFade();B=A;A=el;dur=ms||0;cb=onDone||null;armReady(el);if(!B){dur=0;}},
     busy:function(){return !!B;},
     setLite:function(on){lite=!!on;},
+    setHot:function(on){hot=!!on;},
     clear:function(){endFade();A=null;x.fillStyle="#000";x.fillRect(0,0,cv.width,cv.height);}
   };
 };
@@ -1545,6 +1547,15 @@ pimp.addEventListener("change",function(){
   b.addEventListener("click",function(){seqManual=!seqManual;if(!seqManual)qItem=null;try{localStorage.setItem("vpseq",seqManual?"manual":"num");}catch(e){}u();render();});})();
 (function(){var b=document.getElementById("xfb"),L=[0,0.5,1,2];function u(){b.textContent="Passaggio: "+(xfade?"dissolvenza "+String(xfade).replace(".",",")+" s":"stacco netto");b.classList.toggle("on",xfade>0);}u();
   b.addEventListener("click",function(){var k=L.indexOf(xfade);xfade=L[(k+1)%L.length];try{localStorage.setItem("vpxf",String(xfade));}catch(e){}u();});})();
+// Diagnostica: temperatura, memoria, fotogrammi persi (iPhone e monitor)
+(function(){var on=false,b=document.getElementById("diagb"),box=document.getElementById("diag"),ns=null,TH=["normale","tiepido","caldo","molto caldo"];
+  window.nativeStats=function(o){ns=o;if(MIX)MIX.setHot(o.th>=2);draw();};
+  function draw(){if(!on)return;var q=null;try{q=v.getVideoPlaybackQuality&&v.getVideoPlaybackQuality();}catch(e){}
+    var t="iPhone persi: "+(q?q.droppedVideoFrames:"–");
+    if(ns){t+="\nMonitor persi: "+(ns.mdrop>=0?ns.mdrop:"–")+"\nTemperatura: "+TH[ns.th]+"\nMemoria app: "+ns.mem+" MB";}
+    box.textContent=t;}
+  setInterval(draw,1000);
+  b.addEventListener("click",function(){on=!on;b.textContent="Diagnostica: "+(on?"On":"Off");box.hidden=!on;draw();});})();
 // === BARRA DEI MENU (stile Mac) ===
 (function(){
   function $(id){return document.getElementById(id);}
@@ -1554,7 +1565,7 @@ pimp.addEventListener("change",function(){
   var M={
     mfile:[hd("Progetto"),$("psel"),$("pnew"),$("pren"),$("pdel"),sep(),$("pexp"),$("pimpl"),sep(),hd("Aggiungi"),lab("file"),lab("filep"),lab("filea"),lab("fileva")],
     medit:[$("und"),sep(),$("cap"),$("delcur")],
-    mview:[$("thm"),$("bgpick"),sep(),$("fsbtn")],
+    mview:[$("thm"),$("bgpick"),sep(),$("fsbtn"),$("diagb")],
     mplay:[$("seqm"),$("xfb"),$("cont"),$("tap1"),$("pdur"),sep(),$("ap")]
   };
   var trashHome=$("delcur").parentNode,trashNext=$("delcur").nextSibling;
@@ -1574,7 +1585,7 @@ pimp.addEventListener("change",function(){
   document.addEventListener("pointerdown",function(e){if(!dd.hidden&&!dd.contains(e.target)&&!bar.contains(e.target))close();},true);
   dd.addEventListener("click",function(e){
     var t=e.target.closest("button,label");if(!t||t.tagName==="SELECT")return;
-    if(t.id==="pdel"||t.id==="pexp"||t.id==="pdur"||t.id==="cont"||t.id==="thm"||t.id==="tap1"||t.id==="seqm"||t.id==="xfb")return; // restano aperti per vedere l'effetto
+    if(t.id==="pdel"||t.id==="pexp"||t.id==="pdur"||t.id==="cont"||t.id==="thm"||t.id==="tap1"||t.id==="seqm"||t.id==="xfb"||t.id==="diagb")return; // restano aperti per vedere l'effetto
     setTimeout(close,0);
   });
   $("psel").addEventListener("change",close);
