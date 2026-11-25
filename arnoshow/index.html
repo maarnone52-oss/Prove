@@ -1586,6 +1586,16 @@ pimp.addEventListener("change",function(){
   place();window.addEventListener("resize",place);window.addEventListener("orientationchange",function(){setTimeout(place,250);});
   setTimeout(place,400);
 })();
+// Senza sosta: il passaggio parte poco PRIMA della fine della clip (e prima ancora della durata della dissolvenza),
+// così la clip uscente scorre ancora mentre l'entrante prende il via: niente incertezze nei passaggi automatici
+(function(){var advFor=null;
+  setInterval(function(){
+    if(!continuous||cur<0||!items[cur]||items[cur].kind==="photo"||v.paused||!isFinite(v.duration)||!v.duration)return;
+    if(advFor===items[cur])return;
+    var lead=Math.max(xfade||0,0)+0.4;
+    if(v.duration-v.currentTime<=lead&&hasNextItem()){advFor=items[cur];goNext();}
+  },50);
+})();
 fillProj();openDB(function(){loadBgPhotoDB();loadAll();});
 })();
 </script>
