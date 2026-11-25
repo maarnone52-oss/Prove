@@ -132,9 +132,11 @@ final class MonitorVC: UIViewController {
         if !playing { if p.rate != 0 { p.pause() }; if now.isFinite, abs(now - t) > 0.15 { p.seek(to: CMTime(seconds: t, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) }; return }
         guard now.isFinite else { return }
         let d = now - t
-        if (m["seek"] as? Bool) == true || abs(d) > 2.0 {   // spostamento con la barra, o molto fuori tempo: si salta   // solo se molto fuori tempo si salta
-            p.seek(to: CMTime(seconds: t, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
-            p.rate = 1
+        if (m["seek"] as? Bool) == true || abs(d) > 2.0 {   // spostamento con la barra, o molto fuori tempo: si salta, poi si riparte
+            p.pause()
+            p.seek(to: CMTime(seconds: t, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) { _ in
+                DispatchQueue.main.async { p.preroll(atRate: 1) { _ in DispatchQueue.main.async { p.rate = 1 } } }
+            }
         } else if abs(d) > 0.08 {   // altrimenti si recupera piano, senza scatti
             p.rate = Float(1 - max(-0.06, min(0.06, d * 0.5)))
         } else if p.rate != 1 { p.rate = 1 }
