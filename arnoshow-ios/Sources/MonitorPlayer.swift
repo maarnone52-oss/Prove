@@ -107,7 +107,7 @@ final class MonitorVC: UIViewController {
         guard id != curId, id != preId, let u = MediaStore.url(for: id) else { return }
         let idx = 1 - active
         let p = players[idx]
-        p.replaceCurrentItem(with: AVPlayerItem(url: u))
+        p.replaceCurrentItem(with: MonitorVC.silentItem(u))
         p.pause()
         setOpacity(layers[idx], 0, 0)
         preId = id
@@ -150,7 +150,7 @@ final class MonitorVC: UIViewController {
         let idx = 1 - active
         let p = players[idx], l = layers[idx]
         let oldIdx = active
-        if preId != id { p.replaceCurrentItem(with: AVPlayerItem(url: u)) }
+        if preId != id { p.replaceCurrentItem(with: MonitorVC.silentItem(u)) }
         preId = nil
         let t = (m["time"] as? Double) ?? 0
         if t > 0.3 { p.seek(to: CMTime(seconds: t, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) }
@@ -184,6 +184,21 @@ final class MonitorVC: UIViewController {
                p.observe(\.timeControlStatus, options: [.new]) { _, _ in check() }]
         check()
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: go)
+    }
+
+    /// Elemento senza traccia audio: il monitor non tocca mai l'audio (che esce dall'iPhone)
+    static func silentItem(_ u: URL) -> AVPlayerItem {
+        let it = AVPlayerItem(url: u)
+        it.audioTimePitchAlgorithm = .varispeed
+        let mix = AVMutableAudioMix()
+        it.audioMix = mix
+        Task { @MainActor in
+            if let tracks = try? await it.asset.loadTracks(withMediaType: .audio) {
+                mix.inputParameters = tracks.map { t in let p = AVMutableAudioMixInputParameters(track: t); p.setVolume(0, at: .zero); return p }
+                it.audioMix = mix
+            }
+        }
+        return it
     }
 
     private func setOpacity(_ l: AVPlayerLayer, _ v: Float, _ dur: Double) {
