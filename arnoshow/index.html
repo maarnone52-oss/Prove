@@ -107,6 +107,11 @@ body.dragging #delcur.hot{background:var(--del);border-color:var(--del);color:#f
 
 .tile{position:relative;display:flex;flex-direction:column;background:var(--card);border:3px solid var(--mut);box-shadow:0 2px 6px rgba(0,0,0,.25);border-radius:12px;overflow:hidden;cursor:pointer;min-width:0}
 .tile.sel{border-color:#ffffff;box-shadow:0 0 0 2px rgba(255,255,255,.55)}
+#curnum{position:fixed;z-index:32;font-weight:800;font-size:clamp(34px,11vw,56px);line-height:1;color:var(--fg);font-variant-numeric:tabular-nums;pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,.5)}
+#curnum.in{font-size:34px;color:#fff;text-shadow:0 0 6px rgba(0,0,0,.95)}
+body.isplaying #curnum{color:var(--del)}
+@keyframes numBlink{0%,100%{color:#ef4444;opacity:1}50%{color:#ef4444;opacity:.15}}
+body.isplaying .tile.on .num{animation:numBlink 1s ease-in-out infinite}
 .tile.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}
 .tile.drag{z-index:40;pointer-events:none;opacity:.92;box-shadow:0 10px 26px rgba(0,0,0,.5);transition:border-color .12s ease,opacity .12s ease}
 .tile.drag.trash{border-color:var(--del);opacity:.78}
@@ -244,7 +249,7 @@ header .brand-text{display:inline-flex}
 <div id="prj"><select id="psel" aria-label="Progetto"></select><button id="pnew" type="button">Nuovo progetto</button><button id="pren" type="button">Rinomina progetto…</button><button id="pdel" type="button">Elimina progetto</button><button id="pexp" type="button" title="Salva il progetto (video, foto, audio e ordine) in un file">Salva progetto su file…</button><label id="pimpl" title="Apri un progetto salvato in un file" style="padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:12px;white-space:nowrap">Apri progetto da file…<input type="file" id="pimp" accept=".arnoshow,.zip,application/zip" hidden></label></div>
 <div id="pedit" hidden><input id="pname" maxlength="40" placeholder="Nome del progetto"><button id="pok" type="button">OK</button><button id="pno" type="button">Annulla</button></div>
 <div id="imp" hidden><div id="impt"></div><div id="impb"><div id="impf"></div></div></div>
-<video id="vout" playsinline webkit-playsinline x-webkit-airplay="allow"></video><button id="fsexit" type="button">✕ Esci da schermo intero</button><div id="stage"><video id="v" playsinline webkit-playsinline x-webkit-airplay="allow"></video><img id="ph" alt="" hidden><div id="audvis" hidden><div class="av-ico" id="audico">🎵</div><div class="av-nm" id="audnm"></div><div id="audsub" style="font-size:11px;opacity:.68;margin-top:2px" hidden>Traccia audio estratta da video</div></div><div id="wait"></div></div>
+<video id="vout" playsinline webkit-playsinline x-webkit-airplay="allow"></video><button id="fsexit" type="button">✕ Esci da schermo intero</button><div id="curnum" hidden></div><div id="stage"><video id="v" playsinline webkit-playsinline x-webkit-airplay="allow"></video><img id="ph" alt="" hidden><div id="audvis" hidden><div class="av-ico" id="audico">🎵</div><div class="av-nm" id="audnm"></div><div id="audsub" style="font-size:11px;opacity:.68;margin-top:2px" hidden>Traccia audio estratta da video</div></div><div id="wait"></div></div>
 <div id="prog" aria-label="Avanzamento"><div id="pf"></div></div>
 <div id="bar"><span id="now">Nessun video in riproduzione</span><span id="tm">0:00 / 0:00</span><button id="mu" type="button" aria-label="Audio">🔊</button></div>
 <div id="ctl"><button id="pp" type="button">Pausa</button><button id="tap1" type="button" title="Avvia una clip con un solo tocco sulla miniatura (altrimenti doppio tocco)">Avvio con un tocco: Off</button><button id="cont" type="button" title="Riproduzione continua senza sosta">Senza sosta: Off</button><button id="pdur" type="button" title="Durata foto">Durata foto: ∞</button><button id="cap" type="button">Scegli miniatura</button><button id="fsbtn" type="button" title="Espandi il quadro di riproduzione a schermo intero" style="border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:0 10px;font-size:12px;font-family:inherit;height:38px;touch-action:manipulation;font-weight:600">Schermo intero</button><button id="delcur" type="button" aria-label="Elimina selezionato o trascina qui per eliminare" title="Elimina selezionato o trascina qui" disabled>🗑️</button></div>
@@ -359,6 +364,7 @@ pdur.addEventListener("click",function(){
 
 function setStagePlaying(on){
   stage.classList.toggle("playing",!!on);
+  document.body.classList.toggle("isplaying",!!on);
 }
 
 function clearPhotoTimer(){
@@ -515,6 +521,7 @@ function pump(){
 
 function render(){
   if(drag){return;}
+  updCurNum();
   updateGo();
   if(selIdx>=items.length)selIdx=-1;delcur.disabled=((cur<0||cur>=items.length)&&selIdx<0);
   list.innerHTML="";
@@ -796,6 +803,12 @@ function tileTap(i){
   if(oneTap||(i===lastTapI&&n-lastTapT<350)){lastTapI=-1;selIdx=-1;play(i);return;}
   lastTapI=i;lastTapT=n;selIdx=i;render();
 }
+function updCurNum(){var e=document.getElementById("curnum");if(!e)return;var it=cur>=0?items[cur]:null;e.textContent=it?(nums[it.id]||cur+1):"";e.hidden=!it;placeCurNum();}
+function placeCurNum(){var e=document.getElementById("curnum");if(!e||e.hidden)return;var r=stage.getBoundingClientRect();
+  var por=window.matchMedia("(orientation:portrait)").matches;
+  if(por&&r.left>40){e.classList.remove("in");e.style.left=Math.max(4,r.left-e.offsetWidth-10)+"px";e.style.top=(r.top+r.height/2-e.offsetHeight/2)+"px";}
+  else{e.classList.add("in");e.style.left=(r.left+8)+"px";e.style.top=(r.top+6)+"px";}}
+window.addEventListener("resize",function(){setTimeout(placeCurNum,60);});
 function fmt(s){if(!isFinite(s))s=0;var m=Math.floor(s/60),x=Math.floor(s%60);return m+":"+(x<10?"0":"")+x;}
 function updateGo(){
   var nextIdx=cur<0?0:cur+1;
