@@ -158,7 +158,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.1.1';
+const VERSION='0.1.2';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -173,6 +173,7 @@ const saveCfg=()=>{try{localStorage.setItem('arnostage.cfg',JSON.stringify(cfg))
 const uid=()=>'f'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const dbg=db=>db<=-60?0:Math.pow(10,db/20);
 const fmt=t=>{t=Math.max(0,t||0);const m=Math.floor(t/60),s=Math.floor(t%60);return m+':'+(s<10?'0':'')+s;};
+const fmtL=t=>{const m=Math.floor(t/60),s=t-m*60;return m+':'+(s<10?'0':'')+s.toFixed(2);};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function status(s,err){const e=$('status');e.textContent=s;e.classList.toggle('err',!!err);}
 function prog(f){$('prog').style.transform='scaleX('+(f==null?0:Math.max(0,Math.min(1,f)))+')';}
@@ -246,7 +247,7 @@ function renderMix(){
   if(!s){m.innerHTML='<div class="empty">Importa un progetto ARNOCLICK (File › Importa) o dei file audio.</div>';return;}
   let h='';
   s.tracks.forEach((t,i)=>{h+=`<div class="strip${isClick(t.name)?' click':''}" data-i="${i}">
-    <div class="nm"><b>${esc(t.name)}</b><span class="db">${t.db<=-60?'-∞':(t.db>0?'+':'')+t.db.toFixed(1)} dB</span></div>
+    <div class="nm"><b>${esc(t.name)}</b><span class="lbl" style="flex:none">${t.dur?"⏱ "+fmtL(t.dur):''}</span><span class="db">${t.db<=-60?'-∞':(t.db>0?'+':'')+t.db.toFixed(1)} dB</span></div>
     <div class="tg"><button class="m${t.mute?' on':''}" data-a="mute">M</button><button class="s${t.solo?' on':''}" data-a="solo">S</button>
       <select data-a="out">${outOptions(t.out)}</select><button class="x" data-a="del" title="Togli la traccia dal brano">✕</button></div>
     <div class="fr"><span class="lbl">Vol</span><input type="range" data-a="db" min="-60" max="6" step="0.5" value="${t.db}"><span class="lbl">Pan</span><input type="range" class="pan" data-a="pan" min="-1" max="1" step="0.05" value="${t.pan||0}" title="Panorama (doppio tocco: al centro)"></div>
@@ -319,7 +320,7 @@ async function loadSong(i,autoplay){
       await ensureNative(ids.concat(s.video?[s.video.fid]:[]));
       let d=0;
       for(let k=0;k<ids.length;k++){status('Preparo «'+s.tracks[k].name+'» ('+(k+1)+'/'+ids.length+')…');prog((k+.5)/ids.length);
-        const r=await eng({op:'load',id:ids[k]});if(!r||!r.ok){status('Non riesco a leggere «'+s.tracks[k].name+'»',true);}else d=Math.max(d,r.dur);}
+        const r=await eng({op:'load',id:ids[k]});if(!r||!r.ok){status('Non riesco a leggere «'+s.tracks[k].name+'»',true);}else{d=Math.max(d,r.dur);s.tracks[k].dur=r.dur;}}
       prog(null);
       const r=await eng({op:'song',strips:s.tracks.map(t=>Object.assign({id:t.fid},stripMsg(s,t)))});
       dur=r&&r.dur||d;
@@ -327,10 +328,10 @@ async function loadSong(i,autoplay){
       // tiene in memoria il brano attuale e il successivo
       const nx=songs[i+1];eng({op:'keep',ids:ids.concat(nx?nx.tracks.map(t=>t.fid):[])});
     }else{
-      let d=0;for(const id of ids){try{d=Math.max(d,(await waLoad(id)).duration);}catch(e){status('Non riesco a leggere un file audio',true);}}
+      let d=0;for(const t of s.tracks){try{t.dur=(await waLoad(t.fid)).duration;d=Math.max(d,t.dur);}catch(e){status('Non riesco a leggere un file audio',true);}}
       dur=d;
     }
-    s.dur=dur;saveSongs();renderList();
+    s.dur=dur;saveSongs();renderList();renderMix();
     await setVideo(s);
     updTime();
     status('«'+s.name+'» pronto · '+s.tracks.length+' tracce'+(s.video?' + video':'')+'.');
@@ -353,7 +354,9 @@ async function setVideo(s){
 }
 let lastMon=0;
 function syncVideo(force){const s=songs[cur];if(!s||!s.video)return;const vt=pos-(s.video.off||0)/1000;
-  if(vUrl){if(vt<0||!playing){if(!vid.paused)vid.pause();if(Math.abs(vid.currentTime-Math.max(0,vt))>0.08)vid.currentTime=Math.max(0,vt);}
+  const vd=vid.duration;
+  if(vUrl&&isFinite(vd)&&vd>0&&vt>=vd-0.05){if(!vid.paused)vid.pause();vid.style.visibility='hidden';}
+  else if(vUrl){vid.style.visibility='';if(vt<0||!playing){if(!vid.paused)vid.pause();if(Math.abs(vid.currentTime-Math.max(0,vt))>0.08)vid.currentTime=Math.max(0,vt);}
     else{if(vid.paused)vid.play().catch(()=>{});if(force||Math.abs(vid.currentTime-vt)>0.25)vid.currentTime=vt;}}
   const now=performance.now();if(force||now-lastMon>250){lastMon=now;mon({t:'state',time:vt,playing,seek:!!force});}}
 

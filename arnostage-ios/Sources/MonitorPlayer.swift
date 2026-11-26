@@ -87,6 +87,7 @@ final class MonitorVC: UIViewController {
         guard let u = MediaStore.url(for: id) else { pending = m; info.text = "Preparo il video per il monitor…"; info.isHidden = false; return }
         pending = nil; info.isHidden = true
         player.replaceCurrentItem(with: MonitorVC.silentItem(u))
+        layer.isHidden = false
         curId = id
         let t = (m["time"] as? Double) ?? 0
         player.seek(to: CMTime(seconds: max(0, t), preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
@@ -95,8 +96,16 @@ final class MonitorVC: UIViewController {
 
     /// Segue il tempo dell'audio: piccoli scarti si recuperano piano, grandi con un salto.
     private func state(_ m: [String: Any]) {
-        guard curId != nil, player.currentItem != nil else { return }
+        guard curId != nil, let item = player.currentItem else { return }
         let t = (m["time"] as? Double) ?? 0
+        // finita la clip (o non ancora iniziata): nero fermo, niente salti in loop
+        let vd = item.duration.seconds
+        if vd.isFinite && vd > 0 && t >= vd - 0.05 {
+            if player.rate != 0 { player.pause() }
+            if !layer.isHidden { CATransaction.begin(); CATransaction.setDisableActions(true); layer.isHidden = true; CATransaction.commit() }
+            return
+        }
+        if layer.isHidden { CATransaction.begin(); CATransaction.setDisableActions(true); layer.isHidden = false; CATransaction.commit() }
         let playing = ((m["playing"] as? Bool) ?? false) && t >= 0
         let now = player.currentTime().seconds
         let tt = max(0, t)
