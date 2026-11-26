@@ -111,6 +111,10 @@ body.mac #zoom{position:static;display:flex}body.mac #zoom .hb{box-shadow:none;m
 #pad:not(.size) .zm{visibility:hidden}
 #pad .pmn{font-size:20px;font-weight:900;color:var(--cy)}
 #pad.side{border-color:#ff5fd2;background:rgba(40,2,30,.9)}
+#pad.rot{border-color:#3dff8a;background:rgba(2,36,15,.9)}
+#pad.rot .pm{color:#03240f;background:linear-gradient(180deg,#9dffbf,#22c55e)}
+#pad.rot [data-d]{color:#7dffb0}
+#padMenu{max-height:calc(100% - 220px);overflow:auto}
 #pad.side .pm{color:#2a0020;background:linear-gradient(180deg,#ff9fe6,#e040b8)}
 #pad.side [data-d]{color:#ff9fe6}
 #pad [data-d].off{opacity:.22;pointer-events:none}
@@ -231,11 +235,13 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
   </div>
   <div id="pad"><button class="hb pm" id="padMode" aria-label="Cambia modo delle frecce"></button><button class="hb" data-d="0,-1" aria-label="Su">▲</button><button class="hb pmn" id="padMenuB" aria-label="Opzioni della croce" title="Modo, lato e passo">⋯</button><button class="hb" data-d="-1,0" aria-label="Sinistra">◀</button><button class="hb st" id="padSt" aria-label="Passo"></button><button class="hb" data-d="1,0" aria-label="Destra">▶</button><button class="hb zm" data-zs="-1" aria-label="Rimpicciolisci" title="Rimpicciolisci in proporzione">−</button><button class="hb" data-d="0,1" aria-label="Giù">▼</button><button class="hb zm" data-zs="1" aria-label="Ingrandisci" title="Ingrandisci in proporzione">＋</button></div>
   <div id="padMenu"><div class="pmh">Croce delle frecce<button class="hb" id="pmX">✓</button></div>
-    <span class="lbl">Modo</span><div class="chips"><button class="hb" data-pm="move">✥ Sposta</button><button class="hb" data-pm="size">⤢ Misura</button><button class="hb" data-pm="side">⇲ Lati</button></div>
+    <span class="lbl">Modo</span><div class="chips"><button class="hb" data-pm="move">✥ Sposta</button><button class="hb" data-pm="size">⤢ Misura</button><button class="hb" data-pm="side">⇲ Lati</button><button class="hb" data-pm="rot">⟳ Ruota</button></div>
     <p class="hint" id="pmHint"></p>
     <span class="lbl">Lato da spostare (modo Lati)</span>
     <div class="pmx"><span></span><button class="hb" data-ps="t">▲ sopra</button><span></span><button class="hb" data-ps="l">◀ sinistra</button><span class="pmc">⬚</span><button class="hb" data-ps="r">destra ▶</button><span></span><button class="hb" data-ps="b">▼ sotto</button><span></span></div>
     <span class="lbl">Passo</span><div class="chips"><button class="hb" data-pp="1">1 punto</button><button class="hb" data-pp="8">8 punti</button></div>
+    <span class="lbl">Rotazione</span><div class="chips"><button class="hb" data-pr="1">1°</button><button class="hb" data-pr="5">5°</button><button class="hb" data-pr="15">15°</button><button class="hb" data-pr="45">45°</button><button class="hb" data-pr="90">90°</button></div>
+    <div class="chips" style="margin-top:6px"><button class="hb" data-rq="-90">⟲ 90°</button><button class="hb" data-rq="90">⟳ 90°</button><button class="hb" data-rq="180">↻ 180°</button><button class="hb" data-rq="0">⦸ Raddrizza</button></div>
   </div>
   <div id="zord"><button class="hb" data-z="bot" title="In fondo">⤓</button><button class="hb" data-z="down" title="Porta sotto">↓</button><button class="hb" data-z="up" title="Porta sopra">↑</button><button class="hb" data-z="top" title="In primo piano">⤒</button><span id="zlv"></span></div>
   <div id="nav"><button class="hb" data-nv="prev" title="Elemento precedente (⇧Tab)">‹</button><span id="navN">–</span><button class="hb" data-nv="next" title="Elemento successivo (Tab)">›</button><button class="hb" data-nv="up" title="Esci al contenitore">⤴</button><button class="hb" data-nv="in" title="Entra nel gruppo">⤵</button></div>
@@ -256,7 +262,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.9.5';
+var VER='0.9.6';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -328,7 +334,7 @@ LIB.forEach(function(x){if(!KN[x.k])KN[x.k]=x.n+' (nuovo)'});
 function lsGet(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 var S=Object.assign({app:'arnovideo',dev:'iphone15',lvl:'P',grid:8,snap:true,showGrid:true,zoom:0,ascroll:true},lsGet('arnocanvas:set',{}));
-function saveSet(){lsSet('arnocanvas:set',{app:S.app,dev:S.dev,lvl:S.lvl,grid:S.grid,snap:S.snap,showGrid:S.showGrid,zoom:S.zoom,fine:!!S.fine,ascroll:S.ascroll!==false,cguide:S.cguide!==false,pmode:S.pmode==='size'||S.pmode==='side'?S.pmode:'move',pside:S.pside||'r',later:!!S.later})}
+function saveSet(){lsSet('arnocanvas:set',{app:S.app,dev:S.dev,lvl:S.lvl,grid:S.grid,snap:S.snap,showGrid:S.showGrid,zoom:S.zoom,fine:!!S.fine,ascroll:S.ascroll!==false,cguide:S.cguide!==false,pmode:S.pmode==='size'||S.pmode==='side'||S.pmode==='rot'?S.pmode:'move',rstep:S.rstep||15,pside:S.pside||'r',later:!!S.later})}
 function A(){for(var i=0;i<APPS.length;i++)if(APPS[i].k===S.app)return APPS[i];return APPS[0]}
 function DV(){for(var i=0;i<DEVS.length;i++)if(DEVS[i].k===S.dev)return DEVS[i];return DEVS[0]}
 function mkey(){return 'arnocanvas:m:'+S.app+':'+S.dev}
@@ -426,16 +432,19 @@ function restoreAll(){
   MOVED=[];
   Array.prototype.forEach.call(D.querySelectorAll('[data-cvn],[data-cvprev]'),function(e){if(e.parentNode)e.parentNode.removeChild(e)});
 }
-function setTS(el,dx,dy,s){
-  var st=el.style;dx=dx||0;dy=dy||0;s=s||1;
-  if(s!==1)st.transformOrigin='0 0';
-  if(IND){st.translate=(dx||dy)?dx+'px '+dy+'px':'';st.scale=s!==1?String(s):''}
-  else{var t='';if(dx||dy)t+='translate('+dx+'px,'+dy+'px) ';if(s!==1)t+='scale('+s+')';if(t)st.transform=t}
+function setTS(el,dx,dy,s,rot){
+  var st=el.style;dx=dx||0;dy=dy||0;s=s||1;rot=rot||0;
+  if(s!==1||rot)st.transformOrigin='0 0';
+  if(rot){ // gira attorno al proprio centro: si corregge lo spostamento
+    var a=rot*Math.PI/180,cx=el.offsetWidth*s/2,cy=el.offsetHeight*s/2,ca=Math.cos(a),sa=Math.sin(a);
+    dx+=cx-(ca*cx-sa*cy);dy+=cy-(sa*cx+ca*cy);dx=Math.round(dx*10)/10;dy=Math.round(dy*10)/10}
+  if(IND){st.translate=(dx||dy)?dx+'px '+dy+'px':'';st.scale=s!==1?String(s):'';st.rotate=rot?rot+'deg':''}
+  else{var t='';if(dx||dy)t+='translate('+dx+'px,'+dy+'px) ';if(rot)t+='rotate('+rot+'deg) ';if(s!==1)t+='scale('+s+')';if(t)st.transform=t}
 }
 function applyItem(ref){
   var it=M.I[ref],el=resolve(ref);if(!it||!el)return;
   touch(ref,el);var st=el.style;
-  if(it.dx||it.dy||(it.s&&it.s!==1))setTS(el,it.dx,it.dy,it.s);
+  if(it.dx||it.dy||(it.s&&it.s!==1)||it.rot)setTS(el,it.dx,it.dy,it.s,it.rot);
   if(it.w!=null){imp(st,'box-sizing','border-box');imp(st,'width',it.w+'px');imp(st,'min-width',it.w+'px');imp(st,'max-width','none');imp(st,'flex','none')}
   if(it.h!=null){imp(st,'box-sizing','border-box');imp(st,'height',it.h+'px');imp(st,'min-height',it.h+'px');imp(st,'max-height','none')}
   if(it.hide)imp(st,'display','none');
@@ -580,7 +589,7 @@ function posP(ref){
   else{st.removeProperty('height');st.removeProperty('min-height');st.removeProperty('overflow')}
   if(P.det)imp(st,'overflow','visible');
   if(P.z)imp(st,'z-index',String(P.z));
-  setTS(el,0,0,P.s||1);
+  setTS(el,0,0,P.s||1,P.rot||0);
 }
 
 /* ---------- applica tutto il modello ---------- */
@@ -748,6 +757,7 @@ function dimTxt(b){
   var r=b.r,t=Math.round(r.x)+', '+Math.round(r.y)+' · '+Math.round(r.w)+'×'+Math.round(r.h);
   var s=S.lvl==='P'?(M.P[b.ref]&&M.P[b.ref].s):(M.I[b.ref]&&M.I[b.ref].s);
   if(s&&s!==1)t+=' · '+Math.round(s*100)+'%';
+  var ro=S.lvl==='P'?(M.P[b.ref]&&M.P[b.ref].rot):(M.I[b.ref]&&M.I[b.ref].rot);if(ro)t+=' · '+ro+'°';
   return t;
 }
 var rafM=0;function remeasure(){if(rafM)return;rafM=requestAnimationFrame(function(){rafM=0;measure();render()})}
@@ -1327,10 +1337,14 @@ function updPadMenu(){
   $$('#padMenu [data-pm]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-pm')===(S.pmode||'move'))});
   $$('#padMenu [data-ps]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-ps')===(S.pside||'r'))});
   $$('#padMenu [data-pp]').forEach(function(b){b.classList.toggle('on',+b.getAttribute('data-pp')===stepVal())});
-  $('#pmHint').innerHTML=S.pmode==='side'?'<b>Lati</b>: le frecce spostano solo il lato scelto, verso fuori (allarga) o verso dentro (stringe); il lato opposto resta fermo.':S.pmode==='size'?'<b>Misura</b>: ▶ allarga, ◀ stringe, ▲ alza, ▼ abbassa con il centro fermo; − ＋ in proporzione.':'<b>Sposta</b>: le frecce spostano l\'elemento.';
+  $$('#padMenu [data-pr]').forEach(function(b){b.classList.toggle('on',+b.getAttribute('data-pr')===rotStep())});
+  $('#pmHint').innerHTML=S.pmode==='rot'?'<b>Ruota</b>: ◀ gira a sinistra, ▶ gira a destra del passo di rotazione scelto qui sotto; l\'elemento gira attorno al suo centro.':S.pmode==='side'?'<b>Lati</b>: le frecce spostano solo il lato scelto, verso fuori (allarga) o verso dentro (stringe); il lato opposto resta fermo.':S.pmode==='size'?'<b>Misura</b>: ▶ allarga, ◀ stringe, ▲ alza, ▼ abbassa con il centro fermo; − ＋ in proporzione.':'<b>Sposta</b>: le frecce spostano l\'elemento.';
 }
-function updPad(){var sd=S.pmode==='side',ax=(S.pside==='t'||S.pside==='b')?'y':'x';
-  $('#pad').classList.toggle('side',sd);
+function rotStep(){return S.rstep||15}
+function updPad(){var sd=S.pmode==='side',ro=S.pmode==='rot',ax=(S.pside==='t'||S.pside==='b')?'y':'x';
+  $('#pad').classList.toggle('side',sd);$('#pad').classList.toggle('rot',ro);
+  if(ro){$('#pad').classList.remove('size');$$('#pad [data-d]').forEach(function(b){var d=b.getAttribute('data-d'),isX=d==='1,0'||d==='-1,0';b.classList.toggle('off',!isX);b.classList.toggle('act',isX)});
+    $('#padMode').innerHTML='<b>⟳</b><br>'+rotStep()+'°';$('#padMode').title='◀ ▶ ruotano di '+rotStep()+'°: tocca per cambiare modo · ⋯ per il passo';updPadMenu();return}
   $$('#pad [data-d]').forEach(function(b){var d=b.getAttribute('data-d'),isX=d==='1,0'||d==='-1,0';b.classList.toggle('off',sd&&(ax==='x')!==isX);b.classList.toggle('act',sd&&(ax==='x')===isX)});
   if(sd){$('#pad').classList.remove('size');$('#padMode').innerHTML='<b>⇲</b><br>LATO '+SIDEA[S.pside||'r'];$('#padMode').title='Le frecce spostano solo il lato '+(SIDEN[S.pside||'r']||'').toLowerCase()+': tocca per cambiare modo · ⋯ per scegliere il lato';updPadMenu();return}
   updPadMenu();var sz=S.pmode==='size';$('#pad').classList.toggle('size',sz);$('#padMode').innerHTML=sz?'<b>⤢</b><br>MISURA':'<b>✥</b><br>SPOSTA';$('#padMode').title=sz?'Le frecce cambiano le misure: tocca per tornare a spostare':'Le frecce spostano: tocca per cambiare le misure'}
@@ -1349,6 +1363,14 @@ function sizeOnce(dir,st){ // modo MISURA: ▶ allarga, ◀ stringe, ▲ alza, �
       it.dx=r1((it.dx||0)+(cx-(q2.x+q2.w/2))/K);it.dy=r1((it.dy||0)+(cy-(q2.y+q2.h/2))/K);if(!it.dx)delete it.dx;if(!it.dy)delete it.dy;restoreOne(r);applyItem(r)}
   });
   remeasure();keepVisible();
+}
+function normDeg(a){a=Math.round(a*10)/10%360;if(a>180)a-=360;if(a<=-180)a+=360;return a}
+function rotOnce(d,abs){ // ruota la selezione di d gradi (o la porta a abs)
+  if(!d&&abs==null)return;
+  selList().forEach(function(r){var el=resolve(r);if(!el||!vis(el))return;
+    if(S.lvl==='P'&&M.P[r]){var P=M.P[r];P.rot=normDeg(abs!=null?abs:(P.rot||0)+d);if(!P.rot)delete P.rot;posP(r)}
+    else if(S.lvl!=='P'){var it=M.I[r]||(M.I[r]={});it.rot=normDeg(abs!=null?abs:(it.rot||0)+d);if(!it.rot)delete it.rot;restoreOne(r);applyItem(r)}});
+  remeasure();
 }
 function sideOnce(dir,st){ // modo LATI: si muove solo il lato scelto, quello opposto resta fermo
   var sd=S.pside||'r',d=(sd==='r'||sd==='l')?dir[0]*st:dir[1]*st;if(!d)return;
@@ -1370,6 +1392,7 @@ function sideOnce(dir,st){ // modo LATI: si muove solo il lato scelto, quello op
 }
 function nudgeOnce(dir,st){
   if(nud&&nud.size==='side')return sideOnce(dir,st);
+  if(nud&&nud.size==='rot')return rotOnce(dir[0]*rotStep()*(st>8?2:1));
   if(nud&&nud.size)return sizeOnce(dir,st);
   if(selList().length>1){if(!nud.items)nud.items=multiItems();nud.tx=(nud.tx||0)+dir[0]*st;nud.ty=(nud.ty||0)+dir[1]*st;multiShift(nud.items,nud.tx,nud.ty);remeasure();keepVisible();return}
   if(S.lvl==='P'){var P=M.P[sel];if(!P)return;
@@ -1416,21 +1439,24 @@ $$('#pad [data-zs]').forEach(function(b){
 });
 $$('#pad [data-d]').forEach(function(b){
   var dir=b.getAttribute('data-d').split(',').map(Number);
-  b.addEventListener('pointerdown',function(e){e.preventDefault();if(nud)nudgeEnd();if(!nudgeStart(dir,1,S.pmode==='size'?'size':S.pmode==='side'?'side':false))return;
+  b.addEventListener('pointerdown',function(e){e.preventDefault();if(nud)nudgeEnd();if(!nudgeStart(dir,1,S.pmode==='size'||S.pmode==='side'||S.pmode==='rot'?S.pmode:false))return;
     try{b.setPointerCapture(e.pointerId)}catch(_){}
     var n=0;nud.t=setTimeout(function(){if(!nud)return;nud.i=setInterval(function(){n++;nudgeOnce(dir,stepVal()*(n>15?4:1))},70)},380)});
   ['pointerup','pointercancel','lostpointercapture'].forEach(function(ev){b.addEventListener(ev,nudgeEnd)});
 });
-var PMT={move:'Frecce in modo SPOSTA',size:'Frecce in modo MISURA: ▶ allarga, ◀ stringe, ▲ alza, ▼ abbassa · − ＋ in proporzione',side:'Frecce in modo LATI: si sposta solo il lato scelto (⋯ per cambiarlo)'};
+var PMT={rot:'Frecce in modo RUOTA: ◀ ▶ girano l\'elemento attorno al suo centro (⋯ per il passo)',move:'Frecce in modo SPOSTA',size:'Frecce in modo MISURA: ▶ allarga, ◀ stringe, ▲ alza, ▼ abbassa · − ＋ in proporzione',side:'Frecce in modo LATI: si sposta solo il lato scelto (⋯ per cambiarlo)'};
 function setPMode(m){S.pmode=m;if(!S.pside)S.pside='r';saveSet();updPad();toast(PMT[m])}
 $('#padMenuB').onclick=function(){$('#padMenu').classList.toggle('open');updPadMenu()};
 $('#pmX').onclick=function(){$('#padMenu').classList.remove('open')};
-$('#padMenu').addEventListener('click',function(e){var b=e.target.closest('[data-pm],[data-ps],[data-pp]');if(!b)return;
+$('#padMenu').addEventListener('click',function(e){var b=e.target.closest('[data-pm],[data-ps],[data-pp],[data-pr],[data-rq]');if(!b)return;
+  if(b.hasAttribute('data-pr')){S.rstep=+b.getAttribute('data-pr');if(S.pmode!=='rot')S.pmode='rot';saveSet();updPad();updPadMenu();return}
+  if(b.hasAttribute('data-rq')){if(!sel){toast('Seleziona prima qualcosa');return}var q=+b.getAttribute('data-rq'),before=JSON.stringify(M);if(S.lvl==='P')ensureFrozen();
+    if(q===0)rotOnce(0,0);else rotOnce(q);hist.push(before);if(hist.length>80)hist.shift();redo=[];commit();sizeFrame();measure();render();updBar();toast(q===0?'Raddrizzato (0°)':'Ruotato di '+q+'°');return}
   if(b.hasAttribute('data-pm'))setPMode(b.getAttribute('data-pm'));
   else if(b.hasAttribute('data-ps')){S.pside=b.getAttribute('data-ps');if(S.pmode!=='side')S.pmode='side';saveSet();updPad();toast('Lato da spostare: '+SIDEN[S.pside].toLowerCase())}
   else{S.fine=b.getAttribute('data-pp')==='1';saveSet();updBar()}
   updPadMenu()});
-$('#padMode').onclick=function(){setPMode(S.pmode==='size'?'side':S.pmode==='side'?'move':'size')};
+$('#padMode').onclick=function(){setPMode(S.pmode==='size'?'side':S.pmode==='side'?'rot':S.pmode==='rot'?'move':'size')};
 $('#padSt').onclick=function(){S.fine=!S.fine;saveSet();updBar();updPadMenu();toast('Passo: '+stepVal()+(stepVal()===1?' punto':' punti')+' per tocco')};
 
 /* ---------- livelli (sopra / sotto) ---------- */
@@ -1487,10 +1513,10 @@ function openProps(){
   if(tEl)h+='<span class="lbl">'+(tEl===el?'Testo':'Titolo')+'</span><div class="fld"><input type="text" data-f="txt" value="'+esc(txt(tEl))+'"></div>';
   h+='<span class="lbl">Posizione e dimensioni</span><div class="grid2">';
   if(isP){
-    if(P){h+=num('X','x',r1(P.x))+num('Y','y',r1(P.y))+num('Larghezza','w',r1(P.w))+num('Scala %','s',Math.round((P.s||1)*100))+num('Altezza (vuoto = automatica)','mh',P.mh?r1(P.mh):'',Math.round(el.offsetHeight))}
+    if(P){h+=num('X','x',r1(P.x))+num('Y','y',r1(P.y))+num('Larghezza','w',r1(P.w))+num('Scala %','s',Math.round((P.s||1)*100))+num('Rotazione °','rot',P.rot||0)+num('Altezza (vuoto = automatica)','mh',P.mh?r1(P.mh):'',Math.round(el.offsetHeight))}
     else h+='</div><p class="hint">Sposta o ridimensiona il riquadro col dito per sbloccare posizione e dimensioni.</p><div>';
   }else{
-    h+=num('Sposta X','dx',it.dx||0)+num('Sposta Y','dy',it.dy||0)+num('Larghezza','w',it.w!=null?it.w:'',Math.round(el.offsetWidth))+num('Altezza','h',it.h!=null?it.h:'',Math.round(el.offsetHeight))+num('Scala %','s',Math.round((it.s||1)*100));
+    h+=num('Sposta X','dx',it.dx||0)+num('Sposta Y','dy',it.dy||0)+num('Larghezza','w',it.w!=null?it.w:'',Math.round(el.offsetWidth))+num('Altezza','h',it.h!=null?it.h:'',Math.round(el.offsetHeight))+num('Scala %','s',Math.round((it.s||1)*100))+num('Rotazione °','rot',it.rot||0);
   }
   var lv=levelOf(sel);
   if(lv&&lv.of>1)h+='</div><span class="lbl">Livello · '+lv.n+' di '+lv.of+' (1 = più sotto)</span><div class="chips"><button class="hb" data-zz="bot" type="button">⤓ In fondo</button><button class="hb" data-zz="down" type="button">↓ Sotto</button><button class="hb" data-zz="up" type="button">↑ Sopra</button><button class="hb" data-zz="top" type="button">⤒ In primo piano</button>';
@@ -1504,12 +1530,13 @@ function openProps(){
       var f=e.target.getAttribute('data-f');if(!f)return;var v=e.target.value,isNum=e.target.type==='number';
       change(function(){
         if(f==='txt'){(M.I[tRef]||(M.I[tRef]={})).txt=v;return}
-        if(isP&&/^(x|y|w|s|mh)$/.test(f)){if(!M.P[sel])return;var n=parseFloat(v);if(f==='s')M.P[sel].s=clamp((n||100)/100,.2,4);else if(f==='mh')M.P[sel].mh=n>0?n:0;else if(!isNaN(n))M.P[sel][f]=n;return}
+        if(isP&&/^(x|y|w|s|mh|rot)$/.test(f)){if(!M.P[sel])return;var n=parseFloat(v);if(f==='rot'){M.P[sel].rot=normDeg(n||0);if(!M.P[sel].rot)delete M.P[sel].rot}else if(f==='s')M.P[sel].s=clamp((n||100)/100,.2,4);else if(f==='mh')M.P[sel].mh=n>0?n:0;else if(!isNaN(n))M.P[sel][f]=n;return}
         var n2=parseFloat(v);
         if(/^(bg|fg|rad|fs|op)$/.test(f)&&selList().length>1){selList().forEach(function(r){var tt=M.I[r]||(M.I[r]={});
           if(f==='op'){if(v===''||isNaN(n2))delete tt.op;else tt.op=clamp(n2/100,0,1)}else if(isNum){if(v===''||isNaN(n2))delete tt[f];else tt[f]=n2}else tt[f]=v});return}
         var t=M.I[sel]||(M.I[sel]={});
-        if(f==='s'){t.s=clamp((n2||100)/100,.2,5);if(t.s===1)delete t.s}
+        if(f==='rot'){t.rot=normDeg(n2||0);if(!t.rot)delete t.rot}
+        else if(f==='s'){t.s=clamp((n2||100)/100,.2,5);if(t.s===1)delete t.s}
         else if(f==='op'){if(v===''||isNaN(n2))delete t.op;else t.op=clamp(n2/100,0,1)}
         else if(isNum){if(v===''||isNaN(n2))delete t[f];else t[f]=n2}
         else t[f]=v;
@@ -1520,7 +1547,7 @@ function openProps(){
       var r=e.target.closest('[data-rc]');
       if(r){var f=r.getAttribute('data-rc');change(function(){if(M.I[sel])delete M.I[sel][f]});openProps();return}
       if(e.target.id==='pReset'){change(function(){var t=M.I[sel];if(t)['bg','fg','rad','fs','op','txt'].forEach(function(k){delete t[k]});if(tRef&&M.I[tRef])delete M.I[tRef].txt});openProps()}
-      if(e.target.id==='pResetG'){change(function(){var t=M.I[sel];if(t)['dx','dy','w','h','s'].forEach(function(k){delete t[k]})});openProps()}
+      if(e.target.id==='pResetG'){change(function(){var t=M.I[sel];if(t)['dx','dy','w','h','s','rot'].forEach(function(k){delete t[k]})});openProps()}
     });
   });
 }
@@ -1770,6 +1797,7 @@ function descI(it){
   if(it.w!=null)c.push('larghezza '+it.w);
   if(it.h!=null)c.push('altezza '+it.h);
   if(it.s&&it.s!==1)c.push('scala '+Math.round(it.s*100)+'%');
+  if(it.rot)c.push('ruotato di '+it.rot+'° attorno al centro');
   if(it.txt!=null)c.push('testo «'+it.txt+'»');
   if(it.bg)c.push('sfondo '+it.bg);
   if(it.fg)c.push('colore testo '+it.fg);
@@ -1796,6 +1824,7 @@ function claudeText(note){
     if(P.det)c.push('oggetti sganciati dalla cornice (restano fermi e interi)');
     if(Math.round(P.w)!==Math.round(P.w0))c.push('larghezza '+Math.round(P.w)+' (prima '+Math.round(P.w0)+')');
     if(P.s&&P.s!==1)c.push('scala '+Math.round(P.s*100)+'%');
+    if(P.rot)c.push('ruotato di '+P.rot+'° attorno al centro');
     if(P.e){var LN={t:'sopra',r:'a destra',b:'sotto',l:'a sinistra'};['t','b','l','r'].forEach(function(k){var v=Math.round(P.e[k]||0);if(v>0)c.push('margine '+LN[k]+' +'+v+' (contenuto fermo)');else if(v<0)c.push('ritagliato '+LN[k]+' di '+(-v)+' (contenuto fermo)')})}
     if(P.mh&&Math.round(P.mh)!==Math.round(P.h0||0))c.push('altezza '+Math.round(P.mh)+(P.h0?' (prima '+Math.round(P.h0)+')':''));
     if(c.length)pan.push(nm(r)+': '+c.join('; '))});

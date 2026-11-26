@@ -22,7 +22,7 @@
  {
   "cartella": "arnocanvas",
   "nome": "ARNOCANVAS",
-  "stato": "Prototipo 0.9.5 — libreria di 30 elementi nuovi (cursori, pulsanti, scritte, finestre) con anteprima"
+  "stato": "Prototipo 0.9.6 — rotazione nella croce (modo Ruota, passi 1°–90°, ⟲⟳ 90°, 180°, Raddrizza) e campo Rotazione in Aspetto"
  },
  {
   "cartella": "arnoshow",
