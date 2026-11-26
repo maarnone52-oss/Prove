@@ -319,6 +319,18 @@ header .plate .brand-mark svg,.plate .brand-mark svg{width:19px!important;height
   #bar{position:relative;z-index:35;margin-bottom:6px}
   #foot .fh:last-child #go .go-sub{font-size:14px}
 }
+
+/* verticale da ARNOCANVAS 0.9.4 */
+@media screen and (orientation:portrait){
+  #listwrap{margin-top:16px!important}
+  #zrail{justify-content:flex-end!important}
+  #ztrack{max-height:292px!important}
+  #accord{top:auto!important;bottom:8px;left:auto!important;right:10px;transform:none!important;height:35px}
+  #accord:active:not(:disabled){transform:scale(.96)!important}
+  #foot #hdmiout{margin-left:8px}
+  #qprev{width:42%!important;height:42%!important}
+  #tm{background:#e22400;color:#fff;font-size:15px;font-weight:700;padding:3px 9px;border-radius:7px;box-shadow:0 2px 6px rgba(0,0,0,.45)}
+}
 </style>
 </head>
 <body>
@@ -1633,7 +1645,7 @@ pimp.addEventListener("change",function(){
 function sweepLogo(el){var w=el&&el.querySelector(".sweep");if(!w)return;w.classList.remove("go");void w.offsetWidth;w.classList.add("go");}
 setTimeout(function(){sweepLogo(document.querySelector("header .plate"));},500);
 // Informazioni: versione e copyright
-var APPVER="1.1.17";
+var APPVER="1.1.18";
 (function(){var box=document.getElementById("about");
   document.getElementById("abtn").addEventListener("click",function(){
     document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;setTimeout(function(){sweepLogo(box.querySelector(".plate"));},150);});
