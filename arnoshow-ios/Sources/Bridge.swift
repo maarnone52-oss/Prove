@@ -43,8 +43,8 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWith
         let w = WKWebView(frame: .zero, configuration: c)
         w.navigationDelegate = self
         w.isOpaque = false
-        w.backgroundColor = .black
-        w.scrollView.backgroundColor = .black
+        w.backgroundColor = .clear
+        w.scrollView.backgroundColor = .clear
         w.scrollView.contentInsetAdjustmentBehavior = .never
         w.scrollView.bounces = false
         var u = URLComponents(url: Bridge.base, resolvingAgainstBaseURL: false)!
@@ -67,7 +67,8 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWith
         let xf = max(0.001, (m["xf"] as? Double) ?? 0)
         if on {
             let pos: AVCaptureDevice.Position = (m["cam"] as? String) == "front" ? .front : .back
-            if liveView.superview == nil, let host = control?.superview { host.addSubview(liveView) }
+            // il live sta SOTTO la pagina: la pagina lascia un «buco» trasparente sul riquadro video, così numeri e miniatura in coda restano sopra
+            if liveView.superview == nil, let host = control?.superview, let web = control { host.insertSubview(liveView, belowSubview: web) }
             LiveCamera.shared.addSink(liveView.disp)
             LiveCamera.shared.start(position: pos) { ok in
                 if !ok { self.control?.evaluateJavaScript("window.liveDenied&&window.liveDenied()", completionHandler: nil); return }

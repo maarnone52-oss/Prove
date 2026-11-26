@@ -331,6 +331,15 @@ header .plate .brand-mark svg,.plate .brand-mark svg{width:19px!important;height
   #qprev{width:42%!important;height:42%!important}
   #tm{background:#e22400;color:#fff;font-size:15px;font-weight:700;padding:3px 9px;border-radius:7px;box-shadow:0 2px 6px rgba(0,0,0,.45)}
 }
+
+/* live: la pagina diventa trasparente solo sul riquadro video */
+#livehole{display:none}
+html.liveon,html.liveon body{background:transparent!important}
+html.liveon #livehole{display:block;position:fixed;z-index:0;pointer-events:none;border-radius:7px;box-shadow:0 0 0 4000px var(--bg)}
+html.liveon #stage{background:transparent!important}
+html.liveon #stage #scr,html.liveon #stage video{visibility:hidden!important}
+html.liveon #bgimg,html.liveon #bgdim{display:none!important}
+.tile .th.livet{font-size:15px!important;justify-content:flex-end;padding-right:8px;box-sizing:border-box}
 </style>
 </head>
 <body>
@@ -568,8 +577,17 @@ function applyPrev(){if(MIX)MIX.setLite(prevMode==="leggera"||(prevMode==="auto"
 var natLive=(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.live)||null,liveCam="back",liveIsOn=false;
 try{liveCam=localStorage.getItem("vplivecam")||"back";}catch(e){}
 function liveRect(){var r=stage.getBoundingClientRect(),b=parseFloat(getComputedStyle(stage).borderTopWidth)||0;return {x:r.left+b,y:r.top+b,w:r.width-2*b,h:r.height-2*b};}
-function liveSend(on){if(!natLive)return;liveIsOn=on;try{natLive.postMessage(JSON.stringify({on:on,cam:liveCam,xf:xfade||0,rect:liveRect(),radius:7}));}catch(e){}}
+function liveSend(on){if(!natLive)return;liveIsOn=on;liveHole(on);try{natLive.postMessage(JSON.stringify({on:on,cam:liveCam,xf:xfade||0,rect:liveRect(),radius:7}));}catch(e){}}
 window.addEventListener("resize",function(){if(liveIsOn&&natLive)setTimeout(function(){try{natLive.postMessage(JSON.stringify({rect:liveRect()}));}catch(e){}},300);});
+// «buco» nella pagina sul riquadro video: lo sfondo viene disegnato tutto intorno, il live nativo si vede sotto
+function liveHole(on){
+  var h=document.getElementById("livehole");
+  if(!h){h=document.createElement("div");h.id="livehole";document.body.insertBefore(h,document.body.firstChild);}
+  document.documentElement.classList.toggle("liveon",!!on);
+  if(on)placeHole();
+}
+function placeHole(){var h=document.getElementById("livehole");if(!h)return;var r=liveRect();h.style.left=r.x+"px";h.style.top=r.y+"px";h.style.width=r.w+"px";h.style.height=r.h+"px";}
+window.addEventListener("resize",function(){if(liveIsOn)setTimeout(placeHole,300);});
 window.liveDenied=function(){alert("Per usare il live consenti ad ArnoShow l'accesso alla fotocamera in Impostazioni › ArnoShow PROVA.");};
 function addLive(){
   var it={id:Date.now()+"-live",name:"LIVE · fotocamera",blob:new Blob([],{type:"application/octet-stream"}),url:"",thumb:"",order:Date.now(),pid:pid,kind:"live",tv:3};
@@ -781,7 +799,7 @@ function render(){
     if(it.thumb)th.style.backgroundImage="url("+it.thumb+")";
     if(!it.thumb){var hh=0;for(var q=0;q<it.name.length;q++)hh=(hh*31+it.name.charCodeAt(q))%360;th.style.backgroundColor="hsl("+hh+",35%,32%)";}
     th.textContent=it.kind==="live"?"● LIVE":it.kind==="photo"?(it.thumb?"":"🖼"):(it.kind==="videoaudio"?"🎬🎵":(it.kind==="audio"?"🎵":(it.thumb?"":"▶")));
-    if(it.kind==="live"){th.style.backgroundColor="#7f1d1d";th.style.fontSize="22px";th.style.fontWeight="800";th.style.color="#fff";}
+    if(it.kind==="live"){th.classList.add("livet");th.style.backgroundColor="#7f1d1d";th.style.fontWeight="800";th.style.color="#fff";}
     if(!it.thumb&&it.kind==="video"&&it.tv>=3&&it.url){
       var fv=document.createElement("video");fv.muted=true;fv.defaultMuted=true;fv.setAttribute("muted","");fv.setAttribute("playsinline","");fv.playsInline=true;fv.preload="metadata";
       fv.style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none";
@@ -1240,7 +1258,7 @@ pp.addEventListener("click",function(){
   if(v.paused){var p=v.play();if(p&&p.catch)p.catch(function(){});}else v.pause();
 });
 onV("play",function(){if(!(cur>=0&&items[cur]&&items[cur].kind==="photo")){pp.textContent="Pausa";setStagePlaying(true);if(hdmiOn&&items[cur]&&items[cur].kind==="video")enterNativeExternalFullscreen(v);}});
-onV("pause",function(){if(!(cur>=0&&items[cur]&&items[cur].kind==="photo")){pp.textContent="Riprendi";setStagePlaying(false);}});
+onV("pause",function(){if(!(cur>=0&&items[cur]&&(items[cur].kind==="photo"||items[cur].kind==="live"))){pp.textContent="Riprendi";setStagePlaying(false);}});
 onV("ended",function(){pp.textContent="Pausa";setStagePlaying(false);});
 // STOP (pulsante disegnato con ARNOCANVAS): torna all'inizio della clip in corso e si ferma sul primo fotogramma
 window.arnoStopClip=function(){
@@ -1686,7 +1704,7 @@ setTimeout(function(){sweepLogo(document.querySelector("header .plate"));},500);
   function u(){c.textContent="Fotocamera live: "+(liveCam==="front"?"frontale":"posteriore");}u();
   c.addEventListener("click",function(){liveCam=liveCam==="front"?"back":"front";try{localStorage.setItem("vplivecam",liveCam);}catch(e){}u();if(liveIsOn)liveSend(true);});})();
 // Informazioni: versione e copyright
-var APPVER="1.2.0";
+var APPVER="1.2.1";
 (function(){var box=document.getElementById("about");
   document.getElementById("abtn").addEventListener("click",function(){
     document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;setTimeout(function(){sweepLogo(box.querySelector(".plate"));},150);});
