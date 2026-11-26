@@ -532,28 +532,15 @@ function preloadNext(){
     pre.muted=true;pre.preload="auto";pre.src=it.url;pre.load();window.warmUp(pre);
   }catch(e){}
 }
-// audio dei due lettori attraverso il mixer audio: l'uscente si sente finché entra la nuova (niente vuoti), in dissolvenza sfumano insieme
-var AC=null,GN=new Map();
-window.__gain=function(el){var g=GN.get(el);return g?+g.gain.value.toFixed(2):null};
-function audioInit(){
-  if(AC||AC===false)return;
-  try{var C=window.AudioContext||window.webkitAudioContext;AC=new C();
-    [vA,vB].forEach(function(el){var src=AC.createMediaElementSource(el),g=AC.createGain();src.connect(g);g.connect(AC.destination);GN.set(el,g);});
-  }catch(e){AC=false;}
-}
-function gainTo(el,val,sec){var g=AC&&GN.get(el);if(!g)return false;var t=AC.currentTime;g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value,t);if(sec>0)g.gain.linearRampToValueAtTime(val,t+sec);else g.gain.setValueAtTime(val,t);return true;}
+// audio: niente mixer audio (su iPhone blocca i video). L'uscente continua a suonare finché la nuova è in onda,
+// poi si zittisce nello stesso istante del passaggio: niente vuoti
 function startVideo(it){
-  audioInit();if(AC&&AC.state==="suspended")try{AC.resume();}catch(e){}
   var old=v,nw=pre;v=nw;pre=old;nw._active=true;old._active=false;
   if(nw.getAttribute("src")!==it.url){nw.src=it.url;nw.load();}
-  nw.hidden=false;nw.muted=muteWanted;
-  var mixed=gainTo(nw,0,0);
-  if(!mixed)old.muted=true;            // senza mixer audio: comportamento di prima
-  else old.muted=muteWanted;            // l'uscente continua a suonare finché la nuova è in onda
+  nw.hidden=false;nw.muted=true;old.muted=muteWanted;
   var p=nw.play();   // l'uscente continua a scorrere finché la nuova non è pronta: niente fermo immagine
   if(p&&p.then){p.then(function(){if(hdmiOn)enterNativeExternalFullscreen(nw);},function(){});}
-  var xs=(xfade||0);
-  nw._onSw=function(){ if(mixed){gainTo(nw,1,xs);gainTo(old,0,xs);} };   // al momento del passaggio: sfuma l'audio (o taglia, se stacco)
+  nw._onSw=function(){nw.muted=muteWanted;old.muted=true;};
   MIX.cut(nw,xfade*1000,function(b){if(b===v)return;try{b.pause();}catch(e){}b.muted=true;b.removeAttribute("src");b.load();setTimeout(preloadNext,60);});
 }
 var vout=document.getElementById("vout"),hdmiOn=false;
@@ -1773,7 +1760,7 @@ setTimeout(function(){sweepLogo(document.querySelector("header .plate"));},500);
   upd();
 })();
 // Informazioni: versione e copyright
-var APPVER="1.3.2";
+var APPVER="1.3.3";
 (function(){var box=document.getElementById("about");
   document.getElementById("abtn").addEventListener("click",function(){
     document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;setTimeout(function(){sweepLogo(box.querySelector(".plate"));},150);});
