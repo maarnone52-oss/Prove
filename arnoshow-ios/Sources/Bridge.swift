@@ -43,6 +43,7 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWith
         }
         let w = WKWebView(frame: .zero, configuration: c)
         w.navigationDelegate = self
+        w.uiDelegate = self
         w.isOpaque = false
         w.backgroundColor = .clear
         w.scrollView.backgroundColor = .clear
@@ -208,4 +209,34 @@ final class PageScheme: NSObject, WKURLSchemeHandler {
         task.didReceive(resp); task.didReceive(body); task.didFinish()
     }
     func webView(_ webView: WKWebView, stop task: WKURLSchemeTask) {}
+}
+
+/// Finestre di avviso e conferma della pagina (alert / confirm): senza questo l'app non le mostrava e «confirm» rispondeva sempre no.
+extension Bridge: WKUIDelegate {
+    private func topVC(_ w: WKWebView) -> UIViewController? {
+        var vc = w.window?.rootViewController
+        while let p = vc?.presentedViewController { vc = p }
+        return vc
+    }
+    func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+        guard let vc = topVC(webView) else { completionHandler(); return }
+        let a = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        a.addAction(UIAlertAction(title: "OK", style: .default) { _ in completionHandler() })
+        vc.present(a, animated: true)
+    }
+    func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+        guard let vc = topVC(webView) else { completionHandler(false); return }
+        let a = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        a.addAction(UIAlertAction(title: "Annulla", style: .cancel) { _ in completionHandler(false) })
+        a.addAction(UIAlertAction(title: "OK", style: .default) { _ in completionHandler(true) })
+        vc.present(a, animated: true)
+    }
+    func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
+        guard let vc = topVC(webView) else { completionHandler(nil); return }
+        let a = UIAlertController(title: nil, message: prompt, preferredStyle: .alert)
+        a.addTextField { $0.text = defaultText }
+        a.addAction(UIAlertAction(title: "Annulla", style: .cancel) { _ in completionHandler(nil) })
+        a.addAction(UIAlertAction(title: "OK", style: .default) { _ in completionHandler(a.textFields?.first?.text) })
+        vc.present(a, animated: true)
+    }
 }
