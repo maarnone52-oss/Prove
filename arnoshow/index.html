@@ -1053,7 +1053,7 @@ function tileTap(i){
 }
 function updPause(){document.body.classList.toggle("ispaused",cur>=0&&!!items[cur]&&!stage.classList.contains("playing")&&!wait.classList.contains("on"));}
 function updCurNum(){updPause();var e=document.getElementById("curnum");if(!e)return;var it=cur>=0?items[cur]:null;e.textContent=it?(nums[it.id]||cur+1):"";e.hidden=!it;placeCurNum();}
-function placeCurNum(){var e=document.getElementById("curnum");if(!e||e.hidden)return;var r=stage.getBoundingClientRect();
+function placeCurNum(){var e=document.getElementById("curnum");if(!e||e.hidden)return;if(window.__cvOn&&window.__cvOn("#curnum"))return;var r=stage.getBoundingClientRect();
   var por=window.matchMedia("(orientation:portrait)").matches;
   if(por&&r.left>40){e.classList.remove("in");e.style.left=Math.max(4,r.left-e.offsetWidth-10)+"px";e.style.top=(r.top+r.height/2-e.offsetHeight/2)+"px";}
   else{e.classList.add("in");e.style.left=(r.left+8)+"px";e.style.top=(r.top+6)+"px";}}
@@ -1658,7 +1658,7 @@ pimp.addEventListener("change",function(){
 function sweepLogo(el){var w=el&&el.querySelector(".sweep");if(!w)return;w.classList.remove("go");void w.offsetWidth;w.classList.add("go");}
 setTimeout(function(){sweepLogo(document.querySelector("header .plate"));},500);
 // Informazioni: versione e copyright
-var APPVER="1.1.26";
+var APPVER="1.1.27";
 (function(){var box=document.getElementById("about");
   document.getElementById("abtn").addEventListener("click",function(){
     document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;setTimeout(function(){sweepLogo(box.querySelector(".plate"));},150);});
@@ -1726,6 +1726,7 @@ var APPVER="1.1.26";
       if(pp.parentNode!==foot)foot.insertBefore(pp,foot.children[1]||null);
       if(dc.parentNode!==me){me.appendChild(dc);dc.appendChild(dcTxt);}
       if(mu.parentNode!==document.body)document.body.appendChild(mu);
+      if(window.__cvOn&&window.__cvOn("#mu")){mu.classList.remove("cvfloat");return;}
       mu.classList.add("cvfloat");
       var r=st.getBoundingClientRect(),mw=mu.offsetWidth||44;mu.style.left=Math.min(r.right+10,window.innerWidth-mw-8)+"px";mu.style.top=(r.top+62)+"px";
     }else{
@@ -1769,6 +1770,7 @@ var q=location.search;
 if(/[?&]arnocanvas=/.test(q))return;                       // dentro ARNOCANVAS: ci pensa lui
 if(/[?&]impaginazione=0/.test(q))return;
 var D=document,W=window;
+window.__cvOn=function(k){try{return phone()&&!!(M.P&&M.P[k])&&!/[?&](arnocanvas=|impaginazione=0)/.test(location.search)}catch(e){return false}};   // posizioni decise dal disegno di ARNOCANVAS: ArnoShow non le tocca
 function phone(){try{return W.matchMedia('(orientation:portrait)').matches&&W.innerWidth<=520}catch(e){return false}}
 function imp(st,k,v){st.setProperty(k,v,'important')}
 function isNew(el){return !!(el&&el.nodeType===1&&el.hasAttribute('data-cvn'))}
