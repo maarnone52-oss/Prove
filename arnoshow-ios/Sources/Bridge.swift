@@ -38,6 +38,7 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWith
         if !monitorMode {
             c.userContentController.add(self, name: "mon")
             c.userContentController.add(self, name: "live")
+            c.userContentController.add(self, name: "rec")
             c.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "store")
         }
         let w = WKWebView(frame: .zero, configuration: c)
@@ -85,6 +86,17 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWith
     }
 
     func userContentController(_ ucc: WKUserContentController, didReceive message: WKScriptMessage) {
+        if message.name == "rec" {
+            guard let json = message.body as? String, let d = json.data(using: .utf8),
+                  let m = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any], let segs = m["segs"] as? [[String: Any]] else { return }
+            Recorder.shared.render(segs, progress: { p in
+                self.control?.evaluateJavaScript("window.recProgress&&window.recProgress(\(p))", completionHandler: nil)
+            }, done: { ok, msg in
+                let js = msg.replacingOccurrences(of: "\\", with: " ").replacingOccurrences(of: "'", with: "’")
+                self.control?.evaluateJavaScript("window.recDone&&window.recDone(\(ok ? "true" : "false"),'\(js)')", completionHandler: nil)
+            })
+            return
+        }
         if message.name == "live" {
             if let json = message.body as? String, let d = json.data(using: .utf8), let m = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any] { handleLive(m) }
             return

@@ -340,6 +340,11 @@ html.liveon #stage{background:transparent!important}
 html.liveon #stage #scr,html.liveon #stage video{visibility:hidden!important}
 html.liveon #bgimg,html.liveon #bgdim{display:none!important}
 .tile .th.livet{font-size:15px!important;justify-content:flex-end;padding-right:8px;box-sizing:border-box}
+
+#recind{position:absolute;right:6px;top:6px;z-index:7;background:rgba(0,0,0,.65);color:#ff3b30;font:800 12px/1 -apple-system,system-ui,sans-serif;padding:4px 7px;border-radius:6px;pointer-events:none;animation:recBlink 1s steps(2,start) infinite}
+#recind span{color:#fff;font-variant-numeric:tabular-nums}
+@keyframes recBlink{50%{opacity:.35}}
+#dd .mm>#recb.on{color:#ff3b30!important;font-weight:700!important}
 </style>
 </head>
 <body>
@@ -359,10 +364,10 @@ html.liveon #bgimg,html.liveon #bgdim{display:none!important}
 <div id="dd" hidden><div class="mm" id="mfile"></div><div class="mm" id="medit"></div><div class="mm" id="mview"></div><div class="mm" id="mplay"></div></div>
 <div id="about" hidden><div class="ab"><div class="ab-logo"><span class="plate ab-plate"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17c2.2-1.8 4.4-1.8 6.6 0s4.4 1.8 7.4 0" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><polygon points="9.5 6.5 16.5 10.5 9.5 14.5" fill="#ffffff"/></svg></span><span class="brand-text">Arno<span>Show</span></span><i class="sweep"></i></span></div><div class="ab-ver" id="abver"></div><div class="ab-txt">Video, foto e audio in sequenza, con uscita sul monitor HDMI.</div><div class="ab-copy">© 2026 Maurizio Arnone<br>Tutti i diritti riservati</div><button id="abok" type="button" class="btn">OK</button></div></div>
 <div id="hdminote"><span id="hdminotetxt">Tocca "Apri su TV" per inviare il video puro al monitor HDMI senza clonare l'iPhone.</span><button id="hdmiforce" type="button">Apri su TV</button></div>
-<div id="prj"><select id="psel" aria-label="Progetto"></select><button id="addlive" type="button">● Aggiungi LIVE (fotocamera)</button><button id="camb" type="button">Fotocamera live: posteriore</button><button id="abtn" type="button">Informazioni su ArnoShow…</button><button id="pnew" type="button">Nuovo progetto</button><button id="pren" type="button">Rinomina progetto…</button><button id="pdel" type="button">Elimina progetto</button><button id="pexp" type="button" title="Salva il progetto (video, foto, audio e ordine) in un file">Salva progetto su file…</button><label id="pimpl" title="Apri un progetto salvato in un file" style="padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:12px;white-space:nowrap">Apri progetto da file…<input type="file" id="pimp" accept=".arnoshow,.zip,application/zip" hidden></label></div>
+<div id="prj"><select id="psel" aria-label="Progetto"></select><button id="recb" type="button">● Registra quello che va in onda</button><button id="addlive" type="button">● Aggiungi LIVE (fotocamera)</button><button id="camb" type="button">Fotocamera live: posteriore</button><button id="abtn" type="button">Informazioni su ArnoShow…</button><button id="pnew" type="button">Nuovo progetto</button><button id="pren" type="button">Rinomina progetto…</button><button id="pdel" type="button">Elimina progetto</button><button id="pexp" type="button" title="Salva il progetto (video, foto, audio e ordine) in un file">Salva progetto su file…</button><label id="pimpl" title="Apri un progetto salvato in un file" style="padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:12px;white-space:nowrap">Apri progetto da file…<input type="file" id="pimp" accept=".arnoshow,.zip,application/zip" hidden></label></div>
 <div id="pedit" hidden><input id="pname" maxlength="40" placeholder="Nome del progetto"><button id="pok" type="button">OK</button><button id="pno" type="button">Annulla</button></div>
 <div id="imp" hidden><div id="impt"></div><div id="impb"><div id="impf"></div></div></div>
-<video id="vout" playsinline webkit-playsinline x-webkit-airplay="allow"></video><button id="fsexit" type="button">✕ Esci da schermo intero</button><div id="curnum" hidden></div><div id="stage"><video id="v" playsinline webkit-playsinline x-webkit-airplay="allow"></video><canvas id="scr"></canvas><video id="v2" playsinline webkit-playsinline x-webkit-airplay="allow" muted preload="auto"></video><img id="ph" alt="" hidden><div id="audvis" hidden><div class="av-ico" id="audico">🎵</div><div class="av-nm" id="audnm"></div><div id="audsub" style="font-size:11px;opacity:.68;margin-top:2px" hidden>Traccia audio estratta da video</div></div><div id="wait"></div><div id="diag" hidden></div><div id="qprev" hidden><div class="qth"></div><div class="qn"></div><div class="ql">IN CODA</div></div></div>
+<video id="vout" playsinline webkit-playsinline x-webkit-airplay="allow"></video><button id="fsexit" type="button">✕ Esci da schermo intero</button><div id="curnum" hidden></div><div id="stage"><video id="v" playsinline webkit-playsinline x-webkit-airplay="allow"></video><canvas id="scr"></canvas><video id="v2" playsinline webkit-playsinline x-webkit-airplay="allow" muted preload="auto"></video><img id="ph" alt="" hidden><div id="audvis" hidden><div class="av-ico" id="audico">🎵</div><div class="av-nm" id="audnm"></div><div id="audsub" style="font-size:11px;opacity:.68;margin-top:2px" hidden>Traccia audio estratta da video</div></div><div id="wait"></div><div id="recind" hidden>● REC <span id="rect">0:00</span></div><div id="diag" hidden></div><div id="qprev" hidden><div class="qth"></div><div class="qn"></div><div class="ql">IN CODA</div></div></div>
 <div id="prog" aria-label="Avanzamento"><div id="pf"></div></div>
 <div id="ctl"><button id="pp" type="button">Pausa</button><button id="xfb" type="button" title="Passaggio tra una clip e l altra">Passaggio: stacco netto</button><button id="seqm" type="button" title="Sequenza numerica oppure manuale on air">Sequenza: numerica</button><button id="tap1" type="button" title="Avvia una clip con un solo tocco sulla miniatura (altrimenti doppio tocco)">Avvio con un tocco: Off</button><button id="cont" type="button" title="Riproduzione continua senza sosta">Senza sosta: Off</button><button id="pdur" type="button" title="Durata foto">Durata foto: ∞</button><button id="cap" type="button">Scegli miniatura</button><button id="prevb" type="button" title="Risoluzione dell'anteprima sullo schermo dell'iPhone">Anteprima iPhone: piena</button><button id="diagb" type="button">Diagnostica: Off</button><button id="fsbtn" type="button" title="Espandi il quadro di riproduzione a schermo intero" style="border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:0 10px;font-size:12px;font-family:inherit;height:38px;touch-action:manipulation;font-weight:600">Schermo intero</button><button id="delcur" type="button" aria-label="Elimina selezionato o trascina qui per eliminare" title="Elimina selezionato o trascina qui" disabled>🗑️</button></div>
 <div id="listwrap"><button class="btn danger" id="accord" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg><span>Accetta riordino</span></button>
@@ -1704,8 +1709,54 @@ setTimeout(function(){sweepLogo(document.querySelector("header .plate"));},500);
   a.addEventListener("click",addLive);
   function u(){c.textContent="Fotocamera live: "+(liveCam==="front"?"frontale":"posteriore");}u();
   c.addEventListener("click",function(){liveCam=liveCam==="front"?"back":"front";try{localStorage.setItem("vplivecam",liveCam);}catch(e){}u();if(liveIsOn)liveSend(true);});})();
+// === REGISTRAZIONE di quello che va in onda: si annota durante lo spettacolo, il video si crea alla fine (app iPhone/iPad) ===
+(function(){
+  var natRec=(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.rec)||null;
+  var b=document.getElementById("recb"),ind=document.getElementById("recind"),rt=document.getElementById("rect");
+  if(!natRec){b.style.display="none";return;}
+  var on=false,t0=0,S=[],iv=null;
+  function sample(){
+    var it=(cur>=0&&!wait.classList.contains("on"))?items[cur]:null,k=it?it.kind:"black";
+    var o={t:(performance.now()-t0)/1000,id:it?it.id:null,k:k,vt:0,pl:false,xf:xfade||0};
+    if(k==="video"){o.vt=v.currentTime||0;o.pl=!v.paused;}
+    S.push(o);
+    var sec=Math.floor(o.t);rt.textContent=Math.floor(sec/60)+":"+("0"+sec%60).slice(-2);
+  }
+  function segs(){
+    var G=[],g=null;
+    for(var i=0;i<S.length;i++){var s=S[i],mode=s.k==="video"?(s.pl?"play":"hold"):(s.k==="photo"?"photo":(s.id?"black":"black"));
+      var same=g&&g.id===s.id&&g.mode===mode;
+      if(same&&mode==="play"){var p=S[i-1];if(Math.abs((s.vt-p.vt)-(s.t-p.t))>0.4)same=false;}
+      if(!same){g={id:s.id,mode:mode,first:s,start:s.t};G.push(g);}
+    }
+    var out=[];
+    for(var j=0;j<G.length;j++){var c=G[j],end=(j+1<G.length)?G[j+1].start:S[S.length-1].t+0.05,dur=end-c.start;if(dur<0.04)continue;
+      var prev=out.length?G[j-1]:null,xf=0;
+      if(prev&&prev.id&&c.id&&prev.id!==c.id&&prev.mode!=="black"&&c.mode!=="black")xf=c.first.xf||0;
+      var sg={dur:dur,xf:xf};
+      if(c.mode==="play"){sg.k="video";sg.id=c.id;sg.from=c.first.vt;}
+      else if(c.mode==="hold"){sg.k="hold";sg.id=c.id;sg.at=c.first.vt;}
+      else if(c.mode==="photo"){sg.k="photo";sg.id=c.id;}
+      else sg.k="black";
+      out.push(sg);}
+    return out;
+  }
+  function upd(){b.textContent=on?"■ Ferma la registrazione":"● Registra quello che va in onda";b.classList.toggle("on",on);ind.hidden=!on;}
+  b.addEventListener("click",function(){
+    if(!on){on=true;S=[];t0=performance.now();sample();iv=setInterval(sample,50);upd();return;}
+    clearInterval(iv);sample();on=false;upd();
+    var sg=segs(),tot=S.length?S[S.length-1].t:0;
+    if(tot<1){alert("Registrazione troppo breve.");return;}
+    if(!confirm("Creare il video di quello che è andato in onda ("+Math.floor(tot/60)+":"+("0"+Math.floor(tot%60)).slice(-2)+")? Verrà salvato in Foto."))return;
+    var box=document.getElementById("imp");box.hidden=false;document.getElementById("impf").style.width="0%";document.getElementById("impt").textContent="Creo il video: 0%";
+    natRec.postMessage(JSON.stringify({segs:sg}));
+  });
+  window.recProgress=function(p){document.getElementById("impf").style.width=Math.round(p*100)+"%";document.getElementById("impt").textContent="Creo il video: "+Math.round(p*100)+"%";};
+  window.recDone=function(ok,msg){document.getElementById("imp").hidden=true;alert((ok?"✓ ":"✗ ")+msg);};
+  upd();
+})();
 // Informazioni: versione e copyright
-var APPVER="1.2.3";
+var APPVER="1.3.0";
 (function(){var box=document.getElementById("about");
   document.getElementById("abtn").addEventListener("click",function(){
     document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;setTimeout(function(){sweepLogo(box.querySelector(".plate"));},150);});
@@ -1730,7 +1781,7 @@ var APPVER="1.2.3";
     mfile:[$("abtn"),sep(),hd("Progetto"),$("psel"),$("pnew"),$("pren"),$("pdel"),sep(),$("pexp"),$("pimpl"),sep(),hd("Aggiungi"),lab("file"),lab("filep"),lab("filea"),lab("fileva"),$("addlive")],
     medit:[$("und"),sep(),$("cap"),$("delcur")],
     mview:[$("thm"),$("bgpick"),sep(),$("fsbtn"),$("prevb"),$("diagb")],
-    mplay:[$("seqm"),$("camb"),$("xfb"),$("cont"),$("tap1"),$("pdur"),sep(),$("ap")]
+    mplay:[$("recb"),sep(),$("seqm"),$("camb"),$("xfb"),$("cont"),$("tap1"),$("pdur"),sep(),$("ap")]
   };
   var trashHome=$("delcur").parentNode,trashNext=$("delcur").nextSibling;
   M.medit=M.medit.filter(function(x){return x&&x.id!=="delcur";});
@@ -1754,7 +1805,7 @@ var APPVER="1.2.3";
   document.addEventListener("pointerdown",function(e){if(!dd.hidden&&!dd.contains(e.target)&&!bar.contains(e.target))close();},true);
   dd.addEventListener("click",function(e){
     var t=e.target.closest("button,label");if(!t||t.tagName==="SELECT")return;
-    if(t.id==="pdel"||t.id==="pexp"||t.id==="pdur"||t.id==="cont"||t.id==="thm"||t.id==="tap1"||t.id==="seqm"||t.id==="xfb"||t.id==="diagb"||t.id==="prevb"||t.id==="camb")return; // restano aperti per vedere l'effetto
+    if(t.id==="pdel"||t.id==="pexp"||t.id==="pdur"||t.id==="cont"||t.id==="thm"||t.id==="tap1"||t.id==="seqm"||t.id==="xfb"||t.id==="diagb"||t.id==="prevb"||t.id==="camb"||t.id==="recb")return; // restano aperti per vedere l'effetto
     setTimeout(close,0);
   });
   $("psel").addEventListener("change",close);
