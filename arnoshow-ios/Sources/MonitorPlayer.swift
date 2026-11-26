@@ -37,6 +37,8 @@ final class MonitorVC: UIViewController {
     private var layers: [AVPlayerLayer] = []
     private let img = UIImageView()
     private let info = UILabel()
+    private let live = AVSampleBufferDisplayLayer()
+    private(set) var liveShown = false
     private var active = 0
     private var curId: String?
     private var preId: String?
@@ -64,6 +66,10 @@ final class MonitorVC: UIViewController {
         img.isHidden = true
         img.frame = view.bounds
         img.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        live.videoGravity = .resizeAspect
+        live.opacity = 0
+        live.zPosition = 2
+        view.layer.addSublayer(live)
         view.addSubview(img)
         info.textColor = UIColor(white: 1, alpha: 0.55)
         info.font = .systemFont(ofSize: 22, weight: .semibold)
@@ -78,6 +84,7 @@ final class MonitorVC: UIViewController {
         super.viewDidLayoutSubviews()
         CATransaction.begin(); CATransaction.setDisableActions(true)
         layers.forEach { $0.frame = view.bounds }
+        live.frame = view.bounds
         CATransaction.commit()
     }
     override var prefersHomeIndicatorAutoHidden: Bool { true }
@@ -102,6 +109,7 @@ final class MonitorVC: UIViewController {
         setOpacity(layers[0], 0, 0); setOpacity(layers[1], 0, 0)
         img.isHidden = true; img.image = nil
         curId = nil; preId = nil; pending = nil; pendingPre = nil; transitioning = false
+        if liveShown { liveShown = false; setLiveOpacity(0, 0); LiveCamera.shared.removeSink(live) }
         info.isHidden = true
     }
 
@@ -147,6 +155,18 @@ final class MonitorVC: UIViewController {
         guard let id = m["id"] as? String else { return }
         let kind = m["kind"] as? String ?? "video"
         if id == curId { state(m); return }
+        if kind == "live" {   // fotocamera di questo dispositivo
+            token += 1
+            let xf = max(0, (m["xf"] as? Double) ?? 0)
+            curId = id; pending = nil; info.isHidden = true
+            LiveCamera.shared.addSink(live)
+            liveShown = true
+            setLiveOpacity(1, xf)
+            let tk = token
+            DispatchQueue.main.asyncAfter(deadline: .now() + xf + 0.05) { guard tk == self.token else { return }; self.players.forEach { $0.pause() }; self.img.isHidden = true }
+            return
+        }
+        if liveShown { liveShown = false; let xf = max(0, (m["xf"] as? Double) ?? 0); let tk2 = token + 1; DispatchQueue.main.asyncAfter(deadline: .now() + xf + 0.4) { if tk2 <= self.token && !self.liveShown { self.setLiveOpacity(0, 0); LiveCamera.shared.removeSink(self.live) } } ; setLiveOpacity(0, xf) }
         guard let u = MediaStore.url(for: id) else { pending = m; info.text = "Preparo il file per il monitor…"; info.isHidden = false; return }   // file non ancora copiato: arriva tra poco
         pending = nil
         info.isHidden = true
@@ -241,6 +261,11 @@ final class MonitorVC: UIViewController {
             }
         }
         return it
+    }
+
+    private func setLiveOpacity(_ v: Float, _ dur: Double) {
+        if dur > 0 { let a = CABasicAnimation(keyPath: "opacity"); a.fromValue = live.presentation()?.opacity ?? live.opacity; a.toValue = v; a.duration = dur; live.add(a, forKey: "fade") }
+        CATransaction.begin(); CATransaction.setDisableActions(true); live.opacity = v; CATransaction.commit()
     }
 
     private func setOpacity(_ l: AVPlayerLayer, _ v: Float, _ dur: Double) {

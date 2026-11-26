@@ -27,6 +27,6 @@
  {
   "cartella": "arnoshow",
   "nome": "ARNOSHOW",
-  "stato": "Prova 1.1.27: numero e tasto audio restano dove li metti in ARNOCANVAS anche durante il play"
+  "stato": "Prova 1.2.0: sorgente LIVE dalla fotocamera del dispositivo (anche su monitor HDMI)"
  }
 ]

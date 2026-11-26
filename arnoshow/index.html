@@ -350,7 +350,7 @@ header .plate .brand-mark svg,.plate .brand-mark svg{width:19px!important;height
 <div id="dd" hidden><div class="mm" id="mfile"></div><div class="mm" id="medit"></div><div class="mm" id="mview"></div><div class="mm" id="mplay"></div></div>
 <div id="about" hidden><div class="ab"><div class="ab-logo"><span class="plate ab-plate"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17c2.2-1.8 4.4-1.8 6.6 0s4.4 1.8 7.4 0" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><polygon points="9.5 6.5 16.5 10.5 9.5 14.5" fill="#ffffff"/></svg></span><span class="brand-text">Arno<span>Show</span></span><i class="sweep"></i></span></div><div class="ab-ver" id="abver"></div><div class="ab-txt">Video, foto e audio in sequenza, con uscita sul monitor HDMI.</div><div class="ab-copy">© 2026 Maurizio Arnone<br>Tutti i diritti riservati</div><button id="abok" type="button" class="btn">OK</button></div></div>
 <div id="hdminote"><span id="hdminotetxt">Tocca "Apri su TV" per inviare il video puro al monitor HDMI senza clonare l'iPhone.</span><button id="hdmiforce" type="button">Apri su TV</button></div>
-<div id="prj"><select id="psel" aria-label="Progetto"></select><button id="abtn" type="button">Informazioni su ArnoShow…</button><button id="pnew" type="button">Nuovo progetto</button><button id="pren" type="button">Rinomina progetto…</button><button id="pdel" type="button">Elimina progetto</button><button id="pexp" type="button" title="Salva il progetto (video, foto, audio e ordine) in un file">Salva progetto su file…</button><label id="pimpl" title="Apri un progetto salvato in un file" style="padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:12px;white-space:nowrap">Apri progetto da file…<input type="file" id="pimp" accept=".arnoshow,.zip,application/zip" hidden></label></div>
+<div id="prj"><select id="psel" aria-label="Progetto"></select><button id="addlive" type="button">● Aggiungi LIVE (fotocamera)</button><button id="camb" type="button">Fotocamera live: posteriore</button><button id="abtn" type="button">Informazioni su ArnoShow…</button><button id="pnew" type="button">Nuovo progetto</button><button id="pren" type="button">Rinomina progetto…</button><button id="pdel" type="button">Elimina progetto</button><button id="pexp" type="button" title="Salva il progetto (video, foto, audio e ordine) in un file">Salva progetto su file…</button><label id="pimpl" title="Apri un progetto salvato in un file" style="padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:12px;white-space:nowrap">Apri progetto da file…<input type="file" id="pimp" accept=".arnoshow,.zip,application/zip" hidden></label></div>
 <div id="pedit" hidden><input id="pname" maxlength="40" placeholder="Nome del progetto"><button id="pok" type="button">OK</button><button id="pno" type="button">Annulla</button></div>
 <div id="imp" hidden><div id="impt"></div><div id="impb"><div id="impf"></div></div></div>
 <video id="vout" playsinline webkit-playsinline x-webkit-airplay="allow"></video><button id="fsexit" type="button">✕ Esci da schermo intero</button><div id="curnum" hidden></div><div id="stage"><video id="v" playsinline webkit-playsinline x-webkit-airplay="allow"></video><canvas id="scr"></canvas><video id="v2" playsinline webkit-playsinline x-webkit-airplay="allow" muted preload="auto"></video><img id="ph" alt="" hidden><div id="audvis" hidden><div class="av-ico" id="audico">🎵</div><div class="av-nm" id="audnm"></div><div id="audsub" style="font-size:11px;opacity:.68;margin-top:2px" hidden>Traccia audio estratta da video</div></div><div id="wait"></div><div id="diag" hidden></div><div id="qprev" hidden><div class="qth"></div><div class="qn"></div><div class="ql">IN CODA</div></div></div>
@@ -531,6 +531,7 @@ function mon(o){if(!nat)return;try{nat.postMessage(JSON.stringify(o));}catch(e){
 function sendMon(){
   if(!nat||!hdmiNative)return;
   var it=(cur>=0)?items[cur]:null;
+  if(it&&it.kind==="live"&&!wait.classList.contains("on")){mon({t:"show",id:it.id,kind:"live",xf:xfade});return;}
   if(!it||wait.classList.contains("on")||(it.kind!=="video"&&it.kind!=="photo")){mon({t:"black"});return;}
   mon({t:"show",id:it.id,kind:it.kind,xf:xfade,time:(it.kind==="video"?v.currentTime:0),playing:(it.kind==="video"&&!v.paused)});
   var nx=items[qIdx()>=0?qIdx():cur+1];if(nx&&nx.kind==="video")mon({t:"pre",id:nx.id,kind:nx.kind});
@@ -563,6 +564,17 @@ async function syncStore(){
 }
 var prevMode="piena";try{prevMode=localStorage.getItem("vpprev")||"piena";}catch(e){}
 function applyPrev(){if(MIX)MIX.setLite(prevMode==="leggera"||(prevMode==="auto"&&hdmiNative&&monitorLive));}
+// === LIVE: fotocamera di questo dispositivo (solo app iPhone/iPad) ===
+var natLive=(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.live)||null,liveCam="back",liveIsOn=false;
+try{liveCam=localStorage.getItem("vplivecam")||"back";}catch(e){}
+function liveRect(){var r=stage.getBoundingClientRect(),b=parseFloat(getComputedStyle(stage).borderTopWidth)||0;return {x:r.left+b,y:r.top+b,w:r.width-2*b,h:r.height-2*b};}
+function liveSend(on){if(!natLive)return;liveIsOn=on;try{natLive.postMessage(JSON.stringify({on:on,cam:liveCam,xf:xfade||0,rect:liveRect(),radius:7}));}catch(e){}}
+window.addEventListener("resize",function(){if(liveIsOn&&natLive)setTimeout(function(){try{natLive.postMessage(JSON.stringify({rect:liveRect()}));}catch(e){}},300);});
+window.liveDenied=function(){alert("Per usare il live consenti ad ArnoShow l'accesso alla fotocamera in Impostazioni › ArnoShow PROVA.");};
+function addLive(){
+  var it={id:Date.now()+"-live",name:"LIVE · fotocamera",blob:new Blob([],{type:"application/octet-stream"}),url:"",thumb:"",order:Date.now(),pid:pid,kind:"live",tv:3};
+  nums[it.id]=nextNum();items.push(it);put(it);saveOrder(true);saveNums();render();
+}
 function refreshHdmiBtn(){
   applyPrev();
   if(!nat)return;
@@ -748,7 +760,7 @@ function pump(){
   if(busy||!queue.length)return;
   busy=true;
   var it=queue.shift();
-  var fn=it.kind==="photo"?photoThumb:((it.kind==="audio"||it.kind==="videoaudio")?audioThumb:makeThumb);
+  var fn=it.kind==="photo"?photoThumb:((it.kind==="audio"||it.kind==="videoaudio"||it.kind==="live")?audioThumb:makeThumb);
   fn(it,function(d){it.thumb=d;it.tv=3;if(!it.gone)put(it);if(it.cnt){it.cnt=false;step();}busy=false;render();pump();});
 }
 
@@ -768,7 +780,8 @@ function render(){
     var th=document.createElement("div");th.className="th";
     if(it.thumb)th.style.backgroundImage="url("+it.thumb+")";
     if(!it.thumb){var hh=0;for(var q=0;q<it.name.length;q++)hh=(hh*31+it.name.charCodeAt(q))%360;th.style.backgroundColor="hsl("+hh+",35%,32%)";}
-    th.textContent=it.kind==="photo"?(it.thumb?"":"🖼"):(it.kind==="videoaudio"?"🎬🎵":(it.kind==="audio"?"🎵":(it.thumb?"":"▶")));
+    th.textContent=it.kind==="live"?"● LIVE":it.kind==="photo"?(it.thumb?"":"🖼"):(it.kind==="videoaudio"?"🎬🎵":(it.kind==="audio"?"🎵":(it.thumb?"":"▶")));
+    if(it.kind==="live"){th.style.backgroundColor="#7f1d1d";th.style.fontSize="22px";th.style.fontWeight="800";th.style.color="#fff";}
     if(!it.thumb&&it.kind==="video"&&it.tv>=3&&it.url){
       var fv=document.createElement("video");fv.muted=true;fv.defaultMuted=true;fv.setAttribute("muted","");fv.setAttribute("playsinline","");fv.playsInline=true;fv.preload="metadata";
       fv.style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none";
@@ -998,11 +1011,17 @@ if(hdmiForceBtn)hdmiForceBtn.addEventListener("click",function(){
 
 function play(i){
   if(i<0||i>=items.length)return;
+  var wasLive=cur>=0&&items[cur]&&items[cur].kind==="live";
   if(qItem&&items[i]===qItem)qItem=null;
   cur=i;
   clearPhotoTimer();
   setWait(false);
-  if(items[i].kind==="photo"){
+  if(items[i].kind==="live"){
+    try{v.pause();}catch(e){}
+    ph.hidden=true;ph.removeAttribute("src");audvis.hidden=true;
+    pp.disabled=true;pp.textContent="Pausa";pf.style.width="100%";tm.textContent="● LIVE";
+    setStagePlaying(true);liveSend(true);
+  }else if(items[i].kind==="photo"){
     exitNativeExternalFullscreen(v);
     v.pause();v.removeAttribute("src");v.load();v.hidden=true;
     audvis.hidden=true;
@@ -1024,6 +1043,7 @@ function play(i){
     startVideo(items[i]);var p=null;
     if(p&&p.then){p.then(function(){if(hdmiOn)enterNativeExternalFullscreen(v);},function(){});}
   }
+  if(wasLive&&items[i].kind!=="live")liveSend(false);
   now.textContent="In riproduzione: "+items[i].name;
   render();
   setTimeout(preloadNext,300);
@@ -1073,12 +1093,14 @@ function setWait(on){
   updPause();
   document.body.classList.toggle("waiting",on);
   if(on){
+    if(cur>=0&&items[cur]&&items[cur].kind==="live")liveSend(false);
     setStagePlaying(false);
     if(hdmiOn||hdmiNative)syncHdmiState();
   }
 }
 onV("ended",function(){setStagePlaying(false);if(continuous&&hasNextItem()){goNext();}else{setWait(true);}});
 onV("timeupdate",function(){
+  if(cur>=0&&items[cur]&&items[cur].kind==="live")return;
   pf.style.width=(v.duration?v.currentTime/v.duration*100:0)+"%";
   tm.textContent=fmt(v.currentTime)+" / "+fmt(v.duration);
 });
@@ -1162,6 +1184,7 @@ function remove(i){
   if(i<0||i>=items.length)return;
   var it=items[i];
   if(it===qItem)qItem=null;
+  if(i===cur&&it.kind==="live")liveSend(false);
   pushUndo({del:it,index:i});it.gone=true;
   try{URL.revokeObjectURL(it.url);if(it._hdmiVideoUrl)URL.revokeObjectURL(it._hdmiVideoUrl);}catch(e){}
   it._hdmiVideoUrl=null;
@@ -1657,8 +1680,13 @@ pimp.addEventListener("change",function(){
 // riflesso di luce sul logo all'apertura (e nella finestra Informazioni)
 function sweepLogo(el){var w=el&&el.querySelector(".sweep");if(!w)return;w.classList.remove("go");void w.offsetWidth;w.classList.add("go");}
 setTimeout(function(){sweepLogo(document.querySelector("header .plate"));},500);
+(function(){var a=document.getElementById("addlive"),c=document.getElementById("camb");
+  if(!natLive){a.style.display="none";c.style.display="none";}
+  a.addEventListener("click",addLive);
+  function u(){c.textContent="Fotocamera live: "+(liveCam==="front"?"frontale":"posteriore");}u();
+  c.addEventListener("click",function(){liveCam=liveCam==="front"?"back":"front";try{localStorage.setItem("vplivecam",liveCam);}catch(e){}u();if(liveIsOn)liveSend(true);});})();
 // Informazioni: versione e copyright
-var APPVER="1.1.27";
+var APPVER="1.2.0";
 (function(){var box=document.getElementById("about");
   document.getElementById("abtn").addEventListener("click",function(){
     document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;setTimeout(function(){sweepLogo(box.querySelector(".plate"));},150);});
@@ -1680,10 +1708,10 @@ var APPVER="1.1.27";
   function hd(t){var d=document.createElement("div");d.className="mhd";d.textContent=t;return d;}
   function lab(id){var e=$(id);return e?e.parentNode:null;}
   var M={
-    mfile:[$("abtn"),sep(),hd("Progetto"),$("psel"),$("pnew"),$("pren"),$("pdel"),sep(),$("pexp"),$("pimpl"),sep(),hd("Aggiungi"),lab("file"),lab("filep"),lab("filea"),lab("fileva")],
+    mfile:[$("abtn"),sep(),hd("Progetto"),$("psel"),$("pnew"),$("pren"),$("pdel"),sep(),$("pexp"),$("pimpl"),sep(),hd("Aggiungi"),lab("file"),lab("filep"),lab("filea"),lab("fileva"),$("addlive")],
     medit:[$("und"),sep(),$("cap"),$("delcur")],
     mview:[$("thm"),$("bgpick"),sep(),$("fsbtn"),$("prevb"),$("diagb")],
-    mplay:[$("seqm"),$("xfb"),$("cont"),$("tap1"),$("pdur"),sep(),$("ap")]
+    mplay:[$("seqm"),$("camb"),$("xfb"),$("cont"),$("tap1"),$("pdur"),sep(),$("ap")]
   };
   var trashHome=$("delcur").parentNode,trashNext=$("delcur").nextSibling;
   M.medit=M.medit.filter(function(x){return x&&x.id!=="delcur";});
@@ -1707,7 +1735,7 @@ var APPVER="1.1.27";
   document.addEventListener("pointerdown",function(e){if(!dd.hidden&&!dd.contains(e.target)&&!bar.contains(e.target))close();},true);
   dd.addEventListener("click",function(e){
     var t=e.target.closest("button,label");if(!t||t.tagName==="SELECT")return;
-    if(t.id==="pdel"||t.id==="pexp"||t.id==="pdur"||t.id==="cont"||t.id==="thm"||t.id==="tap1"||t.id==="seqm"||t.id==="xfb"||t.id==="diagb"||t.id==="prevb")return; // restano aperti per vedere l'effetto
+    if(t.id==="pdel"||t.id==="pexp"||t.id==="pdur"||t.id==="cont"||t.id==="thm"||t.id==="tap1"||t.id==="seqm"||t.id==="xfb"||t.id==="diagb"||t.id==="prevb"||t.id==="camb")return; // restano aperti per vedere l'effetto
     setTimeout(close,0);
   });
   $("psel").addEventListener("change",close);

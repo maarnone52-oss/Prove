@@ -1,5 +1,6 @@
 import UIKit
 import WebKit
+import AVFoundation
 
 /// Collega la pagina di controllo (iPhone) alla pagina "monitor" (schermo esterno).
 final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWithReply, WKNavigationDelegate {
@@ -36,6 +37,7 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWith
         c.setURLSchemeHandler(PageScheme(), forURLScheme: "arnoshow")
         if !monitorMode {
             c.userContentController.add(self, name: "mon")
+            c.userContentController.add(self, name: "live")
             c.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "store")
         }
         let w = WKWebView(frame: .zero, configuration: c)
@@ -53,7 +55,39 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWith
     }
 
     // Messaggio dalla pagina di controllo -> inoltrato alla pagina monitor
+    // Live dalla fotocamera di questo dispositivo: {on, cam:"back"/"front", xf, rect:{x,y,w,h}}
+    let liveView = LiveView()
+    private var liveOn = false
+    func handleLive(_ m: [String: Any]) {
+        if let r = m["rect"] as? [String: Any], let x = r["x"] as? Double, let y = r["y"] as? Double, let w = r["w"] as? Double, let h = r["h"] as? Double {
+            liveView.frame = CGRect(x: x, y: y, width: w, height: h)
+        }
+        if let c = m["radius"] as? Double { liveView.layer.cornerRadius = c }
+        guard let on = m["on"] as? Bool else { return }
+        let xf = max(0.001, (m["xf"] as? Double) ?? 0)
+        if on {
+            let pos: AVCaptureDevice.Position = (m["cam"] as? String) == "front" ? .front : .back
+            if liveView.superview == nil, let host = control?.superview { host.addSubview(liveView) }
+            LiveCamera.shared.addSink(liveView.disp)
+            LiveCamera.shared.start(position: pos) { ok in
+                if !ok { self.control?.evaluateJavaScript("window.liveDenied&&window.liveDenied()", completionHandler: nil); return }
+                self.liveView.isHidden = false
+                UIView.animate(withDuration: xf) { self.liveView.alpha = 1 }
+            }
+            liveOn = true
+        } else if liveOn {
+            liveOn = false
+            UIView.animate(withDuration: xf, animations: { self.liveView.alpha = 0 }) { _ in
+                if !self.liveOn { self.liveView.isHidden = true; if !(self.monitorVC?.liveShown ?? false) { LiveCamera.shared.stop() } }
+            }
+        }
+    }
+
     func userContentController(_ ucc: WKUserContentController, didReceive message: WKScriptMessage) {
+        if message.name == "live" {
+            if let json = message.body as? String, let d = json.data(using: .utf8), let m = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any] { handleLive(m) }
+            return
+        }
         guard let json = message.body as? String, monitorReady,
               let d = json.data(using: .utf8),
               let m = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any] else { return }
