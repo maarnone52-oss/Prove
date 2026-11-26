@@ -293,6 +293,20 @@ header .plate .brand-mark svg,.plate .brand-mark svg{width:19px!important;height
 #dd.lift{animation:ddLift .18s ease-in forwards}
 @keyframes ddLift{from{clip-path:inset(0 0 0 0 round 12px);transform:none;opacity:1}to{clip-path:inset(0 0 100% 0 round 12px);transform:translateY(-10px);opacity:.4}}
 @media (max-width:400px){#mbar button{padding:6px 4px!important}}
+
+/* orizzontale da ARNOCANVAS 0.9.1 (iPhone 15 girato): menu sopra le miniature, titolo e tempo sotto il video, pulsanti sotto le miniature */
+@media screen and (orientation:landscape) and (max-height:600px){
+  body{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;grid-template-rows:auto minmax(0,1fr) auto auto!important;
+       grid-template-areas:"stage hdr" "stage list" "prog list" "bar foot"!important;row-gap:0}
+  header{align-self:start}
+  #stage{align-self:center}
+  #bar{align-self:center;padding:4px 4px 0!important;font-size:12px}
+  #tm{font-size:21px;font-weight:700;color:var(--fg)}
+  #mu{transform:scale(1.24);margin-left:8px}
+  #foot{align-self:center;padding:2px 2px 0!important}
+  #foot #pp{margin-left:8px}
+  #go{width:70px!important;height:70px!important;font-size:13px!important}
+}
 </style>
 </head>
 <body>
@@ -1607,7 +1621,7 @@ pimp.addEventListener("change",function(){
 function sweepLogo(el){var w=el&&el.querySelector(".sweep");if(!w)return;w.classList.remove("go");void w.offsetWidth;w.classList.add("go");}
 setTimeout(function(){sweepLogo(document.querySelector("header .plate"));},500);
 // Informazioni: versione e copyright
-var APPVER="1.1.15";
+var APPVER="1.1.16";
 (function(){var box=document.getElementById("about");
   document.getElementById("abtn").addEventListener("click",function(){
     document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;setTimeout(function(){sweepLogo(box.querySelector(".plate"));},150);});
