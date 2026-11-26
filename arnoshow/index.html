@@ -1219,6 +1219,19 @@ pp.addEventListener("click",function(){
 onV("play",function(){if(!(cur>=0&&items[cur]&&items[cur].kind==="photo")){pp.textContent="Pausa";setStagePlaying(true);if(hdmiOn&&items[cur]&&items[cur].kind==="video")enterNativeExternalFullscreen(v);}});
 onV("pause",function(){if(!(cur>=0&&items[cur]&&items[cur].kind==="photo")){pp.textContent="Riprendi";setStagePlaying(false);}});
 onV("ended",function(){pp.textContent="Pausa";setStagePlaying(false);});
+// STOP (pulsante disegnato con ARNOCANVAS): torna all'inizio della clip in corso e si ferma sul primo fotogramma
+window.arnoStopClip=function(){
+  var it=cur>=0?items[cur]:null;if(!it)return;
+  if(it.kind==="photo"){
+    var d=photoDurs[photoDurIdx];if(!d)return;photoPaused=true;photoElapsed=0;photoStart=Date.now();
+    pp.textContent="Riprendi";setStagePlaying(false);pf.style.width="0%";tm.textContent=fmt(0)+" / "+fmt(d);
+    return;
+  }
+  if(!v.getAttribute("src"))return;
+  v.pause();try{v.currentTime=0;}catch(e){}
+  pf.style.width="0%";tm.textContent=fmt(0)+" / "+fmt(v.duration);
+  pp.textContent="Riprendi";setStagePlaying(false);
+};
 var psel=document.getElementById("psel"),pedit=document.getElementById("pedit"),pname=document.getElementById("pname"),pdel=document.getElementById("pdel"),pmode="",armed=false;
 function saveProj(){try{localStorage.setItem("vpprojects",JSON.stringify(projs));localStorage.setItem("vpcur",pid);}catch(e){}}
 function fillProj(){psel.innerHTML="";projs.forEach(function(p){var o=document.createElement("option");o.value=p.id;o.textContent=p.name;psel.appendChild(o);});psel.value=pid;}
@@ -1645,7 +1658,7 @@ pimp.addEventListener("change",function(){
 function sweepLogo(el){var w=el&&el.querySelector(".sweep");if(!w)return;w.classList.remove("go");void w.offsetWidth;w.classList.add("go");}
 setTimeout(function(){sweepLogo(document.querySelector("header .plate"));},500);
 // Informazioni: versione e copyright
-var APPVER="1.1.18";
+var APPVER="1.1.19";
 (function(){var box=document.getElementById("about");
   document.getElementById("abtn").addEventListener("click",function(){
     document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;setTimeout(function(){sweepLogo(box.querySelector(".plate"));},150);});
@@ -1738,5 +1751,6 @@ var APPVER="1.1.18";
 fillProj();openDB(function(){loadBgPhotoDB();loadAll();});
 })();
 </script>
+<script src="impaginazione-iphone.js?v=1"></script>
 </body>
 </html>
