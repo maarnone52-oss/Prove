@@ -1699,12 +1699,13 @@ pimp.addEventListener("change",function(){
 function sweepLogo(el){var w=el&&el.querySelector(".sweep");if(!w)return;w.classList.remove("go");void w.offsetWidth;w.classList.add("go");}
 setTimeout(function(){sweepLogo(document.querySelector("header .plate"));},500);
 (function(){var a=document.getElementById("addlive"),c=document.getElementById("camb");
-  if(!natLive){a.style.display="none";c.style.display="none";}
+  var LIVE_SOSPESO=true;   // telecamere sospese per ora: il codice resta, le voci di menu sono nascoste
+  if(!natLive||LIVE_SOSPESO){a.style.display="none";c.style.display="none";}
   a.addEventListener("click",addLive);
   function u(){c.textContent="Fotocamera live: "+(liveCam==="front"?"frontale":"posteriore");}u();
   c.addEventListener("click",function(){liveCam=liveCam==="front"?"back":"front";try{localStorage.setItem("vplivecam",liveCam);}catch(e){}u();if(liveIsOn)liveSend(true);});})();
 // Informazioni: versione e copyright
-var APPVER="1.2.2";
+var APPVER="1.2.3";
 (function(){var box=document.getElementById("about");
   document.getElementById("abtn").addEventListener("click",function(){
     document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;setTimeout(function(){sweepLogo(box.querySelector(".plate"));},150);});
