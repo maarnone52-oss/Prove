@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import UIKit
 
 /// Motore audio di ArnoStage: suona insieme tutte le tracce del brano (base stereo, click, ecc.),
 /// ognuna con volume, panorama, muto e uscita della scheda audio scelti dal mixer della pagina.
@@ -161,7 +162,8 @@ final class StageEngine {
         let name = s.currentRoute.outputs.first?.portName ?? "iPhone"
         let inName = s.currentRoute.inputs.first?.portName ?? ""
         let ic = inOn ? max(inChannels, s.inputNumberOfChannels) : s.maximumInputNumberOfChannels
-        return ["out": channels, "in": ic, "name": name, "inName": inName, "rate": hwRate, "inOn": inOn]
+        let all = s.currentRoute.outputs.map { $0.portName }
+        return ["outs": all, "out": channels, "in": ic, "name": name, "inName": inName, "rate": hwRate, "inOn": inOn]
     }
 
     // MARK: - Decodifica (fuori dal thread principale)
@@ -214,6 +216,8 @@ final class StageEngine {
         switch op {
         case "info":
             prepare(); reply(info())
+        case "picker":   // finestra di sistema per scegliere l'uscita audio (scheda, HDMI, iPhone…)
+            RoutePicker.show(); reply(true)
         case "load":
             guard let id = m["id"] as? String else { reply(["ok": false]); return }
             if let t = tracks[id] { reply(["ok": true, "dur": t.duration, "ch": t.ch]); return }
@@ -400,5 +404,15 @@ final class StageEngine {
         }
         pos += Double(n) * dt
         if pos >= length { playing = false; ended = true; pos = length }
+    }
+}
+
+import AVKit
+/// Pulsante di sistema (invisibile) per scegliere dove esce l'audio.
+enum RoutePicker {
+    static let view: AVRoutePickerView = { let v = AVRoutePickerView(frame: CGRect(x: 0, y: 0, width: 1, height: 1)); v.alpha = 0.01; return v }()
+    static func show() {
+        if view.superview == nil, let host = Bridge.shared.control?.superview { host.addSubview(view) }
+        for sub in view.subviews { if let b = sub as? UIButton { b.sendActions(for: .touchUpInside); return } }
     }
 }

@@ -116,6 +116,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
   <div style="position:relative"><button class="mbtn" data-m="mAudio">Audio</button>
     <div class="menu" id="mAudio">
       <button id="miCard">🎛 Scheda audio e uscite…</button>
+      <button id="miRoute">🔈 Scegli dove esce l'audio…</button>
       <button class="chk" id="miIn">🎸 Ingressi: suona sulle basi</button>
       <button id="miInCfg">Impostazioni ingressi…</button>
     </div></div>
@@ -157,7 +158,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.1.0';
+const VERSION='0.1.1';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -408,10 +409,13 @@ $('miInCfg').onclick=inputSheet;
 // ===== Scheda audio =====
 async function refreshCard(){if(!NATIVE){outs=2;ins=0;cardName='browser';return;}
   try{const r=await eng({op:'info'});if(r){outs=r.out||2;ins=r.in||0;cardName=r.name||'';}}catch(e){}}
-window.engChanged=async()=>{const o=outs;await refreshCard();if(o!==outs){renderMix();sendStrips();status('Scheda audio: '+cardName+' · '+outs+' uscite, '+ins+' ingressi.');}};
+window.engChanged=async()=>{const o=outs,n0=cardName;await refreshCard();if(n0!==cardName&&/hdmi|tv|display/i.test(cardName))status('Attenzione: l\'audio ora esce su «'+cardName+'». Audio › Scegli dove esce l\'audio per tornare alla scheda.',true);if(o!==outs){renderMix();sendStrips();status('Scheda audio: '+cardName+' · '+outs+' uscite, '+ins+' ingressi.');}};
+$('miRoute').onclick=async()=>{closeMenus();if(!NATIVE){status('Disponibile nell\'app.',true);return;}await eng({op:'picker'});};
 $('miCard').onclick=async()=>{closeMenus();await refreshCard();
   sheet(`<h3>🎛 Scheda audio e uscite</h3>${NATIVE?`<p><b>${esc(cardName)}</b><br>${outs} uscite · ${ins} ingressi</p>
   <p>Collega la scheda audio esterna (USB, con l'adattatore) prima di aprire il brano: ArnoStage usa tutte le sue uscite. Nel mixer scegli per ogni traccia l'uscita: per esempio la base su Out 1-2 (al pubblico) e il click su Out 3 mono (alle cuffie). Le tracce con «click» nel nome vanno da sole su Out 3, se la scheda ce l'ha.</p>
+  <p><b>Se colleghi l'HDMI dopo la scheda, iOS sposta l'audio sul monitor.</b> Per tenerlo sulla scheda: tocca qui sotto «Scegli dove esce l'audio» e scegli la scheda, oppure collega prima l'HDMI e per ultima la scheda audio (iOS usa l'ultima collegata).</p>
+  <p style="text-align:center"><button class="btn acc" onclick="eng({op:'picker'})">🔈 Scegli dove esce l'audio…</button></p>
   <p>Video: collega il monitor (adattatore HDMI). Il video del brano va sul monitor a tempo con l'audio; lo schermo dell'iPhone resta il pannello di controllo.</p>`:'<p>Nel browser l\'audio esce solo sulle uscite 1-2. Le uscite separate, gli ingressi e l\'HDMI funzionano nell\'app ArnoStage per iPhone e iPad.</p>'}
   <div style="text-align:right"><button class="btn acc" onclick="closeSheet()">OK</button></div>`);};
 window.nativeMonitor=on=>{hdmiOn=on;$('hdmi').classList.toggle('on',on);$('hdmi').textContent=on?'HDMI ●':'HDMI';
