@@ -1658,7 +1658,7 @@ pimp.addEventListener("change",function(){
 function sweepLogo(el){var w=el&&el.querySelector(".sweep");if(!w)return;w.classList.remove("go");void w.offsetWidth;w.classList.add("go");}
 setTimeout(function(){sweepLogo(document.querySelector("header .plate"));},500);
 // Informazioni: versione e copyright
-var APPVER="1.1.19";
+var APPVER="1.1.20";
 (function(){var box=document.getElementById("about");
   document.getElementById("abtn").addEventListener("click",function(){
     document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;setTimeout(function(){sweepLogo(box.querySelector(".plate"));},150);});
@@ -1751,6 +1751,6 @@ var APPVER="1.1.19";
 fillProj();openDB(function(){loadBgPhotoDB();loadAll();});
 })();
 </script>
-<script src="impaginazione-iphone.js?v=2"></script>
+<script src="impaginazione-iphone.js?v=3"></script>
 </body>
 </html>
