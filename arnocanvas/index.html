@@ -109,6 +109,20 @@ body.mac #zoom{position:static;display:flex}body.mac #zoom .hb{box-shadow:none;m
 #pad.size .pm{color:#1b1305;background:linear-gradient(180deg,#ffc44d,#e89a00)}
 #pad.size [data-d]{color:var(--amb)}
 #pad:not(.size) .zm{visibility:hidden}
+#pad .pmn{font-size:20px;font-weight:900;color:var(--cy)}
+#pad.side{border-color:#ff5fd2;background:rgba(40,2,30,.9)}
+#pad.side .pm{color:#2a0020;background:linear-gradient(180deg,#ff9fe6,#e040b8)}
+#pad.side [data-d]{color:#ff9fe6}
+#pad [data-d].off{opacity:.22;pointer-events:none}
+#pad [data-d].act{box-shadow:0 0 0 2px #ff5fd2 inset}
+#padMenu{position:absolute;left:max(10px,env(safe-area-inset-left));bottom:calc(env(safe-area-inset-bottom) + 104px);z-index:40;display:none;width:300px;max-width:calc(100% - 20px);background:linear-gradient(180deg,#2b2e33,#1e2024);border:1px solid #1aa4d6;border-radius:14px;padding:10px 12px 12px;box-shadow:0 10px 30px #000}
+#padMenu.open{display:block}
+#padMenu .pmh{display:flex;align-items:center;justify-content:space-between;font-weight:750;margin-bottom:4px}
+#padMenu .chips .hb.on,#padMenu .pmx .hb.on{background:linear-gradient(180deg,#7fe3ff,#1aa4d6);color:#04161d}
+#padMenu .pmx{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;align-items:center}
+#padMenu .pmx .hb{font-size:13px;padding:0 4px}
+#padMenu .pmc{text-align:center;color:var(--dim);font-size:20px}
+#padMenu .hint{margin:6px 0 0;font-size:12.5px}
 #pad .zm{color:var(--amb);font-size:19px;font-weight:800}
 #pad .hb{min-height:40px;min-width:40px;padding:0;font-size:15px;touch-action:none}
 #pad .st{font-size:11px;line-height:1.05;color:var(--cy);background:#04161d;border-color:#1aa4d6}
@@ -202,7 +216,14 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
     <div id="stage"><div id="fbox"><iframe id="F" title="App da modificare"></iframe></div><div id="ov"></div></div>
     <div id="load">Carico…</div>
   </div>
-  <div id="pad"><button class="hb pm" id="padMode" aria-label="Cambia modo delle frecce"></button><button class="hb" data-d="0,-1" aria-label="Su">▲</button><span></span><button class="hb" data-d="-1,0" aria-label="Sinistra">◀</button><button class="hb st" id="padSt" aria-label="Passo"></button><button class="hb" data-d="1,0" aria-label="Destra">▶</button><button class="hb zm" data-zs="-1" aria-label="Rimpicciolisci" title="Rimpicciolisci in proporzione">−</button><button class="hb" data-d="0,1" aria-label="Giù">▼</button><button class="hb zm" data-zs="1" aria-label="Ingrandisci" title="Ingrandisci in proporzione">＋</button></div>
+  <div id="pad"><button class="hb pm" id="padMode" aria-label="Cambia modo delle frecce"></button><button class="hb" data-d="0,-1" aria-label="Su">▲</button><button class="hb pmn" id="padMenuB" aria-label="Opzioni della croce" title="Modo, lato e passo">⋯</button><button class="hb" data-d="-1,0" aria-label="Sinistra">◀</button><button class="hb st" id="padSt" aria-label="Passo"></button><button class="hb" data-d="1,0" aria-label="Destra">▶</button><button class="hb zm" data-zs="-1" aria-label="Rimpicciolisci" title="Rimpicciolisci in proporzione">−</button><button class="hb" data-d="0,1" aria-label="Giù">▼</button><button class="hb zm" data-zs="1" aria-label="Ingrandisci" title="Ingrandisci in proporzione">＋</button></div>
+  <div id="padMenu"><div class="pmh">Croce delle frecce<button class="hb" id="pmX">✓</button></div>
+    <span class="lbl">Modo</span><div class="chips"><button class="hb" data-pm="move">✥ Sposta</button><button class="hb" data-pm="size">⤢ Misura</button><button class="hb" data-pm="side">⇲ Lati</button></div>
+    <p class="hint" id="pmHint"></p>
+    <span class="lbl">Lato da spostare (modo Lati)</span>
+    <div class="pmx"><span></span><button class="hb" data-ps="t">▲ sopra</button><span></span><button class="hb" data-ps="l">◀ sinistra</button><span class="pmc">⬚</span><button class="hb" data-ps="r">destra ▶</button><span></span><button class="hb" data-ps="b">▼ sotto</button><span></span></div>
+    <span class="lbl">Passo</span><div class="chips"><button class="hb" data-pp="1">1 punto</button><button class="hb" data-pp="8">8 punti</button></div>
+  </div>
   <div id="zord"><button class="hb" data-z="bot" title="In fondo">⤓</button><button class="hb" data-z="down" title="Porta sotto">↓</button><button class="hb" data-z="up" title="Porta sopra">↑</button><button class="hb" data-z="top" title="In primo piano">⤒</button><span id="zlv"></span></div>
   <div id="nav"><button class="hb" data-nv="prev" title="Elemento precedente (⇧Tab)">‹</button><span id="navN">–</span><button class="hb" data-nv="next" title="Elemento successivo (Tab)">›</button><button class="hb" data-nv="up" title="Esci al contenitore">⤴</button><button class="hb" data-nv="in" title="Entra nel gruppo">⤵</button></div>
   <div id="zoom"><button class="hb" id="zM" title="Rimpicciolisci (⌘−)">−</button><button class="hb" id="zl" title="Adatta alla finestra (⌘0)">100%</button><button class="hb" id="zP" title="Ingrandisci (⌘+)">＋</button><button class="hb" id="zfit" title="Adatta alla finestra (⌘0)">⤢ Adatta</button></div>
@@ -222,7 +243,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.9.1';
+var VER='0.9.2';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -254,7 +275,7 @@ var KN={panel:'Riquadro nuovo',button:'Pulsante nuovo',text:'Scritta nuova',disp
 function lsGet(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 var S=Object.assign({app:'arnovideo',dev:'iphone15',lvl:'P',grid:8,snap:true,showGrid:true,zoom:0,ascroll:true},lsGet('arnocanvas:set',{}));
-function saveSet(){lsSet('arnocanvas:set',{app:S.app,dev:S.dev,lvl:S.lvl,grid:S.grid,snap:S.snap,showGrid:S.showGrid,zoom:S.zoom,fine:!!S.fine,ascroll:S.ascroll!==false,cguide:S.cguide!==false,pmode:S.pmode==='size'?'size':'move'})}
+function saveSet(){lsSet('arnocanvas:set',{app:S.app,dev:S.dev,lvl:S.lvl,grid:S.grid,snap:S.snap,showGrid:S.showGrid,zoom:S.zoom,fine:!!S.fine,ascroll:S.ascroll!==false,cguide:S.cguide!==false,pmode:S.pmode==='size'||S.pmode==='side'?S.pmode:'move',pside:S.pside||'r'})}
 function A(){for(var i=0;i<APPS.length;i++)if(APPS[i].k===S.app)return APPS[i];return APPS[0]}
 function DV(){for(var i=0;i<DEVS.length;i++)if(DEVS[i].k===S.dev)return DEVS[i];return DEVS[0]}
 function mkey(){return 'arnocanvas:m:'+S.app+':'+S.dev}
@@ -1175,9 +1196,20 @@ function moveTo(to,keep){ // keep: posizioni a schermo da mantenere (oggetti tra
 }
 
 /* ---------- frecce di spostamento ---------- */
-function stepVal(){return S.fine?1:(S.snap?S.grid:1)}
-function stepTxt(){return S.fine?'passo<br>1':(S.snap?'passo<br>'+S.grid:'passo<br>1')}
-function updPad(){var sz=S.pmode==='size';$('#pad').classList.toggle('size',sz);$('#padMode').innerHTML=sz?'<b>⤢</b><br>MISURA':'<b>✥</b><br>SPOSTA';$('#padMode').title=sz?'Le frecce cambiano le misure: tocca per tornare a spostare':'Le frecce spostano: tocca per cambiare le misure'}
+function stepVal(){return S.fine?1:8}
+function stepTxt(){return S.fine?'passo<br>1':'passo<br>8'}
+var SIDEN={t:'SOPRA',r:'DESTRA',b:'SOTTO',l:'SINISTRA'},SIDEA={t:'▲',r:'▶',b:'▼',l:'◀'};
+function updPadMenu(){
+  $$('#padMenu [data-pm]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-pm')===(S.pmode||'move'))});
+  $$('#padMenu [data-ps]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-ps')===(S.pside||'r'))});
+  $$('#padMenu [data-pp]').forEach(function(b){b.classList.toggle('on',+b.getAttribute('data-pp')===stepVal())});
+  $('#pmHint').innerHTML=S.pmode==='side'?'<b>Lati</b>: le frecce spostano solo il lato scelto, verso fuori (allarga) o verso dentro (stringe); il lato opposto resta fermo.':S.pmode==='size'?'<b>Misura</b>: ▶ allarga, ◀ stringe, ▲ alza, ▼ abbassa con il centro fermo; − ＋ in proporzione.':'<b>Sposta</b>: le frecce spostano l\'elemento.';
+}
+function updPad(){var sd=S.pmode==='side',ax=(S.pside==='t'||S.pside==='b')?'y':'x';
+  $('#pad').classList.toggle('side',sd);
+  $$('#pad [data-d]').forEach(function(b){var d=b.getAttribute('data-d'),isX=d==='1,0'||d==='-1,0';b.classList.toggle('off',sd&&(ax==='x')!==isX);b.classList.toggle('act',sd&&(ax==='x')===isX)});
+  if(sd){$('#pad').classList.remove('size');$('#padMode').innerHTML='<b>⇲</b><br>LATO '+SIDEA[S.pside||'r'];$('#padMode').title='Le frecce spostano solo il lato '+(SIDEN[S.pside||'r']||'').toLowerCase()+': tocca per cambiare modo · ⋯ per scegliere il lato';updPadMenu();return}
+  updPadMenu();var sz=S.pmode==='size';$('#pad').classList.toggle('size',sz);$('#padMode').innerHTML=sz?'<b>⤢</b><br>MISURA':'<b>✥</b><br>SPOSTA';$('#padMode').title=sz?'Le frecce cambiano le misure: tocca per tornare a spostare':'Le frecce spostano: tocca per cambiare le misure'}
 function sizeOnce(dir,st){ // modo MISURA: ▶ allarga, ◀ stringe, ▲ alza, ▼ abbassa; il centro resta fermo
   var dw=dir[0]*st,dh=-dir[1]*st;
   selList().forEach(function(r){var el=resolve(r);if(!el||!vis(el))return;
@@ -1194,7 +1226,26 @@ function sizeOnce(dir,st){ // modo MISURA: ▶ allarga, ◀ stringe, ▲ alza, �
   });
   remeasure();keepVisible();
 }
+function sideOnce(dir,st){ // modo LATI: si muove solo il lato scelto, quello opposto resta fermo
+  var sd=S.pside||'r',d=(sd==='r'||sd==='l')?dir[0]*st:dir[1]*st;if(!d)return;
+  selList().forEach(function(r){var el=resolve(r);if(!el||!vis(el))return;
+    if(S.lvl==='P'&&M.P[r]){var P=M.P[r],s=P.s||1;
+      if(P.det&&!nud.kids&&selList().length===1){var keep=sel;sel=r;nud.kids=holdKids();sel=keep}
+      if(sd==='r')P.w=r1(Math.max(40,P.w+d/s));
+      else if(sd==='l'){var nw=Math.max(40,P.w-d/s);P.x=r1(P.x+(P.w-nw)*s);P.w=r1(nw)}
+      else{var h0=P.mh||el.offsetHeight;if(sd==='b')P.mh=r1(Math.max(20,h0+d/s));else{var nh=Math.max(20,h0-d/s);P.y=r1(P.y+(h0-nh)*s);P.mh=r1(nh)}}
+      posP(r);if(nud.kids)keepKids(nud.kids)}
+    else if(S.lvl!=='P'){var it=M.I[r]||(M.I[r]={}),sc=it.s||1,q=rectOf(el),K=el.offsetWidth?q.w/(el.offsetWidth*sc):1;if(!isFinite(K)||K<=0)K=1;
+      if(sd==='r'||sd==='l')it.w=Math.max(4,Math.round((it.w!=null?it.w:el.offsetWidth)+(sd==='r'?d:-d)/(K*sc)));
+      else it.h=Math.max(4,Math.round((it.h!=null?it.h:el.offsetHeight)+(sd==='b'?d:-d)/(K*sc)));
+      restoreOne(r);applyItem(r);var q2=rectOf(el);
+      var ax=sd==='l'?(q.x+q.w)-(q2.x+q2.w):q.x-q2.x,ay=sd==='t'?(q.y+q.h)-(q2.y+q2.h):q.y-q2.y;
+      it.dx=r1((it.dx||0)+ax/K);it.dy=r1((it.dy||0)+ay/K);if(!it.dx)delete it.dx;if(!it.dy)delete it.dy;restoreOne(r);applyItem(r)}
+  });
+  remeasure();keepVisible();
+}
 function nudgeOnce(dir,st){
+  if(nud&&nud.size==='side')return sideOnce(dir,st);
   if(nud&&nud.size)return sizeOnce(dir,st);
   if(selList().length>1){if(!nud.items)nud.items=multiItems();nud.tx=(nud.tx||0)+dir[0]*st;nud.ty=(nud.ty||0)+dir[1]*st;multiShift(nud.items,nud.tx,nud.ty);remeasure();keepVisible();return}
   if(S.lvl==='P'){var P=M.P[sel];if(!P)return;
@@ -1212,7 +1263,7 @@ function nudgeStart(dir,mult,size){
   if(!sel||S.lvl==='U')return false;
   var before=JSON.stringify(M);
   if(S.lvl==='P'){ensureFrozen();if(selList().length<2&&!M.P[sel]){toast('Questo riquadro non si può spostare');return false}}
-  nud={before:before,size:!!size};nudgeOnce(dir,stepVal()*(mult||1));return true;
+  nud={before:before,size:size||false};nudgeOnce(dir,stepVal()*(mult||1));return true;
 }
 function nudgeEnd(){if(!nud)return;clearTimeout(nud.t);clearInterval(nud.i);hist.push(nud.before);if(hist.length>80)hist.shift();redo=[];nud=null;commit();sizeFrame();measure();render();updBar()}
 /* ---------- ＋ / − : ingrandisce o rimpicciolisce in proporzione la selezione, il centro resta fermo ---------- */
@@ -1241,13 +1292,22 @@ $$('#pad [data-zs]').forEach(function(b){
 });
 $$('#pad [data-d]').forEach(function(b){
   var dir=b.getAttribute('data-d').split(',').map(Number);
-  b.addEventListener('pointerdown',function(e){e.preventDefault();if(nud)nudgeEnd();if(!nudgeStart(dir,1,S.pmode==='size'))return;
+  b.addEventListener('pointerdown',function(e){e.preventDefault();if(nud)nudgeEnd();if(!nudgeStart(dir,1,S.pmode==='size'?'size':S.pmode==='side'?'side':false))return;
     try{b.setPointerCapture(e.pointerId)}catch(_){}
     var n=0;nud.t=setTimeout(function(){if(!nud)return;nud.i=setInterval(function(){n++;nudgeOnce(dir,stepVal()*(n>15?4:1))},70)},380)});
   ['pointerup','pointercancel','lostpointercapture'].forEach(function(ev){b.addEventListener(ev,nudgeEnd)});
 });
-$('#padMode').onclick=function(){S.pmode=S.pmode==='size'?'move':'size';saveSet();updPad();toast(S.pmode==='size'?'Frecce in modo MISURA: ▶ allarga, ◀ stringe, ▲ alza, ▼ abbassa · − ＋ in proporzione':'Frecce in modo SPOSTA')};
-$('#padSt').onclick=function(){S.fine=!S.fine;saveSet();updBar();toast(S.fine?'Spostamento fine: 1 punto per tocco':'Passo della griglia: '+stepVal()+' punti per tocco')};
+var PMT={move:'Frecce in modo SPOSTA',size:'Frecce in modo MISURA: ▶ allarga, ◀ stringe, ▲ alza, ▼ abbassa · − ＋ in proporzione',side:'Frecce in modo LATI: si sposta solo il lato scelto (⋯ per cambiarlo)'};
+function setPMode(m){S.pmode=m;if(!S.pside)S.pside='r';saveSet();updPad();toast(PMT[m])}
+$('#padMenuB').onclick=function(){$('#padMenu').classList.toggle('open');updPadMenu()};
+$('#pmX').onclick=function(){$('#padMenu').classList.remove('open')};
+$('#padMenu').addEventListener('click',function(e){var b=e.target.closest('[data-pm],[data-ps],[data-pp]');if(!b)return;
+  if(b.hasAttribute('data-pm'))setPMode(b.getAttribute('data-pm'));
+  else if(b.hasAttribute('data-ps')){S.pside=b.getAttribute('data-ps');if(S.pmode!=='side')S.pmode='side';saveSet();updPad();toast('Lato da spostare: '+SIDEN[S.pside].toLowerCase())}
+  else{S.fine=b.getAttribute('data-pp')==='1';saveSet();updBar()}
+  updPadMenu()});
+$('#padMode').onclick=function(){setPMode(S.pmode==='size'?'side':S.pmode==='side'?'move':'size')};
+$('#padSt').onclick=function(){S.fine=!S.fine;saveSet();updBar();updPadMenu();toast('Passo: '+stepVal()+(stepVal()===1?' punto':' punti')+' per tocco')};
 
 /* ---------- livelli (sopra / sotto) ---------- */
 function zOf(b){if(b.grp){var z=0;b.mem.forEach(function(x){z=Math.max(z,zOf(x))});return z}var it=M.I[b.ref];if(it&&it.z!=null)return it.z;var P=M.P[b.ref];return P&&P.z?P.z:0}
@@ -1570,7 +1630,7 @@ function showHelp(){
   '<span class="lbl">⇄ Sposta in</span><p class="hint">Dentro un riquadro sposta l\'oggetto o il gruppo selezionato in un altro riquadro, o in uno nuovo: è l\'elemento vero, quindi le funzioni restano collegate. Più semplice: <b>trascina l\'oggetto sopra un altro riquadro e lascialo</b>: entra in quel riquadro, con le funzioni, nel punto in cui l\'hai lasciato (si annulla con ↶). Mentre lo trascini resta sempre visibile sopra tutto.</p>'+
   '<span class="lbl">Navigazione ‹ ›</span><p class="hint">La barra <b>‹ 3/7 ›</b> passa all\'elemento precedente o successivo (dall\'alto in basso, da sinistra a destra) e lo seleziona, pronto da modificare. <b>⤵</b> entra nel gruppo o riquadro selezionato, <b>⤴</b> risale al contenitore. Sul Mac anche Tab e ⇧Tab.</p>'+
   '<span class="lbl">▶ Usa</span><p class="hint">Toglie il velo di modifica: puoi usare l\'app (caricare file, premere i pulsanti) e vedere come si comporta con le modifiche.</p>'+
-  '<span class="lbl">Frecce ◀ ▲ ▶ ▼</span><p class="hint">Con un elemento selezionato compare a sinistra la croce di frecce: ogni tocco lo sposta di un passo della griglia; tenendo premuto continua e poi accelera. Il tasto in alto a sinistra della croce cambia modo: <b>✥ SPOSTA</b> (le frecce spostano) oppure <b>⤢ MISURA</b> (▶ allarga, ◀ stringe, ▲ alza, ▼ abbassa, con il centro fermo; compaiono anche − ＋ per la scala in proporzione). Sul Mac i tasti freccia della tastiera spostano sempre. I tasti arancioni <b>− ＋</b> ai lati di ▼ rimpiccioliscono o ingrandiscono in proporzione gli elementi selezionati (2% per tocco, 1% in modo fine; tenendo premuto continua), con il centro che resta fermo; con più elementi si scala tutto il gruppo. Il tasto al centro passa allo spostamento fine (1 punto) e ritorno. Sul Mac anche i tasti freccia (con ⇧ dieci passi); sul Mac la croce e i pulsanti dei livelli restano sempre visibili.</p>'+
+  '<span class="lbl">Frecce ◀ ▲ ▶ ▼</span><p class="hint">Con un elemento selezionato compare a sinistra la croce di frecce: ogni tocco lo sposta di un passo della griglia; tenendo premuto continua e poi accelera. Il tasto <b>⋯</b> in alto a destra della croce apre il suo menu: modo (Sposta, Misura, Lati), lato da spostare e passo (1 o 8 punti). In modo <b>⇲ LATI</b> le frecce spostano solo il lato scelto, verso fuori o verso dentro, e il lato opposto resta fermo. Il tasto in alto a sinistra della croce cambia modo: <b>✥ SPOSTA</b> (le frecce spostano) oppure <b>⤢ MISURA</b> (▶ allarga, ◀ stringe, ▲ alza, ▼ abbassa, con il centro fermo; compaiono anche − ＋ per la scala in proporzione). Sul Mac i tasti freccia della tastiera spostano sempre. I tasti arancioni <b>− ＋</b> ai lati di ▼ rimpiccioliscono o ingrandiscono in proporzione gli elementi selezionati (2% per tocco, 1% in modo fine; tenendo premuto continua), con il centro che resta fermo; con più elementi si scala tutto il gruppo. Il tasto al centro passa allo spostamento fine (1 punto) e ritorno. Sul Mac anche i tasti freccia (con ⇧ dieci passi); sul Mac la croce e i pulsanti dei livelli restano sempre visibili.</p>'+
   '<span class="lbl">Zoom</span><p class="hint"><b>− 100% ＋</b> (sul Mac nella barra in alto) ingrandiscono solo il canvas con l\'interfaccia; 100% (il numero) la adatta alla larghezza. Sul Mac anche il pizzico sul trackpad, Ctrl+rotella e ⌘+ ⌘− ⌘0: i comandi restano sempre della stessa misura.</p>'+
   '<span class="lbl">Livelli (sopra / sotto)</span><p class="hint">Quando selezioni qualcosa compaiono i pulsanti <b>⤓ ↓ ↑ ⤒</b>: in fondo, sotto, sopra, in primo piano. Valgono per i riquadri e per gli oggetti dello stesso gruppo; li trovi anche in Aspetto. Sul Mac: ⌘] e ⌘[ (con ⇧ in cima o in fondo).</p>'+
   '<span class="lbl">Griglia ▦</span><p class="hint">Passo regolabile, aggancio acceso o movimento libero.</p>'+
