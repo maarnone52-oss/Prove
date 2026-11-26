@@ -263,7 +263,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.9.9';
+var VER='0.9.10';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -1686,6 +1686,7 @@ $('#menuB').onclick=function(){
   h+='<button class="opt" data-m="list"><span class="ic">▤</span><span>Elenco elementi<small>Accendi, spegni e ritrova riquadri e oggetti</small></span></button>';
   h+='<button class="opt" data-m="deleted"><span class="ic">🗑</span><span>Elementi eliminati ('+nd+')<small>Rimettili al loro posto</small></span></button>';
   h+='<button class="opt" data-m="import"><span class="ic">⤒</span><span>Importa modifiche<small>Incolla un riepilogo ARNOCANVAS</small></span></button>';
+  h+='<button class="opt" data-m="fromapp"><span class="ic">⬇</span><span>Riparti dalla versione dell\'app<small>Carica l\'impaginazione che '+esc(A().n)+' usa adesso (l\'ultima applicata da Claude), così vedi e modifichi esattamente quella</small></span></button>';
   h+='<button class="opt" data-m="reset"><span class="ic">↺</span><span>Ripristina tutto<small>Torna all\'interfaccia originale di '+esc(A().n)+' · '+esc(DV().n)+'</small></span></button>';
   h+='<button class="opt" data-m="reload"><span class="ic">⟳</span><span>Ricarica l\'app<small>Riapre l\'app e riapplica le modifiche</small></span></button>';
   h+='<button class="opt" data-m="help"><span class="ic">?</span><span>Come si usa</span></button>';
@@ -1694,9 +1695,28 @@ $('#menuB').onclick=function(){
     if(m==='spread'){closeSheet();spreadAll();return}
     if(m==='claude')showClaude();else if(m==='copydev')showCopyDev();else if(m==='list')showList();else if(m==='deleted')showDeleted();else if(m==='import')showImport();else if(m==='help')showHelp();
     else if(m==='reload'){closeSheet();loadApp()}
+    else if(m==='fromapp'){closeSheet();fromApp()}
     else if(m==='reset'){if(confirm('Ripristinare l\'interfaccia originale? (Si può annullare con ↶)')){closeSheet();sel=null;cont=null;change(function(){M=blank()});setLevel('P')}}
   })});
 };
+/* ---------- riparti dalla versione dell'app: legge l'impaginazione che l'app usa davvero ---------- */
+function fromApp(){
+  var base=A().u.replace(/[^\/]*$/,'');
+  function grab(t){var m=t&&t.match(/var M=(\{"v":1[\s\S]*?\});\n/);if(!m)return null;try{return JSON.parse(m[1])}catch(e){return null}}
+  function ver(t){var m=t&&t.match(/APPVER="([0-9.]+)"/);return m?m[1]:''}
+  fetch(base+'index.html?x='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){
+    var mm=grab(t),v=ver(t);
+    if(mm)return [mm,v];
+    return fetch(base+'impaginazione-iphone.js?x='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.text():''}).then(function(j){return [grab(j),v]});
+  }).then(function(x){
+    var mm=x[0],v=x[1];
+    if(!mm){toast('In '+A().n+' non c\'è un\'impaginazione da caricare');return}
+    if(S.dev!=='iphone15plus'&&!confirm('L\'impaginazione dell\'app è fatta per iPhone 15 Plus in verticale. Caricarla lo stesso su questo schermo?'))return;
+    if(!mm.MV)mm.MV=[];if(!mm.N)mm.N=[];if(!mm.G)mm.G=[];
+    sel=null;cont=null;change(function(){M=mm});setLevel('P');loadApp();
+    toast('Caricata l\'impaginazione di '+A().n+(v?' '+v:'')+': ora modifichi quella');
+  }).catch(function(){toast('Non riesco a leggere l\'app')});
+}
 /* ---------- separa tutto: riquadri (o oggetti del riquadro aperto) in file ordinate, senza sovrapposizioni ---------- */
 function shelf(items,X0,Y0,maxW,gap){ // items: {w,h}; ritorna le posizioni in file da sinistra a destra, dall'alto in basso
   var x=X0,y=Y0,rowH=0,out=[];
