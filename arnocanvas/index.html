@@ -262,7 +262,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.9.6';
+var VER='0.9.7';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -308,11 +308,11 @@ var LIB=[
  {k:'btn_pill',c:'Pulsanti',n:'Pulsante a pillola',d:'Angoli tutti tondi',h:'<button type="button" style="min-height:40px;padding:0 22px;border-radius:999px;border:1px solid #9be9ff;background:linear-gradient(180deg,#7fe3ff,#1aa4d6);color:#04161d;font:700 15px -apple-system,Helvetica,Arial,sans-serif">Pillola</button>'},
  {k:'btn_round',c:'Pulsanti',n:'Pulsante tondo',d:'Piccolo, con simbolo',h:'<button type="button" style="width:56px;height:56px;border-radius:50%;border:'+KEYB+';background:'+KEYG+';color:#eceef0;font:700 22px -apple-system,Helvetica,Arial,sans-serif;padding:0">●</button>'},
  {k:'btn_round_l',c:'Pulsanti',n:'Pulsante tondo grande',d:'Rosso, tipo registra',h:'<button type="button" style="width:86px;height:86px;border-radius:50%;border:3px solid #2b2e34;background:radial-gradient(circle at 40% 35%,#ff7a66,#d1301c 70%);box-shadow:0 0 0 3px #4a4f58,0 4px 10px #000;color:#fff;font:800 14px -apple-system,Helvetica,Arial,sans-serif;padding:0">REC</button>'},
- {k:'btn_tri',c:'Pulsanti',n:'Pulsante triangolare',d:'Forma «play»',h:'<button type="button" style="width:62px;height:62px;border:0;padding:0;background:linear-gradient(180deg,#7dff9e,#1fae4f);clip-path:polygon(18% 6%,92% 50%,18% 94%);-webkit-clip-path:polygon(18% 6%,92% 50%,18% 94%)" aria-label="Avvia"></button>'},
+ {k:'btn_tri',c:'Pulsanti',n:'Pulsante triangolare',d:'Forma «play»',h:'<button type="button" style="width:62px;height:62px;border:0;padding:0;background:linear-gradient(180deg,#7dff9e,#1fae4f);clip-path:polygon(18% 6%,92% 50%,18% 94%);-webkit-clip-path:polygon(18% 6%,92% 50%,18% 94%);display:inline-flex;align-items:center;justify-content:center;color:#04240f;font:800 12px -apple-system,Helvetica,Arial,sans-serif" aria-label="Avvia"><span data-cvt style="margin-right:22%"></span></button>'},
  {k:'btn_sq',c:'Pulsanti',n:'Pulsante quadrato con icona',d:'Solo simbolo',h:'<button type="button" style="width:48px;height:48px;border-radius:10px;border:'+KEYB+';background:'+KEYG+';color:'+AMB+';font:700 22px -apple-system,Helvetica,Arial,sans-serif;padding:0">★</button>'},
- {k:'btn_icon',c:'Pulsanti',n:'Pulsante con icona e testo',d:'Simbolo a sinistra',h:'<button type="button" style="display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:10px;border:'+KEYB+';background:'+KEYG+';color:#eceef0;font:650 15px -apple-system,Helvetica,Arial,sans-serif"><span style="color:'+CY+';font-size:18px">⬆</span>Carica</button>'},
- {k:'toggle',c:'Pulsanti',n:'Interruttore acceso/spento',d:'Stile iPhone',h:'<div role="switch" style="position:relative;display:inline-block;width:54px;height:32px;border-radius:16px;background:#34c759;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)"><div style="position:absolute;right:2px;top:2px;width:28px;height:28px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.4)"></div></div>'},
- {k:'sel2',c:'Pulsanti',n:'Menu a scelta',d:'Menu a tendina',h:'<select style="min-height:38px;padding:0 10px;border-radius:8px;border:'+KEYB+';background:#0a0b0d;color:#eceef0;font:15px -apple-system,Helvetica,Arial,sans-serif"><option>Opzione 1</option><option>Opzione 2</option></select>'},
+ {k:'btn_icon',c:'Pulsanti',n:'Pulsante con icona e testo',d:'Simbolo a sinistra',h:'<button type="button" style="display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:10px;border:'+KEYB+';background:'+KEYG+';color:#eceef0;font:650 15px -apple-system,Helvetica,Arial,sans-serif"><span style="color:'+CY+';font-size:18px">⬆</span><span data-cvt>Carica</span></button>'},
+ {k:'toggle',c:'Pulsanti',n:'Interruttore acceso/spento',d:'Stile iPhone',h:'<div role="switch" style="position:relative;display:inline-block;width:54px;height:32px;border-radius:16px;background:#34c759;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2);color:#fff;font:700 10px -apple-system,Helvetica,Arial,sans-serif"><span data-cvt style="position:absolute;left:7px;top:50%;transform:translateY(-50%)"></span><div style="position:absolute;right:2px;top:2px;width:28px;height:28px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.4)"></div></div>'},
+ {k:'sel2',c:'Pulsanti',n:'Menu a scelta',d:'Menu a tendina',h:'<select style="min-height:38px;padding:0 10px;border-radius:8px;border:'+KEYB+';background:#0a0b0d;color:#eceef0;font:15px -apple-system,Helvetica,Arial,sans-serif"><option data-cvt>Opzione 1</option><option>Opzione 2</option></select>'},
  // SCRITTE
  {k:'txt_title',c:'Scritte',n:'Titolo',d:'Grande e in grassetto',h:'<div style="font:800 24px -apple-system,Helvetica,Arial,sans-serif;color:#eceef0">Titolo</div>'},
  {k:'txt_sub',c:'Scritte',n:'Sottotitolo',d:'Medio, grigio chiaro',h:'<div style="font:500 16px -apple-system,Helvetica,Arial,sans-serif;color:#b9bec6">Sottotitolo</div>'},
@@ -328,6 +328,18 @@ var LIB=[
  {k:'pop_toast',c:'Finestre',n:'Avviso a comparsa',d:'Striscia in basso o in alto',h:'<div style="display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;background:#1e2024;border:1px solid #3b3f46;box-shadow:0 6px 18px #000;color:#eceef0;font:500 14px -apple-system,Helvetica,Arial,sans-serif"><span style="color:#46ff7a;font-size:16px">✓</span>Operazione completata</div>'},
  {k:'pop_sheet',c:'Finestre',n:'Pannello dal basso',d:'Con maniglia e scelte',h:'<div style="display:inline-block;width:300px;padding:8px 14px 14px;border-radius:16px 16px 0 0;background:linear-gradient(180deg,#2b2e33,#1e2024);border:1px solid #3b3f46;border-bottom:0;box-shadow:0 -8px 24px #000;font-family:-apple-system,Helvetica,Arial,sans-serif;color:#eceef0"><div style="width:40px;height:5px;border-radius:3px;background:#5a606b;margin:0 auto 10px"></div><div style="font-weight:750;margin-bottom:8px">Scegli</div><div style="padding:10px;border-radius:9px;background:#20232a;margin-bottom:6px">Prima scelta</div><div style="padding:10px;border-radius:9px;background:#20232a">Seconda scelta</div></div>'}
 ];
+var FONTS=[['','Originale'],['-apple-system,Helvetica,Arial,sans-serif','Sistema'],['ui-rounded,"SF Pro Rounded","Arial Rounded MT Bold",-apple-system,sans-serif','Arrotondato'],['"Avenir Next Condensed","Arial Narrow",sans-serif-condensed,sans-serif','Stretto'],['Avenir,"Avenir Next",-apple-system,sans-serif','Avenir'],['Georgia,"Times New Roman",ui-serif,serif','Classico (serif)'],['Didot,"Bodoni 72",Georgia,serif','Elegante'],['Menlo,ui-monospace,"Courier New",monospace','Macchina da scrivere'],['Impact,"Arial Black",sans-serif','Forte'],['"Marker Felt","Chalkboard SE","Comic Sans MS",cursive','Pennarello'],['"Snell Roundhand","Bradley Hand","Brush Script MT",cursive','Corsivo a mano']];
+var TF=/^(fs|fg|ff|fw|fi|tt|ls)$/;
+function fontRef(r){ // dove vanno carattere, dimensione e colore della scritta: sullo spazio scritta del pulsante
+  var el=resolve(r);if(!el)return r;
+  var sl=el.querySelector('[data-cvt]');if(sl)return refOf(sl);
+  var b=el.matches('button,[role=button]')?el:(el.children.length===1&&el.firstElementChild.matches('button,[role=button]')?el.firstElementChild:null);
+  if(!b)return r;
+  if(b.children.length===0)return b===el?r:refOf(b);
+  var tl=[].filter.call(b.querySelectorAll('*'),function(x){return x.children.length===0&&txt(x)});
+  return tl.length===1?refOf(tl[0]):(b===el?r:refOf(b));
+}
+function fontName(v){for(var i=0;i<FONTS.length;i++)if(FONTS[i][0]===v)return FONTS[i][1];return v}
 function libItem(k){for(var i=0;i<LIB.length;i++)if(LIB[i].k===k)return LIB[i];return null}
 LIB.forEach(function(x){if(!KN[x.k])KN[x.k]=x.n+' (nuovo)'});
 
@@ -453,6 +465,11 @@ function applyItem(ref){
   if(it.fg)imp(st,'color',it.fg);
   if(it.rad!=null)imp(st,'border-radius',it.rad+'px');
   if(it.fs)imp(st,'font-size',it.fs+'px');
+  if(it.ff)imp(st,'font-family',it.ff);
+  if(it.fw)imp(st,'font-weight',String(it.fw));
+  if(it.fi)imp(st,'font-style','italic');
+  if(it.tt)imp(st,'text-transform',it.tt);
+  if(it.ls!=null)imp(st,'letter-spacing',it.ls+'px');
   if(it.op!=null)imp(st,'opacity',String(it.op));
   if(it.txt!=null&&el.children.length===0){if(ORIG[ref].html==null)ORIG[ref].html=el.innerHTML;el.textContent=it.txt}
   var rv=REV[ref];if(rv&&!it.hide){if(rv.d)imp(st,'display',rv.d);if(rv.v)imp(st,'visibility','visible')}
@@ -1508,9 +1525,12 @@ function openProps(){
   var isP=S.lvl==='P',it=M.I[sel]||{},P=M.P[sel],cs=W.getComputedStyle(el);
   var tEl=null,tRef=null;
   if(el.children.length===0&&txt(el)&&!/^(INPUT|SELECT|TEXTAREA|CANVAS)$/.test(el.tagName)){tEl=el;tRef=sel}
+  else if(el.querySelector('[data-cvt]')){tEl=el.querySelector('[data-cvt]');tRef=refOf(tEl)}
   else if(isP){var l=el.querySelector('.lbl,h1,h2,h3');if(l&&l.children.length===0){tEl=l;tRef=refOf(l)}}
+  if(!tEl){var fr0=fontRef(sel),fe0=resolve(fr0);if(fe0&&fe0!==el&&fe0.children.length===0&&!/^(INPUT|SELECT|TEXTAREA|CANVAS)$/.test(fe0.tagName)){tEl=fe0;tRef=fr0}}
   var h=(selList().length>1?'<p class="hint" style="color:var(--cy)">'+selList().length+' elementi selezionati: <b>colori, angoli, testo e opacità</b> valgono per tutti; posizione e misure solo per quello qui sotto.</p>':'')+'<p class="hint">'+(isP?'Riquadro':'Oggetto')+' <b>'+esc(isP?panelName(el):objName(el))+'</b>'+(isFresh(el)?' · <span style="color:var(--new)">funzione da assegnare</span>':'')+'</p>';
-  if(tEl)h+='<span class="lbl">'+(tEl===el?'Testo':'Titolo')+'</span><div class="fld"><input type="text" data-f="txt" value="'+esc(txt(tEl))+'"></div>';
+  if(tEl)h+='<span class="lbl">'+(tEl===el||tEl.hasAttribute('data-cvt')||!isP?'Scritta':'Titolo')+'</span><div class="fld"><input type="text" data-f="txt" placeholder="scrivi qui la scritta" value="'+esc(txt(tEl))+'"></div>';
+  var hasT=tEl||txt(el);
   h+='<span class="lbl">Posizione e dimensioni</span><div class="grid2">';
   if(isP){
     if(P){h+=num('X','x',r1(P.x))+num('Y','y',r1(P.y))+num('Larghezza','w',r1(P.w))+num('Scala %','s',Math.round((P.s||1)*100))+num('Rotazione °','rot',P.rot||0)+num('Altezza (vuoto = automatica)','mh',P.mh?r1(P.mh):'',Math.round(el.offsetHeight))}
@@ -1521,20 +1541,32 @@ function openProps(){
   var lv=levelOf(sel);
   if(lv&&lv.of>1)h+='</div><span class="lbl">Livello · '+lv.n+' di '+lv.of+' (1 = più sotto)</span><div class="chips"><button class="hb" data-zz="bot" type="button">⤓ In fondo</button><button class="hb" data-zz="down" type="button">↓ Sotto</button><button class="hb" data-zz="up" type="button">↑ Sopra</button><button class="hb" data-zz="top" type="button">⤒ In primo piano</button>';
   h+='</div><span class="lbl">Aspetto</span><div class="grid2">';
-  h+=col('Sfondo','bg',it.bg||hex(cs.backgroundColor)||'#000000',!!it.bg)+col('Colore testo','fg',it.fg||hex(cs.color)||'#ffffff',!!it.fg);
-  h+=num('Angoli (px)','rad',it.rad!=null?it.rad:'',parseFloat(cs.borderTopLeftRadius)||0)+num('Dim. testo (px)','fs',it.fs||'',parseFloat(cs.fontSize)||'');
+  var fR=fontRef(sel),fEl=resolve(fR)||el,ft=M.I[fR]||{},fcs=W.getComputedStyle(fEl);
+  h+=col('Sfondo','bg',it.bg||hex(cs.backgroundColor)||'#000000',!!it.bg)+col('Colore testo','fg',ft.fg||hex(fcs.color)||'#ffffff',!!ft.fg);
+  h+=num('Angoli (px)','rad',it.rad!=null?it.rad:'',parseFloat(cs.borderTopLeftRadius)||0)+num('Dim. testo (px)','fs',ft.fs||'',parseFloat(fcs.fontSize)||'');
   h+=num('Opacità %','op',it.op!=null?Math.round(it.op*100):'',100);
+  if(hasT){var csT=fcs;
+    h+='</div><span class="lbl">Carattere della scritta</span><div class="grid2">';
+    h+='<label class="fld">Carattere<select data-f="ff">'+FONTS.map(function(f){return '<option value="'+esc(f[0])+'"'+((ft.ff||'')===f[0]?' selected':'')+' style="font-family:'+esc(f[0]||'inherit')+'">'+f[1]+'</option>'}).join('')+'</select></label>';
+    h+='<label class="fld">Spessore<select data-f="fw">'+[['','Originale'],['300','Sottile'],['400','Normale'],['600','Medio'],['700','Grassetto'],['900','Nero']].map(function(f){return '<option value="'+f[0]+'"'+(String(ft.fw||'')===f[0]?' selected':'')+'>'+f[1]+'</option>'}).join('')+'</select></label>';
+    h+='<label class="fld">Stile<select data-f="fi"><option value="">Dritto</option><option value="1"'+(ft.fi?' selected':'')+'>Corsivo</option></select></label>';
+    h+='<label class="fld">Maiuscole<select data-f="tt">'+[['','Originali'],['uppercase','TUTTE MAIUSCOLE'],['lowercase','tutte minuscole'],['capitalize','Iniziali Maiuscole']].map(function(f){return '<option value="'+f[0]+'"'+((ft.tt||'')===f[0]?' selected':'')+'>'+f[1]+'</option>'}).join('')+'</select></label>';
+    h+=num('Spaziatura lettere (px)','ls',ft.ls!=null?ft.ls:'',parseFloat(csT.letterSpacing)||0);
+    h+='<div class="fld" style="grid-column:1/-1"><span class="hint">Anteprima</span><div id="pFontPrev" style="padding:8px 10px;border:1px solid #444;border-radius:8px;background:#0a0b0d;color:#eceef0;font-size:'+(ft.fs||parseFloat(csT.fontSize)||15)+'px;font-family:'+esc(ft.ff||csT.fontFamily)+';font-weight:'+(ft.fw||csT.fontWeight)+';font-style:'+(ft.fi?'italic':'normal')+';text-transform:'+(ft.tt||'none')+';letter-spacing:'+(ft.ls!=null?ft.ls+'px':'normal')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(txt(tEl||el)||'Scritta')+'</div></div>';}
   h+='</div><div class="row"><button class="rs" id="pReset">↺ Aspetto originale</button>'+(!isP&&(it.dx||it.dy||it.w!=null||it.h!=null||it.s)?'<button class="rs" id="pResetG">↺ Posizione e misure originali</button>':'')+'</div>';
   openSheet('Aspetto',h,function(c){
+    c.addEventListener('change',function(){setTimeout(function(){var pv=c.querySelector('#pFontPrev');if(!pv)return;var t=M.I[sel]||{},e2=resolve(sel),e3=resolve(fontRef(sel))||e2,cs2=e3&&W.getComputedStyle(e3);if(!cs2)return;
+      pv.style.fontFamily=cs2.fontFamily;pv.style.fontWeight=cs2.fontWeight;pv.style.fontStyle=cs2.fontStyle;pv.style.textTransform=cs2.textTransform;pv.style.letterSpacing=cs2.letterSpacing;pv.style.fontSize=cs2.fontSize;var tv=c.querySelector('[data-f=txt]');if(tv)pv.textContent=tv.value||'Scritta'},30)});
     c.addEventListener('change',function(e){
       var f=e.target.getAttribute('data-f');if(!f)return;var v=e.target.value,isNum=e.target.type==='number';
       change(function(){
         if(f==='txt'){(M.I[tRef]||(M.I[tRef]={})).txt=v;return}
         if(isP&&/^(x|y|w|s|mh|rot)$/.test(f)){if(!M.P[sel])return;var n=parseFloat(v);if(f==='rot'){M.P[sel].rot=normDeg(n||0);if(!M.P[sel].rot)delete M.P[sel].rot}else if(f==='s')M.P[sel].s=clamp((n||100)/100,.2,4);else if(f==='mh')M.P[sel].mh=n>0?n:0;else if(!isNaN(n))M.P[sel][f]=n;return}
         var n2=parseFloat(v);
-        if(/^(bg|fg|rad|fs|op)$/.test(f)&&selList().length>1){selList().forEach(function(r){var tt=M.I[r]||(M.I[r]={});
+        if(/^(ff|fw|fi|tt)$/.test(f)){selList().forEach(function(r){r=fontRef(r);var tt=M.I[r]||(M.I[r]={});if(v==='')delete tt[f];else tt[f]=f==='fw'?+v:f==='fi'?1:v});return}
+        if(/^(bg|fg|rad|fs|op|ls)$/.test(f)&&selList().length>1){selList().forEach(function(r){if(TF.test(f))r=fontRef(r);var tt=M.I[r]||(M.I[r]={});
           if(f==='op'){if(v===''||isNaN(n2))delete tt.op;else tt.op=clamp(n2/100,0,1)}else if(isNum){if(v===''||isNaN(n2))delete tt[f];else tt[f]=n2}else tt[f]=v});return}
-        var t=M.I[sel]||(M.I[sel]={});
+        var tr=TF.test(f)?fontRef(sel):sel,t=M.I[tr]||(M.I[tr]={});
         if(f==='rot'){t.rot=normDeg(n2||0);if(!t.rot)delete t.rot}
         else if(f==='s'){t.s=clamp((n2||100)/100,.2,5);if(t.s===1)delete t.s}
         else if(f==='op'){if(v===''||isNaN(n2))delete t.op;else t.op=clamp(n2/100,0,1)}
@@ -1545,8 +1577,8 @@ function openProps(){
     c.addEventListener('click',function(e){
       var zz=e.target.closest('[data-zz]');if(zz){zMove(zz.getAttribute('data-zz'));openProps();return}
       var r=e.target.closest('[data-rc]');
-      if(r){var f=r.getAttribute('data-rc');change(function(){if(M.I[sel])delete M.I[sel][f]});openProps();return}
-      if(e.target.id==='pReset'){change(function(){var t=M.I[sel];if(t)['bg','fg','rad','fs','op','txt'].forEach(function(k){delete t[k]});if(tRef&&M.I[tRef])delete M.I[tRef].txt});openProps()}
+      if(r){var f=r.getAttribute('data-rc'),rr=TF.test(f)?fontRef(sel):sel;change(function(){if(M.I[rr])delete M.I[rr][f]});openProps();return}
+      if(e.target.id==='pReset'){change(function(){var t=M.I[sel];if(t)['bg','fg','rad','fs','op','txt','ff','fw','fi','tt','ls'].forEach(function(k){delete t[k]});if(tRef&&M.I[tRef])delete M.I[tRef].txt;var f2=M.I[fontRef(sel)];if(f2)['fg','fs','txt','ff','fw','fi','tt','ls'].forEach(function(k){delete f2[k]})});openProps()}
       if(e.target.id==='pResetG'){change(function(){var t=M.I[sel];if(t)['dx','dy','w','h','s','rot'].forEach(function(k){delete t[k]})});openProps()}
     });
   });
@@ -1803,6 +1835,11 @@ function descI(it){
   if(it.fg)c.push('colore testo '+it.fg);
   if(it.rad!=null)c.push('angoli '+it.rad+' px');
   if(it.fs)c.push('testo '+it.fs+' px');
+  if(it.ff)c.push('carattere «'+fontName(it.ff)+'» ('+it.ff+')');
+  if(it.fw)c.push('spessore '+it.fw);
+  if(it.fi)c.push('corsivo');
+  if(it.tt)c.push('maiuscole: '+it.tt);
+  if(it.ls!=null)c.push('spaziatura lettere '+it.ls+' px');
   if(it.op!=null)c.push('opacità '+Math.round(it.op*100)+'%');
   return c;
 }

@@ -22,7 +22,7 @@
  {
   "cartella": "arnocanvas",
   "nome": "ARNOCANVAS",
-  "stato": "Prototipo 0.9.6 — rotazione nella croce (modo Ruota, passi 1°–90°, ⟲⟳ 90°, 180°, Raddrizza) e campo Rotazione in Aspetto"
+  "stato": "Prototipo 0.9.7 — tutti i pulsanti della libreria hanno una scritta modificabile; in Aspetto carattere, spessore, corsivo, maiuscole, spaziatura e dimensione"
  },
  {
   "cartella": "arnoshow",
