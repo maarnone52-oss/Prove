@@ -11,6 +11,32 @@ final class LiveCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     private(set) var position: AVCaptureDevice.Position = .back
     private var sinks: [AVSampleBufferDisplayLayer] = []
     private var configured = false
+    private var orient: AVCaptureVideoOrientation = .landscapeRight
+
+    override init() {
+        super.init()
+        // il live segue come è girato il dispositivo: in verticale immagine verticale, in orizzontale orizzontale
+        DispatchQueue.main.async {
+            UIDevice.current.beginGeneratingDeviceOrientationNotifications()
+            NotificationCenter.default.addObserver(forName: UIDevice.orientationDidChangeNotification, object: nil, queue: .main) { [weak self] _ in self?.followDevice() }
+            self.followDevice()
+        }
+    }
+    private func followDevice() {
+        let o: AVCaptureVideoOrientation
+        switch UIDevice.current.orientation {
+        case .portrait: o = .portrait
+        case .portraitUpsideDown: o = .portraitUpsideDown
+        case .landscapeLeft: o = .landscapeRight
+        case .landscapeRight: o = .landscapeLeft
+        default: return   // a faccia in su/giù: si tiene l'ultimo verso
+        }
+        q.async {
+            guard o != self.orient else { return }
+            self.orient = o
+            if let c = self.out.connection(with: .video), c.isVideoOrientationSupported { c.videoOrientation = o }
+        }
+    }
 
     func addSink(_ l: AVSampleBufferDisplayLayer) { q.async { if !self.sinks.contains(where: { $0 === l }) { self.sinks.append(l) } } }
     func removeSink(_ l: AVSampleBufferDisplayLayer) { q.async { self.sinks.removeAll { $0 === l } } }
@@ -44,7 +70,7 @@ final class LiveCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
             }
         }
         if let c = out.connection(with: .video) {
-            if c.isVideoOrientationSupported { c.videoOrientation = .landscapeRight }
+            if c.isVideoOrientationSupported { c.videoOrientation = orient }
             if c.isVideoMirroringSupported { c.automaticallyAdjustsVideoMirroring = false; c.isVideoMirrored = (pos == .front) }
         }
         session.commitConfiguration()

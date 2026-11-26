@@ -1704,7 +1704,7 @@ setTimeout(function(){sweepLogo(document.querySelector("header .plate"));},500);
   function u(){c.textContent="Fotocamera live: "+(liveCam==="front"?"frontale":"posteriore");}u();
   c.addEventListener("click",function(){liveCam=liveCam==="front"?"back":"front";try{localStorage.setItem("vplivecam",liveCam);}catch(e){}u();if(liveIsOn)liveSend(true);});})();
 // Informazioni: versione e copyright
-var APPVER="1.2.1";
+var APPVER="1.2.2";
 (function(){var box=document.getElementById("about");
   document.getElementById("abtn").addEventListener("click",function(){
     document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;setTimeout(function(){sweepLogo(box.querySelector(".plate"));},150);});
