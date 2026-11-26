@@ -280,6 +280,17 @@ header .plate .brand-mark svg,.plate .brand-mark svg{width:19px!important;height
 #prog{position:relative}
 #bar{padding:4px 14px 0!important}
 @media screen and (orientation:landscape) and (max-height:600px){body{grid-template-areas:"hdr prj" ". list" "stage list" "prog list" ". bar" ". foot" ". foot"!important}#bar{padding:2px 6px 0!important}#prog{margin:14px 14px 4px!important}#pf:after{width:22px;height:22px;margin-top:-11px;right:-11px}}
+
+/* barra dei titoli in un riquadro di tono diverso; tendine che sfilano da sotto e si chiudono da sole */
+#mbar{flex:0 1 auto!important;background:linear-gradient(180deg,#26262b,#18181c);border:1px solid #3a3a42;border-radius:11px;padding:3px 4px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 2px 6px rgba(0,0,0,.5);position:relative;z-index:75}
+:root[data-theme="white"] #mbar{background:linear-gradient(180deg,#ffffff,#e9e9e6);border-color:#cfcfc9}
+#mbar button{padding:6px 7px!important;border-radius:8px}
+#dd{transform-origin:top center}
+#dd.drop{animation:ddDrop .22s cubic-bezier(.2,.8,.2,1)}
+@keyframes ddDrop{from{clip-path:inset(0 0 100% 0 round 12px);transform:translateY(-10px);opacity:.6}to{clip-path:inset(0 0 0 0 round 12px);transform:none;opacity:1}}
+#dd.lift{animation:ddLift .18s ease-in forwards}
+@keyframes ddLift{from{clip-path:inset(0 0 0 0 round 12px);transform:none;opacity:1}to{clip-path:inset(0 0 100% 0 round 12px);transform:translateY(-10px);opacity:.4}}
+@media (max-width:400px){#mbar button{padding:6px 4px!important}}
 </style>
 </head>
 <body>
@@ -1594,7 +1605,7 @@ pimp.addEventListener("change",function(){
 function sweepLogo(el){var w=el&&el.querySelector(".sweep");if(!w)return;w.classList.remove("go");void w.offsetWidth;w.classList.add("go");}
 setTimeout(function(){sweepLogo(document.querySelector("header .plate"));},500);
 // Informazioni: versione e copyright
-var APPVER="1.1.13";
+var APPVER="1.1.14";
 (function(){var box=document.getElementById("about");
   document.getElementById("abtn").addEventListener("click",function(){
     document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;setTimeout(function(){sweepLogo(box.querySelector(".plate"));},150);});
@@ -1625,14 +1636,19 @@ var APPVER="1.1.13";
   M.medit=M.medit.filter(function(x){return x&&x.id!=="delcur";});
   var dd=$("dd"),bar=$("mbar"),openId=null;
   for(var k in M){M[k].forEach(function(e){if(e)$(k).appendChild(e);});}
-  function close(){dd.hidden=true;openId=null;[].forEach.call(bar.children,function(b){b.classList.remove("open");});}
+  var idleT=null;
+  function idle(){clearTimeout(idleT);idleT=setTimeout(function(){if(!dd.hidden)close();},3000);}   // si chiude da sola dopo 3 s senza tocchi
+  function close(){clearTimeout(idleT);if(dd.hidden)return;openId=null;[].forEach.call(bar.children,function(b){b.classList.remove("open");});
+    dd.classList.remove("drop");dd.classList.add("lift");setTimeout(function(){if(!openId){dd.hidden=true;}dd.classList.remove("lift");},180);}
   function open(b){
     var id=b.dataset.m;if(openId===id){close();return;}
     [].forEach.call(dd.children,function(m){m.classList.toggle("on",m.id===id);});
     [].forEach.call(bar.children,function(x){x.classList.toggle("open",x===b);});
-    dd.hidden=false;openId=id;
+    var was=!dd.hidden;dd.classList.remove("lift");dd.hidden=false;openId=id;
+    if(!was){dd.classList.remove("drop");void dd.offsetWidth;dd.classList.add("drop");}
+    idle();
     var r=b.getBoundingClientRect(),w=dd.offsetWidth;
-    dd.style.top=(r.bottom+6)+"px";dd.style.left=Math.max(8,Math.min(r.left,window.innerWidth-w-8))+"px";
+    dd.style.top=(bar.getBoundingClientRect().bottom+2)+"px";dd.style.left=Math.max(8,Math.min(r.left,window.innerWidth-w-8))+"px";
   }
   [].forEach.call(bar.children,function(b){b.addEventListener("click",function(e){e.stopPropagation();open(b);});});
   document.addEventListener("pointerdown",function(e){if(!dd.hidden&&!dd.contains(e.target)&&!bar.contains(e.target))close();},true);
@@ -1642,6 +1658,7 @@ var APPVER="1.1.13";
     setTimeout(close,0);
   });
   $("psel").addEventListener("change",close);
+  ["pointerdown","scroll","input","change"].forEach(function(t){dd.addEventListener(t,function(){if(!dd.hidden)idle();},true);});
   ["bgfile","pimp"].forEach(function(id){var e=$(id);if(e)e.addEventListener("change",close);});
   window.addEventListener("resize",close);
 })();
