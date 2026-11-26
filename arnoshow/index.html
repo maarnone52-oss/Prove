@@ -122,7 +122,9 @@ body.ispaused #pp:not(:disabled){animation:ppBlinkW 1s ease-in-out infinite}
 body.isplaying #go:not(:disabled){animation:ppBlinkW 1s ease-in-out infinite}
 #qprev{position:absolute;left:0;bottom:0;width:33.333%;height:33.333%;z-index:3;background:#000;border:2px solid #fff;border-radius:6px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.6);pointer-events:none}
 #qprev .qth{position:absolute;inset:0;background:#2a2a2a center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px}
-#qprev .qn{position:absolute;left:4px;top:1px;font-weight:800;font-size:clamp(14px,30%,30px);line-height:1.1;color:#ef4444;text-shadow:0 0 4px rgba(0,0,0,.95);animation:numBlink 1s ease-in-out infinite}
+#qprev .qn{position:absolute;left:5px;top:0;font-weight:800;font-size:clamp(30px,13vw,60px);line-height:1;color:#fff;text-shadow:0 0 6px rgba(0,0,0,.95),0 2px 3px rgba(0,0,0,.9);animation:qnBlink 1s ease-in-out infinite}
+@keyframes qnBlink{0%,100%{opacity:1}50%{opacity:.25}}
+@media screen and (orientation:landscape) and (max-height:600px){#qprev .qn{font-size:clamp(28px,6vw,56px)}}
 #qprev .ql{position:absolute;right:3px;bottom:2px;font-size:8px;font-weight:800;letter-spacing:.05em;color:#fff;background:rgba(239,68,68,.85);padding:1px 4px;border-radius:3px}
 #diag{position:absolute;right:4px;top:4px;z-index:6;background:rgba(0,0,0,.7);color:#fff;font:600 10px/1.35 -apple-system,system-ui,sans-serif;padding:4px 6px;border-radius:6px;pointer-events:none;white-space:pre}
 #listwrap{position:relative}
@@ -1605,7 +1607,7 @@ pimp.addEventListener("change",function(){
 function sweepLogo(el){var w=el&&el.querySelector(".sweep");if(!w)return;w.classList.remove("go");void w.offsetWidth;w.classList.add("go");}
 setTimeout(function(){sweepLogo(document.querySelector("header .plate"));},500);
 // Informazioni: versione e copyright
-var APPVER="1.1.14";
+var APPVER="1.1.15";
 (function(){var box=document.getElementById("about");
   document.getElementById("abtn").addEventListener("click",function(){
     document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;setTimeout(function(){sweepLogo(box.querySelector(".plate"));},150);});
