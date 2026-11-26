@@ -1,0 +1,30 @@
+# ARNOSTAGE PROVA iPhone: controlla che l'app nativa (con uscita sul monitor via cavo) si compili.
+# Non firma e non carica nulla su App Store Connect.
+name: ARNOSTAGE PROVA iPhone compilazione
+
+on:
+  push:
+    branches: [main]
+    paths: ['arnostage-ios/**', '.github/workflows/arnostage-ios-prova.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Genera il progetto Xcode
+        working-directory: arnostage-ios
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: Compila (senza firma)
+        working-directory: arnostage-ios
+        run: |
+          set -o pipefail
+          xcodebuild -project ArnoStage.xcodeproj -scheme ArnoStage \
+            -destination 'generic/platform=iOS' -configuration Release \
+            CODE_SIGNING_ALLOWED=NO build | tail -n 40

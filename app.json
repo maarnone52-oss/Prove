@@ -28,5 +28,10 @@
   "cartella": "arnoshow",
   "nome": "ARNOSHOW",
   "stato": "Prova 1.3.3: tolto il mixer audio (bloccava i video); audio senza vuoti nei passaggi"
+ },
+ {
+  "cartella": "arnostage",
+  "nome": "ARNOSTAGE",
+  "stato": "Prima prova 0.1.0: basi multitraccia + click, video in sync su HDMI, mixer, uscite separate, ingressi, import zip ARNOCLICK"
  }
 ]

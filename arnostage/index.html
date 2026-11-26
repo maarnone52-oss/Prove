@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>ArnoStage</title>
+<meta name="apple-mobile-web-app-title" content="ArnoStage">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<!-- ArnoStage © 2026 Maurizio Arnone. Tutti i diritti riservati. -->
+<style>
+:root{--bg:#000;--fg:#f5f5f3;--mut:#9a9a94;--card:#161616;--card2:#202022;--line:#2e2e2c;--acc:#6b9bff;--ok:#22c55e;--warn:#f59e0b;--del:#ef4444;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);color-scheme:dark}
+:root[data-theme="gray"]{--bg:#525256;--card:#3f3f44;--card2:#48484d;--line:#68686e;--mut:#d4d4d8}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+*:not(input):not(select):not(textarea){-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:15px/1.3 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+body{display:flex;flex-direction:column;padding-top:var(--sat);padding-bottom:var(--sab)}
+header{display:flex;align-items:center;gap:4px;padding:6px 8px;border-bottom:1px solid var(--line);position:relative;z-index:30;flex:none}
+.brand{display:flex;align-items:center;gap:7px;font-weight:700;font-size:17px;margin-right:6px}
+.brand i{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--acc),#1d4ed8);display:inline-flex;align-items:center;justify-content:center}
+.brand span{color:var(--acc)}
+.mbtn{background:none;border:0;color:var(--fg);font:inherit;font-size:14px;padding:6px 8px;border-radius:7px}
+.mbtn.open{background:var(--card2)}
+.menu{position:absolute;top:100%;min-width:230px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:5px;box-shadow:0 10px 30px rgba(0,0,0,.6);display:none}
+.menu.open{display:block}
+.menu button,.menu label{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;background:none;border:0;color:var(--fg);font:inherit;padding:9px 10px;border-radius:7px}
+.menu button:active,.menu label:active{background:var(--acc)}
+.menu hr{border:0;border-top:1px solid var(--line);margin:4px 6px}
+.menu .chk::after{content:"";}
+.menu .chk.on::after{content:"✓";color:var(--acc)}
+#hdmi{margin-left:auto;font-size:12px;padding:3px 7px;border-radius:6px;border:1px solid var(--line);color:var(--mut)}
+#hdmi.on{color:#fff;background:var(--ok);border-color:var(--ok)}
+main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:8px 8px 20px}
+#stage{position:relative;background:#000;border:1px solid var(--line);border-radius:10px;overflow:hidden;aspect-ratio:16/9;max-height:34vh;margin:0 auto 8px;display:flex;align-items:center;justify-content:center}
+#stage video{width:100%;height:100%;object-fit:contain;background:#000}
+#stage .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:13px;text-align:center;padding:10px}
+#songT{font-weight:700;font-size:18px;text-align:center;margin:2px 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#songT small{color:var(--mut);font-weight:400;font-size:13px}
+.trow{display:flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums;font-size:13px;color:var(--mut)}
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;width:100%;height:28px;margin:0;touch-action:none}
+input[type=range]::-webkit-slider-runnable-track{height:5px;border-radius:3px;background:var(--line)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--fg);margin-top:-8.5px;border:0;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+#seek::-webkit-slider-thumb{background:var(--acc)}
+.transport{display:flex;justify-content:center;gap:12px;margin:4px 0 10px}
+.tb{width:56px;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:20px;display:flex;align-items:center;justify-content:center}
+.tb.play{width:84px;background:var(--acc);border-color:var(--acc);color:#fff;font-size:24px}
+.tb.play.on{background:var(--ok);border-color:var(--ok)}
+.sec{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;margin-bottom:10px}
+.sech{display:flex;align-items:center;gap:6px;margin:0 2px 6px;font-weight:700;font-size:14px}
+.sech .sp{flex:1}
+.btn{background:var(--card2);border:1px solid var(--line);color:var(--fg);font:inherit;font-size:13px;padding:6px 10px;border-radius:8px}
+.btn.acc{background:var(--acc);border-color:var(--acc);color:#fff}
+.strip{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:6px 4px;border-top:1px solid var(--line)}
+.strip:first-of-type{border-top:0}
+.strip .nm{display:flex;align-items:center;gap:6px;min-width:0;font-size:14px}
+.strip .nm b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.strip .nm .db{color:var(--mut);font-size:12px;font-variant-numeric:tabular-nums;flex:none}
+.strip .tg{display:flex;gap:4px;align-items:center}
+.tg button,.tg select{font:inherit;font-size:12px;height:28px;border-radius:7px;border:1px solid var(--line);background:var(--card2);color:var(--fg);padding:0 7px}
+.tg .m.on{background:var(--del);border-color:var(--del);color:#fff}
+.tg .s.on{background:var(--warn);border-color:var(--warn);color:#000}
+.tg .x{color:var(--mut)}
+.strip .fr{grid-column:1/-1;display:flex;align-items:center;gap:8px}
+.strip .fr .pan{width:76px;flex:none}
+.meter{grid-column:1/-1;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--ok) 0 70%,var(--warn) 70% 88%,var(--del) 88%);transition:width .06s linear}
+.strip.click b::before{content:"♩ ";color:var(--acc)}
+.strip.inp b::before{content:"🎸 "}
+.lbl{font-size:12px;color:var(--mut)}
+.vrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;padding:6px 4px;border-top:1px solid var(--line)}
+.vrow b{flex:1;min-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.vrow input[type=number]{width:72px;font:inherit;background:var(--card2);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:4px 6px}
+#list .it{display:flex;align-items:center;gap:6px;padding:8px 6px;border-radius:9px;border:1px solid transparent}
+#list .it.cur{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 16%,transparent)}
+#list .it .n{width:24px;text-align:right;color:var(--mut);font-variant-numeric:tabular-nums}
+#list .it .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#list .it .t small{color:var(--mut)}
+#list .it button{background:var(--card2);border:1px solid var(--line);color:var(--fg);border-radius:7px;height:30px;min-width:30px;font-size:13px}
+#list.noedit .it .ed{display:none}
+.empty{color:var(--mut);font-size:13px;padding:10px;text-align:center}
+#status{flex:none;font-size:12px;color:var(--mut);padding:5px 10px;border-top:1px solid var(--line);min-height:26px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#status.err{color:var(--del)}
+#prog{position:fixed;left:0;right:0;top:0;height:3px;background:var(--acc);transform-origin:left;transform:scaleX(0);z-index:50;transition:transform .1s}
+#sheet{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center;z-index:60}
+#sheet.on{display:flex}
+#sheet .box{background:var(--card2);border-radius:14px 14px 0 0;width:100%;max-width:560px;max-height:80vh;overflow:auto;padding:12px 14px calc(14px + var(--sab))}
+#sheet h3{margin:2px 0 10px;font-size:16px}
+#sheet p{font-size:13px;color:var(--mut);margin:6px 0}
+.frm{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;align-items:center;font-size:14px}
+.frm select,.frm input{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px}
+@media (min-width:900px){main{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(300px,1fr);gap:10px;align-items:start}#colL,#colR{min-width:0}}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<header>
+  <div class="brand"><i><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><rect x="4" y="3" width="3" height="18" rx="1.5"/><rect x="10.5" y="3" width="3" height="18" rx="1.5"/><rect x="17" y="3" width="3" height="18" rx="1.5"/><rect x="2" y="13" width="7" height="4" rx="1.5"/><rect x="8.5" y="6" width="7" height="4" rx="1.5"/><rect x="15" y="10" width="7" height="4" rx="1.5"/></svg></i><b>Arno<span>Stage</span></b></div>
+  <div style="position:relative"><button class="mbtn" data-m="mFile">File</button>
+    <div class="menu" id="mFile">
+      <label><input type="file" id="fZip" accept=".zip,application/zip" hidden>📦 Importa progetto ARNOCLICK (.zip)…</label>
+      <label><input type="file" id="fAud" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" multiple hidden>🎵 Nuovo brano da file audio…</label>
+      <hr>
+      <label><input type="file" id="fAdd" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" multiple hidden>＋ Aggiungi tracce al brano…</label>
+      <label><input type="file" id="fVid" accept="video/*,.mp4,.mov,.m4v" hidden>🎬 Abbina un video al brano…</label>
+      <hr>
+      <button id="miClear">🗑 Svuota la scaletta…</button>
+    </div></div>
+  <div style="position:relative"><button class="mbtn" data-m="mList">Scaletta</button>
+    <div class="menu" id="mList">
+      <button class="chk" id="miAuto">Passa da sola al brano successivo</button>
+      <button class="chk" id="miEdit">Modifica la scaletta (sposta, rinomina, elimina)</button>
+    </div></div>
+  <div style="position:relative"><button class="mbtn" data-m="mAudio">Audio</button>
+    <div class="menu" id="mAudio">
+      <button id="miCard">🎛 Scheda audio e uscite…</button>
+      <button class="chk" id="miIn">🎸 Ingressi: suona sulle basi</button>
+      <button id="miInCfg">Impostazioni ingressi…</button>
+    </div></div>
+  <div style="position:relative"><button class="mbtn" data-m="mView">Vista</button>
+    <div class="menu" id="mView">
+      <button class="chk" id="miPrev">Anteprima del video sull'iPhone</button>
+      <button class="chk" id="miGray">Tema grigio</button>
+      <hr>
+      <button id="miAbout">Informazioni</button>
+    </div></div>
+  <span id="hdmi">HDMI</span>
+</header>
+<main>
+ <div id="colL">
+  <div id="stage"><video id="vid" playsinline muted preload="auto"></video><div class="ph" id="vph">Nessun video abbinato<br>(File › Abbina un video al brano)</div></div>
+  <div id="songT">—</div>
+  <input type="range" id="seek" min="0" max="1000" value="0" step="1">
+  <div class="trow"><span id="tCur">0:00</span><span style="flex:1"></span><span id="tDur">0:00</span></div>
+  <div class="transport">
+    <button class="tb" id="bPrev" title="Brano precedente">⏮</button>
+    <button class="tb" id="bBack" title="Torna all'inizio">⏪</button>
+    <button class="tb play" id="bPlay" title="Avvia / ferma (barra spaziatrice)">▶</button>
+    <button class="tb" id="bNext" title="Brano successivo">⏭</button>
+  </div>
+  <div class="sec" id="mixSec">
+    <div class="sech">Mixer<span class="sp"></span><label class="btn"><input type="file" id="fAdd2" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" multiple hidden>＋ Traccia</label></div>
+    <div id="mix"></div>
+  </div>
+ </div>
+ <div id="colR">
+  <div class="sec">
+    <div class="sech">Scaletta<span class="sp"></span><button class="btn" id="bEdit">✎ Modifica</button></div>
+    <div id="list" class="noedit"></div>
+  </div>
+ </div>
+</main>
+<div id="status">Pronto.</div>
+<div id="sheet"><div class="box" id="sbox"></div></div>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const VERSION='0.1.0';
+// ===== Motore nativo (app) o Web Audio (browser) =====
+const MH=(window.webkit&&window.webkit.messageHandlers)||{};
+const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
+const NATIVE=!!NE;
+const eng=o=>NE.postMessage(o);
+function mon(o){if(NM)try{NM.postMessage(JSON.stringify(o));}catch(e){}}
+
+let songs=[],cur=-1,playing=false,pos=0,dur=0,hdmiOn=false,outs=2,ins=0,cardName='',busy=false;
+let cfg={auto:false,prev:true,gray:false,master:0,inOn:false,inA:0,inB:1,inDb:0,inOut:'s0',inMute:false};
+try{Object.assign(cfg,JSON.parse(localStorage.getItem('arnostage.cfg')||'{}'));}catch(e){}
+const saveCfg=()=>{try{localStorage.setItem('arnostage.cfg',JSON.stringify(cfg));}catch(e){}};
+const uid=()=>'f'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const dbg=db=>db<=-60?0:Math.pow(10,db/20);
+const fmt=t=>{t=Math.max(0,t||0);const m=Math.floor(t/60),s=Math.floor(t%60);return m+':'+(s<10?'0':'')+s;};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function status(s,err){const e=$('status');e.textContent=s;e.classList.toggle('err',!!err);}
+function prog(f){$('prog').style.transform='scaleX('+(f==null?0:Math.max(0,Math.min(1,f)))+')';}
+const isClick=n=>/click|clic|metronom/i.test(n);
+const AUD=/\.(wav|wave|aif|aiff|mp3|m4a|aac|caf|flac)$/i, VID=/\.(mp4|mov|m4v)$/i;
+
+// ===== Archivio file (IndexedDB) =====
+let db=null;
+function idb(){return db?Promise.resolve(db):new Promise((res,rej)=>{const r=indexedDB.open('arnostage',1);
+  r.onupgradeneeded=()=>{r.result.createObjectStore('files',{keyPath:'id'});r.result.createObjectStore('kv');};
+  r.onsuccess=()=>{db=r.result;res(db);};r.onerror=()=>rej(r.error);});}
+async function tx(st,mode,fn){const d=await idb();return new Promise((res,rej)=>{const t=d.transaction(st,mode),s=t.objectStore(st);const r=fn(s);t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error);});}
+const fPut=(id,name,blob)=>tx('files','readwrite',s=>s.put({id,name,type:blob.type||'',blob}));
+const fGet=id=>tx('files','readonly',s=>s.get(id));
+const fDel=id=>tx('files','readwrite',s=>s.delete(id));
+const kvSet=(k,v)=>tx('kv','readwrite',s=>s.put(v,k));
+const kvGet=k=>tx('kv','readonly',s=>s.get(k));
+let saveT=0;function saveSongs(){clearTimeout(saveT);saveT=setTimeout(()=>kvSet('songs',songs).catch(()=>{}),250);}
+async function addFile(name,blob){const id=uid();await fPut(id,name,blob);return id;}
+
+// ===== Copia dei file nell'app (per il motore nativo e il monitor) =====
+const b64Of=blob=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const s=String(r.result);res(s.slice(s.indexOf(',')+1));};r.onerror=rej;r.readAsDataURL(blob);});
+const extOf=n=>{const m=String(n).match(/\.([A-Za-z0-9]{2,5})$/);return m?m[1].toLowerCase():'bin';};
+async function ensureNative(ids,label){
+  if(!NS||!ids.length)return;
+  const have=await NS.postMessage({op:'has',ids})||[];
+  const miss=ids.filter(i=>have.indexOf(i)<0);
+  for(let i=0;i<miss.length;i++){const f=await fGet(miss[i]);if(!f)continue;
+    const CH=1536*1024,n=Math.max(1,Math.ceil(f.blob.size/CH));
+    for(let k=0;k<n;k++){const b=await b64Of(f.blob.slice(k*CH,(k+1)*CH));
+      await NS.postMessage({op:'put',id:f.id,ext:extOf(f.name),seq:k,last:k===n-1,b64:b});
+      prog((i+(k+1)/n)/miss.length);status('Copio nell\'app: '+f.name+' '+Math.round((k+1)/n*100)+'%');}
+  }
+  prog(null);
+}
+
+// ===== Motore Web Audio (solo per provare nel browser: tutto sulle uscite 1-2) =====
+const WA={ctx:null,bufs:{},nodes:[],t0:0,from:0,mg:null};
+function waCtx(){if(!WA.ctx){WA.ctx=new (window.AudioContext||window.webkitAudioContext)();WA.mg=WA.ctx.createGain();WA.mg.connect(WA.ctx.destination);}return WA.ctx;}
+async function waLoad(id){if(WA.bufs[id])return WA.bufs[id];const f=await fGet(id);if(!f)throw 0;
+  const ab=await f.blob.arrayBuffer();const b=await new Promise((res,rej)=>waCtx().decodeAudioData(ab,res,rej));WA.bufs[id]=b;return b;}
+function waStop(){WA.nodes.forEach(n=>{try{n.src.stop();}catch(e){}n.src.disconnect();});WA.nodes=[];}
+function waPlay(from){const c=waCtx();if(c.state!=='running')c.resume();waStop();
+  const s=songs[cur];if(!s)return;WA.from=from;WA.t0=c.currentTime+0.05;
+  s.tracks.forEach((t,i)=>{const b=WA.bufs[t.fid];if(!b)return;const src=c.createBufferSource();src.buffer=b;
+    const g=c.createGain(),p=c.createStereoPanner?c.createStereoPanner():null,an=c.createAnalyser();an.fftSize=512;
+    src.connect(g);if(p){g.connect(p);p.connect(an);}else g.connect(an);an.connect(WA.mg);
+    if(from<b.duration)src.start(WA.t0,from);WA.nodes[i]={src,g,p,an,data:new Float32Array(512)};});
+  waMix();}
+function waPos(){return WA.ctx?Math.max(WA.from,WA.from+WA.ctx.currentTime-WA.t0):0;}
+function waMix(){const s=songs[cur];if(!s||!WA.mg)return;WA.mg.gain.value=dbg(cfg.master);
+  s.tracks.forEach((t,i)=>{const n=WA.nodes[i];if(!n)return;n.g.gain.value=effGain(s,t);if(n.p)n.p.pan.value=t.pan||0;});}
+function waPeaks(){return WA.nodes.map(n=>{if(!n)return 0;n.an.getFloatTimeDomainData(n.data);let m=0;for(const v of n.data){const a=Math.abs(v);if(a>m)m=a;}return m;});}
+
+// ===== Mixer =====
+const anySolo=s=>s.tracks.some(t=>t.solo);
+const effGain=(s,t)=>(t.mute||(anySolo(s)&&!t.solo))?0:dbg(t.db);
+function outVal(o){const m=/^([sm])(\d+)$/.exec(o||'s0')||['','s','0'];return {out:+m[2],om:m[1]==='m'?'mono':'st'};}
+function outOptions(sel,withMono=true){let h='';
+  for(let c=0;c+1<outs;c+=2)h+=`<option value="s${c}"${sel==='s'+c?' selected':''}>Out ${c+1}-${c+2}</option>`;
+  if(withMono)for(let c=0;c<outs;c++)h+=`<option value="m${c}"${sel==='m'+c?' selected':''}>Out ${c+1} mono</option>`;
+  if(!/^[sm]\d+$/.test(sel||'')||+(sel||'s0').slice(1)>=outs)h=h.replace('value="s0"','value="s0" selected');
+  return h;}
+function stripMsg(s,t){const o=outVal(t.out);return {g:effGain(s,t),pan:t.pan||0,mute:false,out:o.out,om:o.om};}
+function sendStrips(){const s=songs[cur];if(!s)return;
+  if(NATIVE)s.tracks.forEach((t,i)=>eng(Object.assign({op:'strip',i},stripMsg(s,t))));else waMix();}
+function defaultOut(name){return isClick(name)&&outs>2?'m2':'s0';}
+
+function renderMix(){
+  const s=songs[cur],m=$('mix');
+  if(!s){m.innerHTML='<div class="empty">Importa un progetto ARNOCLICK (File › Importa) o dei file audio.</div>';return;}
+  let h='';
+  s.tracks.forEach((t,i)=>{h+=`<div class="strip${isClick(t.name)?' click':''}" data-i="${i}">
+    <div class="nm"><b>${esc(t.name)}</b><span class="db">${t.db<=-60?'-∞':(t.db>0?'+':'')+t.db.toFixed(1)} dB</span></div>
+    <div class="tg"><button class="m${t.mute?' on':''}" data-a="mute">M</button><button class="s${t.solo?' on':''}" data-a="solo">S</button>
+      <select data-a="out">${outOptions(t.out)}</select><button class="x" data-a="del" title="Togli la traccia dal brano">✕</button></div>
+    <div class="fr"><span class="lbl">Vol</span><input type="range" data-a="db" min="-60" max="6" step="0.5" value="${t.db}"><span class="lbl">Pan</span><input type="range" class="pan" data-a="pan" min="-1" max="1" step="0.05" value="${t.pan||0}" title="Panorama (doppio tocco: al centro)"></div>
+    <div class="meter"><i></i></div></div>`;});
+  if(cfg.inOn)h+=`<div class="strip inp" data-i="in"><div class="nm"><b>Ingresso ${cfg.inA+1}${cfg.inB>=0&&cfg.inB!==cfg.inA?'-'+(cfg.inB+1):''}</b><span class="db">${cfg.inDb<=-60?'-∞':(cfg.inDb>0?'+':'')+(+cfg.inDb).toFixed(1)} dB</span></div>
+    <div class="tg"><button class="m${cfg.inMute?' on':''}" data-a="imute">M</button><select data-a="iout">${outOptions(cfg.inOut)}</select><button data-a="icfg">⚙</button></div>
+    <div class="fr"><input type="range" data-a="idb" min="-60" max="12" step="0.5" value="${cfg.inDb}"></div><div class="meter"><i></i></div></div>`;
+  h+=`<div class="strip" data-i="master"><div class="nm"><b>Master</b><span class="db">${cfg.master<=-60?'-∞':(cfg.master>0?'+':'')+(+cfg.master).toFixed(1)} dB</span></div><div class="tg"><span class="lbl">${NATIVE?esc(cardName)+' · '+outs+' uscite':'browser · uscite 1-2'}</span></div>
+    <div class="fr"><input type="range" data-a="mdb" min="-60" max="6" step="0.5" value="${cfg.master}"></div></div>`;
+  if(s.video)h+=`<div class="vrow">🎬 <b>${esc(s.video.name)}</b><span class="lbl">sync</span><button class="btn" data-a="voff" data-d="-40">−</button><input type="number" step="10" data-a="voffn" value="${s.video.off||0}"><span class="lbl">ms</span><button class="btn" data-a="voff" data-d="40">＋</button><button class="btn" data-a="vdel">✕</button></div>`;
+  m.innerHTML=h;
+}
+$('mix').addEventListener('input',e=>{const el=e.target,a=el.dataset.a,s=songs[cur];if(!s)return;
+  const row=el.closest('.strip'),i=row&&+row.dataset.i;
+  if(a==='db'||a==='pan'){const t=s.tracks[i];t[a]=+el.value;if(a==='db')row.querySelector('.db').textContent=(t.db<=-60?'-∞':(t.db>0?'+':'')+t.db.toFixed(1))+' dB';sendStrips();saveSongs();}
+  else if(a==='mdb'){cfg.master=+el.value;row.querySelector('.db').textContent=(cfg.master<=-60?'-∞':(cfg.master>0?'+':'')+cfg.master.toFixed(1))+' dB';if(NATIVE)eng({op:'master',g:dbg(cfg.master)});else waMix();saveCfg();}
+  else if(a==='idb'){cfg.inDb=+el.value;row.querySelector('.db').textContent=(cfg.inDb<=-60?'-∞':(cfg.inDb>0?'+':'')+cfg.inDb.toFixed(1))+' dB';sendInput();saveCfg();}
+  else if(a==='voffn'){s.video.off=+el.value||0;saveSongs();syncVideo(true);}
+});
+$('mix').addEventListener('change',e=>{const el=e.target,a=el.dataset.a,s=songs[cur];if(!s)return;const row=el.closest('.strip');
+  if(a==='out'){s.tracks[+row.dataset.i].out=el.value;sendStrips();saveSongs();}
+  else if(a==='iout'){cfg.inOut=el.value;sendInput();saveCfg();}});
+$('mix').addEventListener('dblclick',e=>{if(e.target.dataset.a==='pan'){const s=songs[cur],t=s.tracks[+e.target.closest('.strip').dataset.i];t.pan=0;e.target.value=0;sendStrips();saveSongs();}});
+$('mix').addEventListener('click',async e=>{const el=e.target.closest('[data-a]');if(!el||el.tagName==='INPUT'||el.tagName==='SELECT')return;
+  const a=el.dataset.a,s=songs[cur];if(!s)return;const row=el.closest('.strip'),i=row?+row.dataset.i:-1;
+  if(a==='mute'||a==='solo'){s.tracks[i][a]=!s.tracks[i][a];renderMix();sendStrips();saveSongs();}
+  else if(a==='del'){if(!confirm('Togliere la traccia «'+s.tracks[i].name+'» dal brano?'))return;s.tracks.splice(i,1);saveSongs();await loadSong(cur,false);}
+  else if(a==='imute'){cfg.inMute=!cfg.inMute;saveCfg();sendInput();renderMix();}
+  else if(a==='icfg')inputSheet();
+  else if(a==='voff'){s.video.off=(s.video.off||0)+(+el.dataset.d);saveSongs();renderMix();syncVideo(true);}
+  else if(a==='vdel'){if(!confirm('Togliere il video dal brano?'))return;s.video=null;saveSongs();await loadSong(cur,false);}
+});
+
+// ===== Scaletta =====
+let editMode=false;
+function renderList(){
+  const l=$('list');l.classList.toggle('noedit',!editMode);$('bEdit').textContent=editMode?'✓ Fine':'✎ Modifica';$('miEdit').classList.toggle('on',editMode);
+  if(!songs.length){l.innerHTML='<div class="empty">La scaletta è vuota.</div>';return;}
+  l.innerHTML=songs.map((s,i)=>`<div class="it${i===cur?' cur':''}" data-i="${i}"><span class="n">${i+1}</span><span class="t">${esc(s.name)}<br><small>${s.tracks.length} tracce${s.video?' · video':''}${s.dur?' · '+fmt(s.dur):''}</small></span>
+    <button class="ed" data-a="up">▲</button><button class="ed" data-a="dn">▼</button><button class="ed" data-a="ren">✎</button><button class="ed" data-a="dup">⧉</button><button class="ed" data-a="del">🗑</button></div>`).join('');
+}
+$('list').addEventListener('click',async e=>{const it=e.target.closest('.it');if(!it)return;const i=+it.dataset.i,b=e.target.closest('button');
+  if(!b){if(i!==cur){await stop();await loadSong(i,false);}return;}
+  const a=b.dataset.a;
+  if(a==='up'&&i>0){[songs[i-1],songs[i]]=[songs[i],songs[i-1]];if(cur===i)cur--;else if(cur===i-1)cur++;}
+  else if(a==='dn'&&i<songs.length-1){[songs[i+1],songs[i]]=[songs[i],songs[i+1]];if(cur===i)cur++;else if(cur===i+1)cur--;}
+  else if(a==='ren'){const n=prompt('Nome del brano',songs[i].name);if(n&&n.trim())songs[i].name=n.trim();if(i===cur)showTitle();}
+  else if(a==='dup'){const c=JSON.parse(JSON.stringify(songs[i]));c.id=uid();c.name+=' (copia)';songs.splice(i+1,0,c);if(cur>i)cur++;}
+  else if(a==='del'){if(!confirm('Eliminare «'+songs[i].name+'» dalla scaletta?'))return;const gone=songs.splice(i,1)[0];
+    if(i===cur){await stop();cur=-1;if(songs.length)await loadSong(Math.min(i,songs.length-1),false);else{renderMix();showTitle();}}else if(cur>i)cur--;
+    purge(gone);}
+  saveSongs();renderList();});
+$('bEdit').onclick=()=>{editMode=!editMode;renderList();};
+async function purge(song){ // elimina i file che nessun brano usa più
+  const used=new Set();songs.forEach(s=>{s.tracks.forEach(t=>used.add(t.fid));if(s.video)used.add(s.video.fid);});
+  const ids=song.tracks.map(t=>t.fid).concat(song.video?[song.video.fid]:[]).filter(id=>!used.has(id));
+  for(const id of ids){try{await fDel(id);}catch(e){}if(NS)try{NS.postMessage({op:'del',id});}catch(e){}delete WA.bufs[id];}
+}
+
+// ===== Caricamento del brano =====
+let vUrl=null,vFid=null;
+function showTitle(){const s=songs[cur];$('songT').innerHTML=s?esc(s.name)+' <small>'+(cur+1)+'/'+songs.length+'</small>':'—';}
+async function loadSong(i,autoplay){
+  if(busy)return;busy=true;
+  try{
+    const s=songs[i];if(!s)return;cur=i;pos=0;showTitle();renderList();renderMix();
+    status('Carico «'+s.name+'»…');
+    const ids=s.tracks.map(t=>t.fid);
+    if(NATIVE){
+      await ensureNative(ids.concat(s.video?[s.video.fid]:[]));
+      let d=0;
+      for(let k=0;k<ids.length;k++){status('Preparo «'+s.tracks[k].name+'» ('+(k+1)+'/'+ids.length+')…');prog((k+.5)/ids.length);
+        const r=await eng({op:'load',id:ids[k]});if(!r||!r.ok){status('Non riesco a leggere «'+s.tracks[k].name+'»',true);}else d=Math.max(d,r.dur);}
+      prog(null);
+      const r=await eng({op:'song',strips:s.tracks.map(t=>Object.assign({id:t.fid},stripMsg(s,t)))});
+      dur=r&&r.dur||d;
+      eng({op:'master',g:dbg(cfg.master)});
+      // tiene in memoria il brano attuale e il successivo
+      const nx=songs[i+1];eng({op:'keep',ids:ids.concat(nx?nx.tracks.map(t=>t.fid):[])});
+    }else{
+      let d=0;for(const id of ids){try{d=Math.max(d,(await waLoad(id)).duration);}catch(e){status('Non riesco a leggere un file audio',true);}}
+      dur=d;
+    }
+    s.dur=dur;saveSongs();renderList();
+    await setVideo(s);
+    updTime();
+    status('«'+s.name+'» pronto · '+s.tracks.length+' tracce'+(s.video?' + video':'')+'.');
+    if(autoplay)await play();
+    // prepara in anticipo il brano successivo
+    if(NATIVE&&songs[i+1])setTimeout(()=>preloadNext(i+1),500);
+  }finally{busy=false;prog(null);}
+}
+async function preloadNext(j){const s=songs[j];if(!s||busy)return;try{await ensureNative(s.tracks.map(t=>t.fid).concat(s.video?[s.video.fid]:[]));for(const t of s.tracks)await eng({op:'load',id:t.fid});status('Pronto anche il successivo: «'+s.name+'».');}catch(e){}}
+
+// ===== Video =====
+const vid=$('vid');
+async function setVideo(s){
+  const fid=s&&s.video?s.video.fid:null;
+  if(fid!==vFid){if(vUrl){URL.revokeObjectURL(vUrl);vUrl=null;}vid.removeAttribute('src');vFid=fid;
+    if(fid&&(cfg.prev||!NATIVE)){const f=await fGet(fid);if(f){vUrl=URL.createObjectURL(f.blob);vid.src=vUrl;}}}
+  $('vph').style.display=fid&&vUrl?'none':'flex';
+  $('vph').innerHTML=fid?(vUrl?'':'Anteprima spenta (Vista › Anteprima del video)'):'Nessun video abbinato<br>(File › Abbina un video al brano)';
+  if(fid)mon({t:'show',id:fid,time:pos-(s.video.off||0)/1000,playing});else mon({t:'black'});
+}
+let lastMon=0;
+function syncVideo(force){const s=songs[cur];if(!s||!s.video)return;const vt=pos-(s.video.off||0)/1000;
+  if(vUrl){if(vt<0||!playing){if(!vid.paused)vid.pause();if(Math.abs(vid.currentTime-Math.max(0,vt))>0.08)vid.currentTime=Math.max(0,vt);}
+    else{if(vid.paused)vid.play().catch(()=>{});if(force||Math.abs(vid.currentTime-vt)>0.25)vid.currentTime=vt;}}
+  const now=performance.now();if(force||now-lastMon>250){lastMon=now;mon({t:'state',time:vt,playing,seek:!!force});}}
+
+// ===== Trasporto =====
+async function play(){const s=songs[cur];if(!s||!s.tracks.length)return;
+  if(pos>=dur-0.05)pos=0;
+  if(NATIVE)await eng({op:'play',from:pos});else waPlay(pos);
+  playing=true;$('bPlay').textContent='❚❚';$('bPlay').classList.add('on');syncVideo(true);tick();}
+async function stop(){if(NATIVE)await eng({op:'stop'});else{if(playing)pos=Math.min(dur,waPos());waStop();}
+  playing=false;$('bPlay').textContent='▶';$('bPlay').classList.remove('on');syncVideo(true);}
+async function seekTo(t){pos=Math.max(0,Math.min(dur,t));if(NATIVE)await eng({op:'seek',t:pos});else if(playing)waPlay(pos);updTime();syncVideo(true);}
+$('bPlay').onclick=()=>playing?stop():play();
+$('bBack').onclick=()=>seekTo(0);
+$('bPrev').onclick=async()=>{if(pos>3){seekTo(0);return;}if(cur>0){const p=playing;await stop();await loadSong(cur-1,p);}};
+$('bNext').onclick=async()=>{if(cur<songs.length-1){const p=playing;await stop();await loadSong(cur+1,p);}};
+let seeking=false;
+$('seek').addEventListener('input',()=>{seeking=true;$('tCur').textContent=fmt($('seek').value/1000*dur);});
+$('seek').addEventListener('change',()=>{seeking=false;seekTo($('seek').value/1000*dur);});
+document.addEventListener('keydown',e=>{if(e.target.closest('input,select,textarea'))return;if(e.code==='Space'){e.preventDefault();$('bPlay').click();}});
+function updTime(){$('tCur').textContent=fmt(pos);$('tDur').textContent=fmt(dur);if(!seeking)$('seek').value=dur?Math.round(pos/dur*1000):0;}
+let ticking=false;
+async function tick(){if(ticking)return;ticking=true;
+  try{while(true){
+    let pk=[],ip=0,ended=false;
+    if(NATIVE){const r=await eng({op:'pos'});if(r){pos=r.t;pk=r.pk||[];ip=r.ip||0;ended=r.ended;if(!r.playing&&playing&&!ended){}}}
+    else if(playing){pos=waPos();pk=waPeaks();if(pos>=dur){ended=true;pos=dur;waStop();}}
+    updTime();meters(pk,ip);syncVideo(false);
+    if(ended&&playing){playing=false;$('bPlay').textContent='▶';$('bPlay').classList.remove('on');syncVideo(true);
+      if(cfg.auto&&cur<songs.length-1){await loadSong(cur+1,true);continue;}}
+    if(!playing&&!cfg.inOn)break;
+    await new Promise(r=>setTimeout(r,playing?50:120));}
+  }finally{ticking=false;}}
+const lv=p=>p<=0.0001?0:Math.max(0,Math.min(100,(20*Math.log10(p)+48)/48*100));
+function meters(pk,ip){const rows=$('mix').querySelectorAll('.strip');
+  rows.forEach(r=>{const m=r.querySelector('.meter i');if(!m)return;const i=r.dataset.i;m.style.width=(i==='in'?lv(ip):lv(pk[+i]||0))+'%';});}
+
+// ===== Ingressi della scheda =====
+function sendInput(){if(!NATIVE)return;const o=outVal(cfg.inOut);
+  return eng({op:'input',on:!!cfg.inOn,a:cfg.inA,b:cfg.inB,gain:dbg(cfg.inDb),out:o.out,om:o.om,mute:!!cfg.inMute});}
+$('miIn').onclick=async()=>{closeMenus();if(!NATIVE){status('Gli ingressi della scheda funzionano nell\'app per iPhone/iPad.',true);return;}
+  cfg.inOn=!cfg.inOn;saveCfg();const r=await sendInput();if(cfg.inOn&&r&&r.ok===false){cfg.inOn=false;saveCfg();status('Permesso per gli ingressi negato: Impostazioni › ArnoStage › Microfono.',true);}
+  $('miIn').classList.toggle('on',cfg.inOn);await refreshCard();renderMix();if(cfg.inOn){status('Ingressi attivi: suona sulle basi (cuffie consigliate).');tick();}};
+function inputSheet(){closeMenus();
+  let opt=sel=>{let h='';for(let c=0;c<Math.max(ins,2);c++)h+=`<option value="${c}"${sel===c?' selected':''}>Ingresso ${c+1}</option>`;return h;};
+  sheet(`<h3>🎸 Ingressi: suona sulle basi</h3><p>Scegli gli ingressi della scheda (es. chitarra e voce) e le uscite dove ascoltarli insieme alle basi. ${NATIVE?'Scheda: '+esc(cardName)+' · '+ins+' ingressi.':'Disponibile solo nell\'app.'}</p>
+   <div class="frm"><span>Canale 1</span><select id="iA">${opt(cfg.inA)}</select>
+   <span>Canale 2</span><select id="iB"><option value="-1"${cfg.inB<0?' selected':''}>— nessuno (mono)</option>${opt(cfg.inB)}</select>
+   <span>Uscita</span><select id="iO">${outOptions(cfg.inOut)}</select></div>
+   <p>Il volume e il muto dell'ingresso sono nel mixer, sotto le tracce.</p><div style="text-align:right;margin-top:10px"><button class="btn acc" id="iOk">OK</button></div>`);
+  $('iOk').onclick=async()=>{cfg.inA=+$('iA').value;cfg.inB=+$('iB').value;cfg.inOut=$('iO').value;saveCfg();await sendInput();closeSheet();renderMix();};}
+$('miInCfg').onclick=inputSheet;
+
+// ===== Scheda audio =====
+async function refreshCard(){if(!NATIVE){outs=2;ins=0;cardName='browser';return;}
+  try{const r=await eng({op:'info'});if(r){outs=r.out||2;ins=r.in||0;cardName=r.name||'';}}catch(e){}}
+window.engChanged=async()=>{const o=outs;await refreshCard();if(o!==outs){renderMix();sendStrips();status('Scheda audio: '+cardName+' · '+outs+' uscite, '+ins+' ingressi.');}};
+$('miCard').onclick=async()=>{closeMenus();await refreshCard();
+  sheet(`<h3>🎛 Scheda audio e uscite</h3>${NATIVE?`<p><b>${esc(cardName)}</b><br>${outs} uscite · ${ins} ingressi</p>
+  <p>Collega la scheda audio esterna (USB, con l'adattatore) prima di aprire il brano: ArnoStage usa tutte le sue uscite. Nel mixer scegli per ogni traccia l'uscita: per esempio la base su Out 1-2 (al pubblico) e il click su Out 3 mono (alle cuffie). Le tracce con «click» nel nome vanno da sole su Out 3, se la scheda ce l'ha.</p>
+  <p>Video: collega il monitor (adattatore HDMI). Il video del brano va sul monitor a tempo con l'audio; lo schermo dell'iPhone resta il pannello di controllo.</p>`:'<p>Nel browser l\'audio esce solo sulle uscite 1-2. Le uscite separate, gli ingressi e l\'HDMI funzionano nell\'app ArnoStage per iPhone e iPad.</p>'}
+  <div style="text-align:right"><button class="btn acc" onclick="closeSheet()">OK</button></div>`);};
+window.nativeMonitor=on=>{hdmiOn=on;$('hdmi').classList.toggle('on',on);$('hdmi').textContent=on?'HDMI ●':'HDMI';
+  if(on){const s=songs[cur];if(s&&s.video)mon({t:'show',id:s.video.fid,time:pos-(s.video.off||0)/1000,playing});else mon({t:'black'});status('Monitor HDMI collegato.');}};
+
+// ===== ZIP (progetti ARNOCLICK e archivi di tracce) =====
+const blobBuf=b=>b.arrayBuffer?b.arrayBuffer():new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsArrayBuffer(b);});
+async function readZip(file){
+  const tail=new DataView(await blobBuf(file.slice(Math.max(0,file.size-65558))));let p=-1;
+  for(let i=tail.byteLength-22;i>=0;i--)if(tail.getUint32(i,true)===0x06054b50){p=i;break;}
+  if(p<0)throw new Error('zip');
+  const n=tail.getUint16(p+10,true),cdSize=tail.getUint32(p+12,true),cdOff=tail.getUint32(p+16,true);
+  const cd=new DataView(await blobBuf(file.slice(cdOff,cdOff+cdSize))),dec=new TextDecoder(),out={};let q=0;
+  for(let k=0;k<n;k++){if(cd.getUint32(q,true)!==0x02014b50)throw new Error('zip');
+    const meth=cd.getUint16(q+10,true),csz=cd.getUint32(q+20,true),nl=cd.getUint16(q+28,true),xl=cd.getUint16(q+30,true),cl=cd.getUint16(q+32,true),lo=cd.getUint32(q+42,true);
+    const name=dec.decode(new Uint8Array(cd.buffer,cd.byteOffset+q+46,nl));q+=46+nl+xl+cl;
+    if(name.endsWith('/')||/(^|\/)(__MACOSX|\._)/.test(name))continue;
+    const lh=new DataView(await blobBuf(file.slice(lo,lo+30))),start=lo+30+lh.getUint16(26,true)+lh.getUint16(28,true);
+    let b=file.slice(start,start+csz);
+    if(meth===8){if(!window.DecompressionStream)throw new Error('deflate');b=await new Response(b.stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();}
+    else if(meth!==0)continue;
+    out[name]=b;}
+  return out;
+}
+const base=n=>String(n).split('/').pop();
+const strip=n=>base(n).replace(/\.[^.]+$/,'');
+function trackName(n,songName){let t=strip(n);if(songName&&t.indexOf(songName)===0&&t.length>songName.length)t=t.slice(songName.length).replace(/^[\s\-–_]+/,'');return t||strip(n);}
+async function importZip(f){
+  if(busy)return;status('Apro «'+f.name+'»…');prog(0.05);
+  let files,meta=null;
+  try{files=await readZip(f);}catch(e){status(e.message==='deflate'?'Questo .zip è compresso in un modo che questo iPhone non sa aprire: aggiorna iOS.':'Il file non è un .zip valido.',true);prog(null);return;}
+  if(files['arnoclick.json']){try{meta=JSON.parse(new TextDecoder().decode(await blobBuf(files['arnoclick.json'])));}catch(e){}}
+  const names=Object.keys(files);
+  const songName=meta&&meta.name?strip(meta.name):f.name.replace(/\.zip$/i,'').replace(/\s*-\s*ARNOCLICK progetto$/i,'');
+  const song={id:uid(),name:songName,tracks:[],video:null};
+  const aud=names.filter(n=>AUD.test(n)),vids=names.filter(n=>VID.test(n));
+  let k=0;const tot=aud.length+vids.length;
+  // il brano originale del progetto ARNOCLICK per primo, poi le altre tracce (click per ultimo)
+  aud.sort((a,b)=>(isClick(a)-isClick(b))||((meta&&b===meta.media)-(meta&&a===meta.media)));
+  for(const n of aud){prog(++k/tot);status('Importo '+base(n)+'…');
+    const fid=await addFile(base(n),files[n]);const nm=meta&&n===meta.media?'Base':trackName(n,songName);
+    song.tracks.push({fid,name:nm,db:0,pan:0,mute:false,solo:false,out:defaultOut(n)});}
+  if(vids.length){const n=(meta&&vids.includes(meta.media))?meta.media:vids[0];prog(++k/tot);status('Importo il video '+base(n)+'…');
+    const fid=await addFile(base(n),files[n]);song.video={fid,name:base(n),off:0};
+    // video del progetto ARNOCLICK (o senza altre basi): il suo audio diventa la traccia «Base»
+    if((meta&&n===meta.media)||!song.tracks.some(t=>!isClick(t.name)))song.tracks.unshift({fid,name:'Base (audio del video)',db:0,pan:0,mute:false,solo:false,out:'s0'});}
+  prog(null);
+  if(!song.tracks.length){status('Nello .zip non ci sono tracce audio.',true);return;}
+  songs.push(song);saveSongs();renderList();
+  const hasClick=song.tracks.some(t=>isClick(t.name));
+  await loadSong(songs.length-1,false);
+  if(meta&&!hasClick)status('Progetto ARNOCLICK importato, ma lo .zip non contiene il click: aggiungilo con «＋ Traccia» (in ARNOCLICK: Esporta › Click .wav).',true);
+}
+async function newFromAudio(list){if(!list.length)return;
+  const fs=[...list].sort((a,b)=>isClick(a.name)-isClick(b.name));
+  const song={id:uid(),name:strip(fs[0].name),tracks:[],video:null};
+  for(let i=0;i<fs.length;i++){status('Importo '+fs[i].name+'…');prog((i+1)/fs.length);
+    const fid=await addFile(fs[i].name,fs[i]);song.tracks.push({fid,name:i===0?'Base':trackName(fs[i].name,song.name),db:0,pan:0,mute:false,solo:false,out:defaultOut(fs[i].name)});}
+  prog(null);songs.push(song);saveSongs();await loadSong(songs.length-1,false);}
+async function addTracks(list){const s=songs[cur];if(!s){return newFromAudio(list);}
+  for(const f of list){status('Importo '+f.name+'…');const fid=await addFile(f.name,f);s.tracks.push({fid,name:trackName(f.name,s.name),db:0,pan:0,mute:false,solo:false,out:defaultOut(f.name)});}
+  saveSongs();await stop();await loadSong(cur,false);}
+async function addVideo(f){const s=songs[cur];if(!s){status('Prima crea o scegli un brano.',true);return;}
+  status('Importo il video '+f.name+'…');const fid=await addFile(f.name,f);s.video={fid,name:f.name,off:0};saveSongs();await stop();await loadSong(cur,false);}
+const onPick=(id,fn)=>$(id).addEventListener('change',async e=>{const l=[...e.target.files];e.target.value='';closeMenus();if(l.length)await fn(l);});
+onPick('fZip',l=>importZip(l[0]));onPick('fAud',newFromAudio);onPick('fAdd',addTracks);onPick('fAdd2',addTracks);onPick('fVid',l=>addVideo(l[0]));
+// trascinamento (Mac/iPad)
+document.addEventListener('dragover',e=>e.preventDefault());
+document.addEventListener('drop',async e=>{e.preventDefault();const l=[...e.dataTransfer.files];if(!l.length)return;
+  const z=l.find(f=>/\.zip$/i.test(f.name));if(z)return importZip(z);
+  const v=l.find(f=>VID.test(f.name));const a=l.filter(f=>AUD.test(f.name)||/^audio\//.test(f.type));
+  if(a.length)await (cur>=0?addTracks(a):newFromAudio(a));if(v)await addVideo(v);});
+
+// ===== Menu e fogli =====
+function closeMenus(){document.querySelectorAll('.menu.open,.mbtn.open').forEach(x=>x.classList.remove('open'));}
+document.querySelectorAll('.mbtn').forEach(b=>b.onclick=e=>{e.stopPropagation();const m=$(b.dataset.m),o=m.classList.contains('open');closeMenus();if(!o){m.classList.add('open');b.classList.add('open');}});
+document.addEventListener('click',e=>{if(!e.target.closest('.menu'))closeMenus();});
+function sheet(h){$('sbox').innerHTML=h;$('sheet').classList.add('on');}
+function closeSheet(){$('sheet').classList.remove('on');}
+$('sheet').onclick=e=>{if(e.target.id==='sheet')closeSheet();};
+$('miAuto').onclick=()=>{cfg.auto=!cfg.auto;saveCfg();$('miAuto').classList.toggle('on',cfg.auto);closeMenus();status(cfg.auto?'A fine brano parte da solo il successivo.':'A fine brano si ferma.');};
+$('miEdit').onclick=()=>{editMode=!editMode;renderList();closeMenus();};
+$('miPrev').onclick=async()=>{cfg.prev=!cfg.prev;saveCfg();$('miPrev').classList.toggle('on',cfg.prev);closeMenus();vFid=-1;await setVideo(songs[cur]);syncVideo(true);};
+$('miGray').onclick=()=>{cfg.gray=!cfg.gray;saveCfg();applyTheme();closeMenus();};
+function applyTheme(){document.documentElement.dataset.theme=cfg.gray?'gray':'';$('miGray').classList.toggle('on',cfg.gray);}
+$('miClear').onclick=async()=>{closeMenus();if(!songs.length||!confirm('Svuotare tutta la scaletta? I brani importati vengono cancellati dall\'app.'))return;
+  await stop();const old=songs;songs=[];cur=-1;for(const s of old)await purge(s);saveSongs();renderList();renderMix();showTitle();setVideo(null);status('Scaletta svuotata.');};
+$('miAbout').onclick=()=>{closeMenus();sheet(`<h3>ArnoStage ${VERSION} · PROVA</h3><p>Lettore di basi multitraccia (base stereo + click e altre tracce) con video abbinato in sync, mixer, uscite separate della scheda audio, ingressi per suonare sulle basi e uscita HDMI.</p><p>${NATIVE?'App '+esc(window.nativeVer||''):'Versione web (browser)'}.</p><p>© 2026 Maurizio Arnone. Tutti i diritti riservati.</p><div style="text-align:right"><button class="btn acc" onclick="closeSheet()">OK</button></div>`);};
+
+// ===== Avvio =====
+(async()=>{
+  applyTheme();$('miAuto').classList.toggle('on',cfg.auto);$('miPrev').classList.toggle('on',cfg.prev);$('miIn').classList.toggle('on',cfg.inOn&&NATIVE);
+  if(!NATIVE)cfg.inOn=false;
+  try{songs=(await kvGet('songs'))||[];}catch(e){songs=[];}
+  await refreshCard();
+  if(NATIVE&&cfg.inOn)await sendInput();
+  renderList();renderMix();showTitle();
+  if(songs.length){await loadSong(0,false);}else status('Benvenuto: File › Importa progetto ARNOCLICK (.zip) per iniziare.');
+  if(cfg.inOn)tick();
+})();
+</script>
+</body>
+</html>
