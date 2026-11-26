@@ -90,6 +90,11 @@ function applyAll(){
     p.c={x:r.left+W.pageXOffset,y:r.top+W.pageYOffset,pad:{t:parseFloat(cs.paddingTop)||0,r:parseFloat(cs.paddingRight)||0,b:parseFloat(cs.paddingBottom)||0,l:parseFloat(cs.paddingLeft)||0}}});
   list.forEach(function(p){posP(p.el,p.P,p.c)});
   D.body.classList.add('cvlayout');
+  // elementi che compaiono più tardi (es. il numero della clip): si sistemano quando diventano visibili
+  Object.keys(M.P).forEach(function(ref){var el=resolve(ref);if(!el||vis(el)||el._cvObs||!W.MutationObserver)return;el._cvObs=1;
+    var place=function(){if(!vis(el))return;var P=M.P[ref],st=el.style;imp(st,'position','absolute');imp(st,'margin','0');imp(st,'box-sizing','border-box');imp(st,'max-width','none');imp(st,'left','0px');imp(st,'top','0px');imp(st,'width',P.w+'px');setTS(el,0,0,1,0);
+      var r=el.getBoundingClientRect(),cs=W.getComputedStyle(el);posP(el,P,{x:r.left+W.pageXOffset,y:r.top+W.pageYOffset,pad:{t:parseFloat(cs.paddingTop)||0,r:parseFloat(cs.paddingRight)||0,b:parseFloat(cs.paddingBottom)||0,l:parseFloat(cs.paddingLeft)||0}})};
+    new MutationObserver(function(){if(vis(el)&&!el._cvDone){el._cvDone=1;place()}else if(!vis(el))el._cvDone=0}).observe(el,{attributes:true,attributeFilter:['hidden','class','style']})});
 }
 /* funzioni assegnate agli elementi nuovi */
 function stopButtons(){['@n1','@n6'].forEach(function(r){var b=resolve(r);if(!b)return;

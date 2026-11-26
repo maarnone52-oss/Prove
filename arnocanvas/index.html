@@ -263,7 +263,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.9.8';
+var VER='0.9.9';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -273,8 +273,8 @@ var APPS=[
  {k:'arnoclick',n:'ARNOCLICK',u:'../arnoclick/',d:'versione di prova',panels:['main .rack:not(#helpPanel)','main > footer']},
  {k:'arnodesign',n:'ARNODESIGN',u:'../arnodesign/',d:'versione di prova',fixed:true,panels:['#app > header','#canvasWrap','#palette','#props','#app > footer'],
   names:{'#canvasWrap':'Area di lavoro','#palette':'Elementi','#props':'Proprietà','#app > footer':'Barra dei comandi'}},
- {k:'arnoshow',n:'ARNOSHOW',u:'../arnoshow/',d:'versione di prova',samples:[{box:'#list',has:'.tile',n:4,html:function(i){var e=['▶','🖼','🎵','🎬🎵'][i];return '<div class="tile'+(i===0?' on':'')+'"><div class="th" style="background-color:hsl('+(i*70+20)+',35%,32%)">'+e+'</div><div class="nm">Esempio '+(i+1)+'</div><div class="num">'+(i+1)+'</div></div>'}}],fixed:true,panels:['body > header','#stage','#prog','#bar','#ctl','#listwrap','#foot'],
-  names:{'body > header':'Barra dei menu','#stage':'Schermo video','#prog':'Barra del tempo','#bar':'Titolo e audio','#ctl':'Pausa e cestino','#listwrap':'Miniature','#foot':'HDMI e Avvia'}}
+ {k:'arnoshow',n:'ARNOSHOW',u:'../arnoshow/',d:'versione di prova',samples:[{box:'#list',has:'.tile',n:4,html:function(i){var e=['▶','🖼','🎵','🎬🎵'][i];return '<div class="tile'+(i===0?' on':'')+'"><div class="th" style="background-color:hsl('+(i*70+20)+',35%,32%)">'+e+'</div><div class="nm">Esempio '+(i+1)+'</div><div class="num">'+(i+1)+'</div></div>'}}],fixed:true,panels:['body > header','#stage','#prog','#bar','#ctl','#listwrap','#foot','#curnum','#mu'],fill:{'#curnum':{t:'1',left:'#stage'}},
+  names:{'body > header':'Barra dei menu','#stage':'Schermo video','#prog':'Barra del tempo','#bar':'Titolo e audio','#ctl':'Pausa e cestino','#listwrap':'Miniature','#foot':'HDMI e Avvia','#curnum':'Numero della clip in corso','#mu':'Tasto audio (muto)'}}
 ];
 var DEVS=[
  {k:'iphone16e',n:'iPhone 16e',w:390,h:844,ic:'📱',x:'anche iPhone 13 e 14'},
@@ -538,7 +538,10 @@ function revealLater(){
     for(var a=el.parentElement;a&&a!==p.el;a=a.parentElement){var ca=(a.id||'')+' '+(typeof a.className==='string'?a.className:'');if(LATEX.test(ca))return}
     revealOne(el)})});
 }
-function addSamples(){(A().samples||[]).forEach(function(sm){var box=D.querySelector(sm.box);if(!box||box.querySelector(sm.has))return;
+function fillSamples(){var f=A().fill||{};Object.keys(f).forEach(function(q){var el=D.querySelector(q),o=f[q];if(!el)return;var r=refOf(el);
+  if(!txt(el)){touch(r,el);if(ORIG[r].html==null)ORIG[r].html=el.innerHTML;el.textContent=o.t}
+  if(o.left&&!el.style.left){var a=D.querySelector(o.left);if(a){touch(r,el);var ar=a.getBoundingClientRect();el.style.left=Math.max(4,ar.left-el.offsetWidth-10)+'px';el.style.top=(ar.top+ar.height/2-el.offsetHeight/2)+'px'}}})}
+function addSamples(){fillSamples();(A().samples||[]).forEach(function(sm){var box=D.querySelector(sm.box);if(!box||box.querySelector(sm.has))return;
   Array.prototype.forEach.call(box.children,function(c){if(!c.hasAttribute('data-cvprev')&&!c.matches(sm.has)){var r=refOf(c);touch(r,c);imp(c.style,'display','none')}});
   for(var i=0;i<sm.n;i++){var t=D.createElement('div');t.innerHTML=sm.html(i);var e=t.firstElementChild;e.setAttribute('data-cvprev','1');e.style.pointerEvents='none';box.appendChild(e)}
   box.removeAttribute('data-cvempty');})}
@@ -585,6 +588,8 @@ function ensureFrozen(){
 function placeLate(){
   var miss=PANELS.filter(function(p){return !M.P[p.ref]&&vis(p.el)});if(!miss.length)return false;
   var bottom=0,x=null,w=null;Object.keys(M.P).forEach(function(k){var e=resolve(k);if(e&&vis(e)){var r=e.getBoundingClientRect();bottom=Math.max(bottom,r.bottom+W.pageYOffset);if(x==null){x=M.P[k].x;w=M.P[k].w}}});
+  miss=miss.filter(function(p){var ps=W.getComputedStyle(p.el).position;if(ps!=='fixed'&&ps!=='absolute')return true;
+    var r=rectOf(p.el),ww=p.el.offsetWidth;M.P[p.ref]={x:r1(r.x),y:r1(r.y),w:ww,s:1,x0:r1(r.x),y0:r1(r.y),w0:ww,h0:p.el.offsetHeight};return false});
   miss.forEach(function(p){var ww=w||p.el.offsetWidth,xx=x==null?rectOf(p.el).x:x;M.P[p.ref]={x:xx,y:sn(bottom+16),w:ww,s:1,x0:xx,y0:sn(bottom+16),w0:ww};bottom+=p.el.offsetHeight+16});
   lsSet(mkey(),M);return true;
 }
