@@ -166,6 +166,8 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 .li .hb{min-height:34px;min-width:34px;padding:0 7px;font-size:13px}
 .li .ey.on{background:linear-gradient(180deg,#7fe3ff,#1aa4d6);color:#04161d}
 #bIn{display:none!important}
+.bx .spill{position:absolute;border:1px dashed rgba(255,95,210,.85);pointer-events:none;border-radius:4px}
+.bx .spill em{position:absolute;right:0;top:-16px;font:600 10px/1 -apple-system,Helvetica,Arial,sans-serif;color:#ff9fe6;font-style:normal;white-space:nowrap;background:#2a0020;padding:2px 4px;border-radius:4px}
 .bx.grp{outline:2px dashed #b98cff;outline-offset:-1px}
 .bx.grp>.tg{background:#b98cff;color:#1a0b33}
 .bx.wrp>.tg{background:#9fe0ff;color:#04161d}
@@ -220,7 +222,7 @@ textarea.nt{width:100%;min-height:60px;background:#0a0b0d;color:var(--tx);border
 <script>
 (function(){
 'use strict';
-var VER='0.9.0';
+var VER='0.9.1';
 function $(s){return document.querySelector(s)}
 function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
 
@@ -508,17 +510,40 @@ function layoutStage(){
 }
 
 /* ---------- misura e disegna il velo di modifica ---------- */
+function plainBox(el){ // contenitore senza aspetto proprio (niente sfondo, bordo, ombra, testo suo)
+  var cs=W.getComputedStyle(el);
+  if(cs.backgroundImage!=='none'||cs.boxShadow!=='none')return false;
+  if(!/rgba\(0, 0, 0, 0\)|transparent/.test(cs.backgroundColor))return false;
+  if(parseFloat(cs.borderTopWidth)||parseFloat(cs.borderBottomWidth)||parseFloat(cs.borderLeftWidth)||parseFloat(cs.borderRightWidth))return false;
+  for(var n=el.firstChild;n;n=n.nextSibling)if(n.nodeType===3&&n.nodeValue.trim())return false;
+  return !/^(BUTTON|SELECT|INPUT|CANVAS|VIDEO|IMG|LABEL|A|TEXTAREA|SVG)$/i.test(el.tagName);
+}
+function solo(el){for(var i=0;i<6;i++){if(!plainBox(el))return el;var k=visKids(el);if(k.length!==1)return el;el=k[0]}return el}
+function radOf(el,r){ // forma della cornice = forma dell'oggetto (angoli arrotondati, tondo)
+  if(isWrap(el)&&el.firstElementChild)el=el.firstElementChild;
+  var cs=W.getComputedStyle(el),k=el.offsetWidth?(r.w/el.offsetWidth):1;if(!isFinite(k)||k<=0)k=1;
+  function one(v){v=String(v||'0').split(' ')[0];if(v.indexOf('%')>0)return v;var n=parseFloat(v)||0;return n?(n*k*Z).toFixed(1)+'px':'0'}
+  var a=[one(cs.borderTopLeftRadius),one(cs.borderTopRightRadius),one(cs.borderBottomRightRadius),one(cs.borderBottomLeftRadius)];
+  return a.join(' ')==='0 0 0 0'?'':a.join(' ');
+}
+function spillOf(el,r){ // se il contenuto esce dall'oggetto: rettangolo di tutto quello che si vede
+  var L=r.x,T=r.y,Rr=r.x+r.w,B=r.y+r.h,out=false;
+  (function walk(e,d){visKids(e).forEach(function(c){var q=rectOf(c);if(q.w<1||q.h<1)return;
+    if(q.x<L-2||q.y<T-2||q.x+q.w>Rr+2||q.y+q.h>B+2)out=true;L=Math.min(L,q.x);T=Math.min(T,q.y);Rr=Math.max(Rr,q.x+q.w);B=Math.max(B,q.y+q.h);if(d<2)walk(c,d+1)})})(el,0);
+  return out?{x:L,y:T,w:Rr-L,h:B-T}:null;
+}
 function hasKids(el){for(var c=el.firstElementChild;c;c=c.nextElementSibling)if(!/^(SCRIPT|STYLE|TEMPLATE|OPTION)$/.test(c.tagName)&&vis(c))return true;return false}
 function measure(){
   BOXES=[];CONTR=null;if(!ready||!D)return;
-  if(S.lvl==='P'){var n=0;PANELS.forEach(function(p){if(!vis(p.el))return;n++;BOXES.push({ref:p.ref,el:p.el,wrap:isWrap(p.el),r:rectP(p.ref,p.el),num:n,name:panelName(p.el),nw:isNew(p.el)||!!p.el.closest('[data-cvn]'),cut:(M.P[p.ref]&&M.P[p.ref].det)?null:cutSides(p.ref,p.el)})})}
+  if(S.lvl==='P'){var n=0;PANELS.forEach(function(p){if(!vis(p.el))return;n++;var rp=rectP(p.ref,p.el);BOXES.push({ref:p.ref,el:p.el,wrap:isWrap(p.el),r:rp,rad:(M.P[p.ref]&&M.P[p.ref].e)?'':radOf(p.el,rp),num:n,name:panelName(p.el),nw:isNew(p.el)||!!p.el.closest('[data-cvn]'),cut:(M.P[p.ref]&&M.P[p.ref].det)?null:cutSides(p.ref,p.el)})})}
   else if(S.lvl==='O'&&cont){
     var c=resolve(cont);if(!c){cont=null;return}
     CONTR=isPanelEl(c)?rectP(cont,c):rectOf(c);
-    for(var ch=c.firstElementChild;ch;ch=ch.nextElementSibling){
-      if(/^(SCRIPT|STYLE|TEMPLATE|OPTION)$/.test(ch.tagName)||!vis(ch))continue;
+    for(var ch0=c.firstElementChild;ch0;ch0=ch0.nextElementSibling){
+      if(/^(SCRIPT|STYLE|TEMPLATE|OPTION)$/.test(ch0.tagName)||!vis(ch0))continue;
+      var ch=solo(ch0); // un contenitore invisibile con un solo oggetto si attraversa: la cornice va sull'oggetto vero
       var r=rectOf(ch);if(r.w<2&&r.h<2)continue;
-      BOXES.push({ref:refOf(ch),el:ch,r:r,name:objName(ch),nw:isFresh(ch)});
+      BOXES.push({ref:refOf(ch),el:ch,r:r,name:objName(ch),nw:isFresh(ch),rad:radOf(ch,r)});
     }
   }
   groupBoxes();
@@ -542,9 +567,10 @@ function render(){
   BOXES.forEach(function(b){
     var many=selList().length>1,s=isSel(b.ref),one=s&&!many&&b.ref===sel,r=b.r;
     if(b.grp){h+='<div class="bx grp'+(s?' sel':'')+'" data-ref="'+esc(b.ref)+'" style="left:'+r.x*Z+'px;top:'+r.y*Z+'px;width:'+r.w*Z+'px;height:'+r.h*Z+'px"><span class="tg"><b class="nm">⧉</b>'+esc(b.name)+' · '+b.mem.length+'</span>'+(s?'<span class="dm">gruppo · doppio tocco per entrare</span>':'')+'</div>';return}
-    h+='<div class="bx'+(S.lvl==='P'?' pn':'')+(b.wrap?' wrp':'')+(s?' sel':'')+(s&&(r.w*Z<90||r.h*Z<70)?' small':'')+(b.nw?' nw':'')+'" data-ref="'+esc(b.ref)+'" style="left:'+r.x*Z+'px;top:'+r.y*Z+'px;width:'+r.w*Z+'px;height:'+r.h*Z+'px">';
+    h+='<div class="bx'+(S.lvl==='P'?' pn':'')+(b.wrap?' wrp':'')+(s?' sel':'')+(s&&(r.w*Z<90||r.h*Z<70)?' small':'')+(b.nw?' nw':'')+'" data-ref="'+esc(b.ref)+'" style="left:'+r.x*Z+'px;top:'+r.y*Z+'px;width:'+r.w*Z+'px;height:'+r.h*Z+'px'+(b.rad?';border-radius:'+b.rad:'')+'">';
     if(S.lvl==='P')h+='<span class="tg"><b class="nm">'+b.num+'</b>'+esc(b.name)+'</span>';
     else if(s&&!(many&&S.lvl==='O'))h+='<span class="tg">'+(many?'✓ ':'')+esc(b.name)+'</span>';
+    if(one&&b.el&&!drag){var sp=spillOf(b.el,r);if(sp)h+='<span class="spill" style="left:'+((sp.x-r.x)*Z-1)+'px;top:'+((sp.y-r.y)*Z-1)+'px;width:'+(sp.w*Z+2)+'px;height:'+(sp.h*Z+2)+'px"><em>il contenuto arriva fin qui</em></span>'}
     if(b.nw)h+='<span class="na">da assegnare</span>';
     if(b.cut)h+='<span class="na cut">contenuto tagliato '+b.cut+'</span>';
     if(s&&many&&b.ref===sel&&S.lvl!=='O')h+='<span class="dm">'+selList().length+' selezionati</span>';
