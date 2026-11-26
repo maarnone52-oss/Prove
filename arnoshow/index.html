@@ -307,6 +307,18 @@ header .plate .brand-mark svg,.plate .brand-mark svg{width:19px!important;height
   #foot #pp{margin-left:8px}
   #go{width:70px!important;height:70px!important;font-size:13px!important}
 }
+
+/* verticale da ARNOCANVAS 0.9.1 (iPhone 15 Plus): video più grande, miniature più basse, Continua più grande */
+@media screen and (orientation:portrait){
+  #stage{width:77%!important;height:23vh!important;margin-top:4px!important}
+  #prog{margin-top:22px!important}
+  #listwrap{margin-top:6px;margin-bottom:18px;padding-left:6px}
+  .hint{padding-top:90px!important}
+  #foot #pp{margin-left:8px}
+  #foot .fh:last-child #go{width:100px!important;height:100px!important;margin-top:-12px;font-size:18px}
+  #bar{position:relative;z-index:35;margin-bottom:6px}
+  #foot .fh:last-child #go .go-sub{font-size:14px}
+}
 </style>
 </head>
 <body>
@@ -1621,7 +1633,7 @@ pimp.addEventListener("change",function(){
 function sweepLogo(el){var w=el&&el.querySelector(".sweep");if(!w)return;w.classList.remove("go");void w.offsetWidth;w.classList.add("go");}
 setTimeout(function(){sweepLogo(document.querySelector("header .plate"));},500);
 // Informazioni: versione e copyright
-var APPVER="1.1.16";
+var APPVER="1.1.17";
 (function(){var box=document.getElementById("about");
   document.getElementById("abtn").addEventListener("click",function(){
     document.getElementById("abver").textContent="Versione "+(window.nativeVer||APPVER)+" · prova";box.hidden=false;setTimeout(function(){sweepLogo(box.querySelector(".plate"));},150);});
@@ -1690,7 +1702,7 @@ var APPVER="1.1.16";
       if(dc.parentNode!==me){me.appendChild(dc);dc.appendChild(dcTxt);}
       if(mu.parentNode!==document.body)document.body.appendChild(mu);
       mu.classList.add("cvfloat");
-      var r=st.getBoundingClientRect();mu.style.left=(r.right+16)+"px";mu.style.top=(r.top+62)+"px";
+      var r=st.getBoundingClientRect(),mw=mu.offsetWidth||44;mu.style.left=Math.min(r.right+10,window.innerWidth-mw-8)+"px";mu.style.top=(r.top+62)+"px";
     }else{
       mu.classList.remove("cvfloat");mu.style.left=mu.style.top="";if(mu.parentNode!==bar)bar.appendChild(mu);
       if(pp.parentNode!==foot)foot.insertBefore(pp,foot.children[1]||null);
