@@ -86,8 +86,13 @@ final class MonitorVC: UIViewController {
         if id == curId { state(m); return }
         guard let u = MediaStore.url(for: id) else { pending = m; info.text = "Preparo il video per il monitor…"; info.isHidden = false; return }
         pending = nil; info.isHidden = true
-        player.replaceCurrentItem(with: MonitorVC.silentItem(u))
+        let it = MonitorVC.silentItem(u)
+        player.replaceCurrentItem(with: it)
         layer.isHidden = false
+        var so: NSKeyValueObservation?
+        so = it.observe(\.status, options: [.new]) { [weak self] it, _ in
+            if it.status == .readyToPlay { so?.invalidate(); so = nil; DispatchQueue.main.async { if let p = self?.player, p.currentItem === it, p.rate == 0 { p.preroll(atRate: 1, completionHandler: nil) } } }
+        }
         curId = id
         let t = (m["time"] as? Double) ?? 0
         player.seek(to: CMTime(seconds: max(0, t), preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
@@ -109,22 +114,19 @@ final class MonitorVC: UIViewController {
         let playing = ((m["playing"] as? Bool) ?? false) && t >= 0
         let now = player.currentTime().seconds
         let tt = max(0, t)
-        if !playing {
-            if player.rate != 0 { player.pause() }
-            if now.isFinite, abs(now - tt) > 0.08 { player.seek(to: CMTime(seconds: tt, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) }
-            return
-        }
+        // stessa regolazione di ArnoShow
+        if !playing { if player.rate != 0 { player.pause() }; if now.isFinite, abs(now - tt) > 0.15 { player.seek(to: CMTime(seconds: tt, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) }; return }
         guard now.isFinite else { return }
         let d = now - t
-        if (m["seek"] as? Bool) == true || abs(d) > 1.0 || player.rate == 0 {
+        if (m["seek"] as? Bool) == true || abs(d) > 2.0 {   // spostamento con la barra o molto fuori tempo: si salta, poi si riparte
             player.pause()
             player.seek(to: CMTime(seconds: tt, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
                 DispatchQueue.main.async { self?.player.preroll(atRate: 1) { _ in DispatchQueue.main.async { self?.player.rate = 1 } } }
             }
-        } else if abs(d) > 0.04 {
-            let r = Float(1 - max(-0.05, min(0.05, d * 0.5)))
-            if abs(player.rate - r) > 0.005 { player.rate = r }
-        } else if player.rate != 1 { player.rate = 1 }
+        } else if abs(d) > 0.25 {   // si recupera piano, senza scatti (sotto 0,25 s non si tocca nulla)
+            let r = Float(1 - max(-0.04, min(0.04, d * 0.3)))
+            if abs(player.rate - r) > 0.01 { player.rate = r }
+        } else if abs(d) < 0.06 && player.rate != 1 { player.rate = 1 }
     }
 
     /// Elemento senza audio: l'audio esce solo dal motore di ArnoStage.
