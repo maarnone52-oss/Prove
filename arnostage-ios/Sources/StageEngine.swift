@@ -21,6 +21,7 @@ final class StageEngine {
     private final class Voice {
         let tr: Track
         var gL: Float = 1, gR: Float = 1, out = 0, st = true
+        var off = 0.0   // ritardo in secondi (audio del video spostato col sync)
         init(_ t: Track) { tr = t }
     }
 
@@ -241,7 +242,7 @@ final class StageEngine {
             var vs: [Voice] = [], ids: [String] = [], len = 0.0
             for s in list {
                 guard let id = s["id"] as? String, let t = tracks[id] else { continue }
-                let v = Voice(t); StageEngine.apply(v, s); vs.append(v); ids.append(id); len = max(len, t.duration)
+                let v = Voice(t); StageEngine.apply(v, s); vs.append(v); ids.append(id); len = max(len, t.duration + max(0, v.off))
             }
             prepare()
             lock()
@@ -252,7 +253,7 @@ final class StageEngine {
             reply(["ok": true, "dur": len, "n": vs.count])
         case "strip":
             let i = Int(num("i"))
-            lock(); if i >= 0 && i < voices.count { StageEngine.apply(voices[i], m) }; unlock()
+            lock(); if i >= 0 && i < voices.count { StageEngine.apply(voices[i], m); length = voices.reduce(0) { max($0, $1.tr.duration + max(0, $1.off)) } }; unlock()
             reply(true)
         case "master":
             lock(); master = Float(num("g")); unlock(); reply(true)
@@ -310,6 +311,7 @@ final class StageEngine {
         v.gL = gg * min(1, 1 - pan); v.gR = gg * min(1, 1 + pan)
         v.out = max(0, Int((s["out"] as? NSNumber)?.intValue ?? 0))
         v.st = (s["om"] as? String) != "mono"
+        v.off = (s["off"] as? NSNumber)?.doubleValue ?? 0
     }
 
     // MARK: - Thread audio
@@ -390,7 +392,7 @@ final class StageEngine {
             let t = v.tr
             let o0 = min(v.out, nOut - 1), o1 = min(v.out + 1, nOut - 1)
             let stereo = v.st && o1 != o0
-            var p = pos * t.sr
+            var p = (pos - v.off) * t.sr
             let step = t.sr * dt
             var pk: Float = 0
             let gl = v.gL * mg, gr = v.gR * mg
