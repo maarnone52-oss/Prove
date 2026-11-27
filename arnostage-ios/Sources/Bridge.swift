@@ -23,6 +23,7 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWith
 
     var control: WKWebView?
     var monitorVC: MonitorVC?
+    weak var webVC: WebVC?
     var monitorAttached = false
 
     func makeWebView() -> WKWebView {
@@ -53,7 +54,8 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWith
     func userContentController(_ ucc: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.name == "mon", let json = message.body as? String, let d = json.data(using: .utf8),
               let m = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any] else { return }
-        monitorVC?.handle(m)
+        if (m["t"] as? String) == "rect" { webVC?.preview.place(m); return }
+        VideoHub.shared.handle(m)
     }
 
     func userContentController(_ ucc: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping (Any?, String?) -> Void) {
@@ -72,7 +74,7 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWith
             DispatchQueue.global(qos: .userInitiated).async {
                 let ok = MediaStore.append(id: id, ext: ext, seq: seq, last: last, data: data)
                 DispatchQueue.main.async {
-                    if ok && last { self.monitorVC?.fileArrived(id) }
+                    if ok && last { VideoHub.shared.fileArrived(id) }
                     replyHandler(ok, ok ? nil : "scrittura non riuscita")
                 }
             }
@@ -101,6 +103,7 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWith
 
 final class WebVC: UIViewController {
     let web: WKWebView
+    let preview = PreviewView(frame: .zero)
     init(web: WKWebView) { self.web = web; super.init(nibName: nil, bundle: nil) }
     required init?(coder: NSCoder) { fatalError() }
     override func viewDidLoad() {
@@ -109,6 +112,8 @@ final class WebVC: UIViewController {
         web.frame = view.bounds
         web.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(web)
+        web.addSubview(preview)   // sopra la pagina, segue il riquadro del video
+        Bridge.shared.webVC = self
     }
 }
 

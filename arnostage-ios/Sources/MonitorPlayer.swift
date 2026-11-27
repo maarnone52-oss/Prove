@@ -31,116 +31,162 @@ enum MediaStore {
     }
 }
 
-/// Schermo esterno (HDMI): il video del brano, muto, a tempo con l'audio. Nessuna dissolvenza né elaborazione.
-final class MonitorVC: UIViewController {
-    private let player = AVPlayer()
-    private var layer: AVPlayerLayer!
-    private let info = UILabel()
+/// Un solo lettore video (decodifica una volta) che disegna sia sull'anteprima dell'iPhone/iPad sia sul monitor HDMI.
+/// Il video è caricato SENZA traccia audio: l'audio esce solo dal motore di ArnoStage e non viene disturbato.
+final class VideoHub {
+    static let shared = VideoHub()
+    let player = AVPlayer()
+    var monitorLayer: AVPlayerLayer?
+    var previewLayer: AVPlayerLayer?
     private var curId: String?
     private var pending: [String: Any]?
+    private var lastState: [String: Any]?
+    private var ended = false
+    private var loading = false
+    var monitorEnabled = true { didSet { apply() } }
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        view.backgroundColor = .black
+    init() {
         player.isMuted = true
         player.automaticallyWaitsToMinimizeStalling = false
         player.actionAtItemEnd = .pause
-        layer = AVPlayerLayer(player: player)
-        layer.videoGravity = .resizeAspect
+    }
+    func makeLayer() -> AVPlayerLayer { let l = AVPlayerLayer(player: player); l.videoGravity = .resizeAspect; l.backgroundColor = UIColor.black.cgColor; return l }
+
+    private func apply() {
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        monitorLayer?.isHidden = ended || !monitorEnabled || curId == nil
+        previewLayer?.isHidden = ended || curId == nil
+        CATransaction.commit()
+    }
+
+    func handle(_ m: [String: Any]) {
+        switch m["t"] as? String ?? "" {
+        case "show": show(m)
+        case "state": lastState = m; if !loading { state(m) }
+        case "hdmi": monitorEnabled = (m["on"] as? Bool) ?? true
+        default: black()
+        }
+    }
+    func fileArrived(_ id: String) { if let p = pending, (p["id"] as? String) == id { pending = nil; show(p) } }
+
+    private func black() { player.pause(); player.replaceCurrentItem(with: nil); curId = nil; pending = nil; ended = false; apply() }
+
+    private func show(_ m: [String: Any]) {
+        guard let id = m["id"] as? String else { black(); return }
+        if id == curId { state(m); return }
+        guard let u = MediaStore.url(for: id) else { pending = m; return }
+        pending = nil; curId = id; ended = false; loading = true; lastState = m
+        player.pause(); player.replaceCurrentItem(with: nil); apply()
+        VideoHub.videoOnlyItem(u) { [weak self] item in
+            guard let self = self, self.curId == id else { return }
+            self.player.replaceCurrentItem(with: item)
+            self.loading = false
+            self.apply()
+            var so: NSKeyValueObservation?
+            so = item.observe(\.status, options: [.new]) { [weak self] it, _ in
+                guard it.status == .readyToPlay else { return }
+                so?.invalidate(); so = nil
+                DispatchQueue.main.async {
+                    guard let self = self, self.player.currentItem === it else { return }
+                    var st = self.lastState ?? m; st["seek"] = true
+                    self.state(st)
+                }
+            }
+        }
+    }
+
+    /// Stessa regolazione di ArnoShow: sotto 0,25 s non si tocca nulla, poi si recupera piano; salto solo se molto fuori.
+    private func state(_ m: [String: Any]) {
+        guard curId != nil, let item = player.currentItem, item.status == .readyToPlay else { return }
+        let t = (m["time"] as? Double) ?? 0
+        let vd = item.duration.seconds
+        let isEnd = vd.isFinite && vd > 0 && t >= vd - 0.05
+        if isEnd != ended { ended = isEnd; apply() }
+        if isEnd { if player.rate != 0 { player.pause() }; return }
+        let playing = ((m["playing"] as? Bool) ?? false) && t >= 0
+        let now = player.currentTime().seconds
+        let tt = max(0, t)
+        if !playing {
+            if player.rate != 0 { player.pause() }
+            if now.isFinite, abs(now - tt) > 0.15 { player.seek(to: CMTime(seconds: tt, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) }
+            return
+        }
+        guard now.isFinite else { return }
+        let d = now - t
+        if (m["seek"] as? Bool) == true || abs(d) > 2.0 || player.rate == 0 {
+            player.pause()
+            player.seek(to: CMTime(seconds: tt + 0.1, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+                DispatchQueue.main.async { self?.player.rate = 1 }
+            }
+        } else if abs(d) > 0.25 {
+            let r = Float(1 - max(-0.04, min(0.04, d * 0.3)))
+            if abs(player.rate - r) > 0.01 { player.rate = r }
+        } else if abs(d) < 0.06 && player.rate != 1 { player.rate = 1 }
+    }
+
+    /// Solo la traccia video del file (niente audio da decodificare).
+    static func videoOnlyItem(_ u: URL, done: @escaping (AVPlayerItem) -> Void) {
+        let a = AVURLAsset(url: u)
+        Task {
+            var item = AVPlayerItem(asset: a)
+            if let vt = try? await a.loadTracks(withMediaType: .video).first, let dur = try? await a.load(.duration) {
+                let comp = AVMutableComposition()
+                if let ct = comp.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
+                   (try? ct.insertTimeRange(CMTimeRange(start: .zero, duration: dur), of: vt, at: .zero)) != nil {
+                    ct.preferredTransform = (try? await vt.load(.preferredTransform)) ?? .identity
+                    item = AVPlayerItem(asset: comp)
+                }
+            }
+            let it = item
+            await MainActor.run { done(it) }
+        }
+    }
+}
+
+/// Schermo esterno (HDMI): il livello video del lettore condiviso, a tutto schermo.
+final class MonitorVC: UIViewController {
+    private var layer: AVPlayerLayer!
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .black
+        layer = VideoHub.shared.makeLayer()
         view.layer.addSublayer(layer)
-        info.textColor = UIColor(white: 1, alpha: 0.5)
-        info.font = .systemFont(ofSize: 22, weight: .semibold)
-        info.textAlignment = .center
-        info.numberOfLines = 0
-        info.frame = view.bounds
-        info.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        info.text = "ArnoStage · monitor collegato"
-        view.addSubview(info)
+        VideoHub.shared.monitorLayer = layer
+        VideoHub.shared.monitorEnabled = VideoHub.shared.monitorEnabled
     }
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         CATransaction.begin(); CATransaction.setDisableActions(true); layer.frame = view.bounds; CATransaction.commit()
     }
     override var prefersHomeIndicatorAutoHidden: Bool { true }
+    deinit { if VideoHub.shared.monitorLayer === layer { VideoHub.shared.monitorLayer = nil } }
+}
 
-    func handle(_ m: [String: Any]) {
-        switch m["t"] as? String ?? "" {
-        case "show": show(m)
-        case "state": state(m)
-        default: black()
-        }
+/// Anteprima sopra la pagina, nel riquadro del video: stesso lettore, nessuna seconda decodifica.
+final class PreviewView: UIView {
+    private let pl: AVPlayerLayer
+    override init(frame: CGRect) {
+        pl = VideoHub.shared.makeLayer()
+        super.init(frame: frame)
+        isUserInteractionEnabled = false
+        clipsToBounds = true
+        layer.cornerRadius = 10
+        backgroundColor = .clear
+        layer.addSublayer(pl)
+        VideoHub.shared.previewLayer = pl
+        isHidden = true
     }
-
-    func fileArrived(_ id: String) {
-        if let p = pending, (p["id"] as? String) == id { pending = nil; show(p) }
-    }
-
-    private func black() {
-        player.pause(); player.replaceCurrentItem(with: nil)
-        curId = nil; pending = nil
-        info.text = ""; info.isHidden = true
-    }
-
-    private func show(_ m: [String: Any]) {
-        guard let id = m["id"] as? String else { black(); return }
-        if id == curId { state(m); return }
-        guard let u = MediaStore.url(for: id) else { pending = m; info.text = "Preparo il video per il monitor…"; info.isHidden = false; return }
-        pending = nil; info.isHidden = true
-        let it = MonitorVC.silentItem(u)
-        player.replaceCurrentItem(with: it)
-        layer.isHidden = false
-        var so: NSKeyValueObservation?
-        so = it.observe(\.status, options: [.new]) { [weak self] it, _ in
-            if it.status == .readyToPlay { so?.invalidate(); so = nil; DispatchQueue.main.async { if let p = self?.player, p.currentItem === it, p.rate == 0 { p.preroll(atRate: 1, completionHandler: nil) } } }
-        }
-        curId = id
-        let t = (m["time"] as? Double) ?? 0
-        player.seek(to: CMTime(seconds: max(0, t), preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
-        if (m["playing"] as? Bool) == true && t >= 0 { player.play() }
-    }
-
-    /// Segue il tempo dell'audio: piccoli scarti si recuperano piano, grandi con un salto.
-    private func state(_ m: [String: Any]) {
-        guard curId != nil, let item = player.currentItem else { return }
-        let t = (m["time"] as? Double) ?? 0
-        // finita la clip (o non ancora iniziata): nero fermo, niente salti in loop
-        let vd = item.duration.seconds
-        if vd.isFinite && vd > 0 && t >= vd - 0.05 {
-            if player.rate != 0 { player.pause() }
-            if !layer.isHidden { CATransaction.begin(); CATransaction.setDisableActions(true); layer.isHidden = true; CATransaction.commit() }
-            return
-        }
-        if layer.isHidden { CATransaction.begin(); CATransaction.setDisableActions(true); layer.isHidden = false; CATransaction.commit() }
-        let playing = ((m["playing"] as? Bool) ?? false) && t >= 0
-        let now = player.currentTime().seconds
-        let tt = max(0, t)
-        // stessa regolazione di ArnoShow
-        if !playing { if player.rate != 0 { player.pause() }; if now.isFinite, abs(now - tt) > 0.15 { player.seek(to: CMTime(seconds: tt, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) }; return }
-        guard now.isFinite else { return }
-        let d = now - t
-        if (m["seek"] as? Bool) == true || abs(d) > 2.0 {   // spostamento con la barra o molto fuori tempo: si salta, poi si riparte
-            player.pause()
-            player.seek(to: CMTime(seconds: tt, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
-                DispatchQueue.main.async { self?.player.preroll(atRate: 1) { _ in DispatchQueue.main.async { self?.player.rate = 1 } } }
-            }
-        } else if abs(d) > 0.25 {   // si recupera piano, senza scatti (sotto 0,25 s non si tocca nulla)
-            let r = Float(1 - max(-0.04, min(0.04, d * 0.3)))
-            if abs(player.rate - r) > 0.01 { player.rate = r }
-        } else if abs(d) < 0.06 && player.rate != 1 { player.rate = 1 }
-    }
-
-    /// Elemento senza audio: l'audio esce solo dal motore di ArnoStage.
-    static func silentItem(_ u: URL) -> AVPlayerItem {
-        let it = AVPlayerItem(url: u)
-        it.audioTimePitchAlgorithm = .varispeed
-        let mix = AVMutableAudioMix()
-        it.audioMix = mix
-        Task { @MainActor in
-            if let tracks = try? await it.asset.loadTracks(withMediaType: .audio) {
-                mix.inputParameters = tracks.map { t in let p = AVMutableAudioMixInputParameters(track: t); p.setVolume(0, at: .zero); return p }
-                it.audioMix = mix
-            }
-        }
-        return it
+    required init?(coder: NSCoder) { fatalError() }
+    /// clip = parte visibile; r = riquadro intero (coordinate della pagina)
+    func place(_ m: [String: Any]) {
+        let n: (String) -> CGFloat = { CGFloat((m[$0] as? NSNumber)?.doubleValue ?? 0) }
+        let on = (m["on"] as? Bool) ?? false
+        let clip = CGRect(x: n("cx"), y: n("cy"), width: n("cw"), height: n("ch"))
+        let r = CGRect(x: n("x"), y: n("y"), width: n("w"), height: n("h"))
+        isHidden = !on || clip.width < 4 || clip.height < 4
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        frame = clip
+        pl.frame = r.offsetBy(dx: -clip.minX, dy: -clip.minY)
+        CATransaction.commit()
     }
 }

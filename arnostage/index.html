@@ -325,13 +325,13 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.1.15';
+const VERSION='0.1.16';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
 const NATIVE=!!NE;
 const eng=o=>NE.postMessage(o);
-function mon(o){if(cfg.hdmi===false&&o.t!=='black')return;if(NM)try{NM.postMessage(JSON.stringify(o));}catch(e){}}
+function mon(o){if(!NATIVE&&cfg.hdmi===false&&o.t!=='black')return;if(NM)try{NM.postMessage(JSON.stringify(o));}catch(e){}}
 
 let songs=[],cur=-1,playing=false,pos=0,dur=0,hdmiOn=false,outs=2,ins=0,cardName='',busy=false;
 let cfg={auto:false,prev:true,gray:false,master:0,inOn:false,inA:0,inB:1,inDb:0,inOut:'s0',inMute:false};
@@ -576,15 +576,24 @@ function applyVW(){document.documentElement.style.setProperty('--vw',(cfg.vw||10
 async function setVideo(s){
   const fid=s&&s.video?s.video.fid:null;
   if(fid!==vFid){if(vUrl){URL.revokeObjectURL(vUrl);vUrl=null;}vid.removeAttribute('src');vFid=fid;
-    if(fid&&(cfg.prev||!NATIVE)){const f=await fGet(fid);if(f){vUrl=URL.createObjectURL(f.blob);vid.src=vUrl;}}}
+    if(fid&&!NATIVE){const f=await fGet(fid);if(f){vUrl=URL.createObjectURL(f.blob);vid.src=vUrl;}}}
   document.body.classList.toggle('novid',!fid);
-  $('vph').style.display=fid&&vUrl?'none':'flex';
-  $('vph').innerHTML=fid?(vUrl?'':'Anteprima spenta (Vista › Anteprima del video)'):'Nessun video abbinato<br>(File › Abbina un video al brano)';
+  const shown=fid&&(vUrl||(NATIVE&&cfg.prev));$('vph').style.display=shown?'none':'flex';
+  $('vph').innerHTML=fid?(shown?'':'Anteprima spenta (Vista › Anteprima del video)'):'Nessun video abbinato<br>(File › Abbina un video al brano)';
+  lastRect='';sendRect();
   if(fid)mon({t:'show',id:fid,time:pos-(s.video.off||0)/1000,playing});else mon({t:'black'});
 }
-let lastMon=0;
+let lastMon=0,lastRect='';
+// posizione dell'anteprima nativa (sopra la pagina) = riquadro #stage, ritagliato alla parte visibile
+function sendRect(){if(!NATIVE)return;const st=$('stage'),s=songs[cur];const r=st.getBoundingClientRect();
+  const c=st.closest('#colL').getBoundingClientRect();
+  const on=!!(s&&s.video)&&cfg.prev!==false&&st.offsetParent!==null&&r.width>4&&!$('sheet').classList.contains('on')&&!document.querySelector('.menu.open');
+  const cx=Math.max(r.left,c.left),cy=Math.max(r.top,c.top),cw=Math.min(r.right,c.right)-cx,ch=Math.min(r.bottom,c.bottom)-cy;
+  const o={t:'rect',on,x:r.left,y:r.top,w:r.width,h:r.height,cx,cy,cw:Math.max(0,cw),ch:Math.max(0,ch)};
+  const k=JSON.stringify(o);if(k!==lastRect){lastRect=k;mon(o);}}
+if(NATIVE){setInterval(sendRect,200);addEventListener('resize',()=>setTimeout(sendRect,50));}
 // con il monitor HDMI acceso l'anteprima si ferma (decodificare due video insieme rallenta i dispositivi meno recenti)
-const previewOff=()=>hdmiOn&&cfg.hdmi!==false&&!cfg.prevHdmi;
+const previewOff=()=>!NATIVE&&hdmiOn&&cfg.hdmi!==false&&!cfg.prevHdmi;
 function syncVideo(force){const s=songs[cur];if(!s||!s.video)return;const vt=pos-(s.video.off||0)/1000;
   const vd=vid.duration;
   if(vUrl&&isFinite(vd)&&vd>0&&vt>=vd-0.05){if(!vid.paused)vid.pause();vid.style.visibility='hidden';}
@@ -701,9 +710,10 @@ $('miCard').onclick=async()=>{closeMenus();await refreshCard();
 function hdmiUI(){const e=$('hdmi'),en=cfg.hdmi!==false;e.classList.toggle('on',hdmiOn&&en);e.classList.toggle('off',!en);
   e.textContent=!en?'HDMI spento':hdmiOn?'HDMI ●':'HDMI';}
 function hdmiShow(){const s=songs[cur];if(s&&s.video)mon({t:'show',id:s.video.fid,time:pos-(s.video.off||0)/1000,playing});else mon({t:'black'});}
-window.nativeMonitor=on=>{hdmiOn=on;hdmiUI();prevMsg();if(on){hdmiShow();status('Monitor HDMI collegato'+(cfg.hdmi===false?' (video spento: tocca HDMI per accenderlo).':'.'));}};
+window.nativeMonitor=on=>{hdmiOn=on;hdmiUI();prevMsg();mon({t:'hdmi',on:cfg.hdmi!==false});if(on){hdmiShow();status('Monitor HDMI collegato'+(cfg.hdmi===false?' (video spento: tocca HDMI per accenderlo).':'.'));}};
 $('hdmi').onclick=()=>{cfg.hdmi=cfg.hdmi===false;saveCfg();hdmiUI();prevMsg();
-  if(cfg.hdmi===false){mon({t:'black'});status('Video sul monitor HDMI spento.');}else{hdmiShow();syncVideo(true);status('Video sul monitor HDMI acceso.');}};
+  mon({t:'hdmi',on:cfg.hdmi!==false});
+  if(cfg.hdmi===false){status('Video sul monitor HDMI spento.');}else{hdmiShow();syncVideo(true);status('Video sul monitor HDMI acceso.');}};
 
 // ===== ZIP (progetti ARNOCLICK e archivi di tracce) =====
 const blobBuf=b=>b.arrayBuffer?b.arrayBuffer():new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsArrayBuffer(b);});
@@ -779,20 +789,20 @@ document.addEventListener('drop',async e=>{e.preventDefault();const l=[...e.data
   if(a.length)await (cur>=0?addTracks(a):newFromAudio(a));if(v)await addVideo(v);});
 
 // ===== Menu e fogli =====
-function closeMenus(){document.querySelectorAll('.menu.open,.mbtn.open').forEach(x=>x.classList.remove('open'));}
-document.querySelectorAll('.mbtn').forEach(b=>b.onclick=e=>{e.stopPropagation();const m=$(b.dataset.m),o=m.classList.contains('open');closeMenus();if(!o){m.classList.add('open');b.classList.add('open');}});
+function closeMenus(){document.querySelectorAll('.menu.open,.mbtn.open').forEach(x=>x.classList.remove('open'));sendRect();}
+document.querySelectorAll('.mbtn').forEach(b=>b.onclick=e=>{e.stopPropagation();const m=$(b.dataset.m),o=m.classList.contains('open');closeMenus();if(!o){m.classList.add('open');b.classList.add('open');}sendRect();});
 document.addEventListener('click',e=>{if(!e.target.closest('.menu'))closeMenus();});
-function sheet(h,lk){document.body.classList.toggle('lkopen',!!lk);$('sbox').innerHTML=h;$('sheet').classList.toggle('lk',!!lk);$('sheet').classList.add('on');}
-function closeSheet(){document.body.classList.remove('lkopen');document.querySelectorAll('#mix .editing').forEach(x=>x.classList.remove('editing'));setTimeout(fitFaders,30);$('sheet').classList.remove('on');}
+function sheet(h,lk){document.body.classList.toggle('lkopen',!!lk);$('sbox').innerHTML=h;$('sheet').classList.toggle('lk',!!lk);$('sheet').classList.add('on');sendRect();}
+function closeSheet(){setTimeout(sendRect,30);document.body.classList.remove('lkopen');document.querySelectorAll('#mix .editing').forEach(x=>x.classList.remove('editing'));setTimeout(fitFaders,30);$('sheet').classList.remove('on');}
 $('sheet').onclick=e=>{if(e.target.id==='sheet')closeSheet();};
 function autoUI(){$('miAuto').classList.toggle('on',!!cfg.auto);$('bAuto').classList.toggle('on',!!cfg.auto);$('bAuto').querySelector('small').textContent=cfg.auto?'AUTO':'STOP';$('bAuto').title=cfg.auto?'Avanzamento automatico ACCESO: a fine brano parte il successivo':'Avanzamento automatico SPENTO: a fine brano si ferma e aspetta ⏭';}
 $('bAuto').onclick=()=>$('miAuto').onclick();
 $('miAuto').onclick=()=>{cfg.auto=!cfg.auto;saveCfg();autoUI();$('miPrevH').classList.toggle('on',!!cfg.prevHdmi);closeMenus();status(cfg.auto?'A fine brano parte da solo il successivo.':'A fine brano si ferma.');};
 $('miEdit').onclick=()=>{editMode=!editMode;renderList();closeMenus();};
-$('miPrev').onclick=async()=>{cfg.prev=!cfg.prev;saveCfg();$('miPrev').classList.toggle('on',cfg.prev);closeMenus();vFid=-1;await setVideo(songs[cur]);syncVideo(true);};
+$('miPrev').onclick=async()=>{cfg.prev=!cfg.prev;saveCfg();lastRect='';$('miPrev').classList.toggle('on',cfg.prev);closeMenus();vFid=-1;await setVideo(songs[cur]);syncVideo(true);};
 $('miAC').onclick=()=>{cfg.mixAC=!cfg.mixAC;saveCfg();applyTheme();closeMenus();};
 $('miPrevH').onclick=()=>{cfg.prevHdmi=!cfg.prevHdmi;saveCfg();$('miPrevH').classList.toggle('on',!!cfg.prevHdmi);closeMenus();prevMsg();syncVideo(true);};
-function prevMsg(){const o=previewOff()&&vUrl;$('vph').style.display=o||!vUrl?'flex':'none';if(o)$('vph').innerHTML='Video sul monitor HDMI<br><small>(anteprima in pausa per fluidità — Vista › Anteprima anche con l\'HDMI acceso)</small>';}
+function prevMsg(){if(NATIVE)return;const o=previewOff()&&vUrl;$('vph').style.display=o||!vUrl?'flex':'none';if(o)$('vph').innerHTML='Video sul monitor HDMI<br><small>(anteprima in pausa per fluidità — Vista › Anteprima anche con l\'HDMI acceso)</small>';}
 $('miGray').onclick=()=>{cfg.gray=!cfg.gray;saveCfg();applyTheme();closeMenus();};
 function applyTheme(){document.body.classList.toggle('mixac',!!cfg.mixAC);$('miAC').classList.toggle('on',!!cfg.mixAC);setTimeout(fitFaders,30);document.documentElement.dataset.theme=cfg.gray?'gray':'';$('miGray').classList.toggle('on',cfg.gray);}
 function showProj(){$('projN').textContent='Progetto: '+(cfg.proj||'(non salvato)');}
