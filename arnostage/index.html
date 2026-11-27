@@ -240,6 +240,12 @@ body.wide.pgMix .transport .tb{width:auto;flex:1;height:34px;font-size:15px;bord
 body.wide.pgMix #bLeft{display:none}
 body.wide.pgMix #mixSec .sech{padding-right:25vw}
 body.wide.pgMix #mix{padding-right:26vw}
+.x3{}
+body.wide .transport .tb{height:40px}
+.tb.auto{flex-direction:column;gap:0;font-size:16px;line-height:1;color:var(--mut)}
+.tb.auto small{font-size:9px;font-weight:800;letter-spacing:.08em}
+.tb.auto.on{background:var(--ok);border-color:var(--ok);color:#fff;box-shadow:0 0 10px rgba(34,197,94,.5)}
+body.wide.pgMix .transport .tb.auto small{display:none}
 </style>
 </head>
 <body>
@@ -296,6 +302,7 @@ body.wide.pgMix #mix{padding-right:26vw}
     <button class="tb" id="bBack" title="Torna all'inizio">⏪</button>
     <button class="tb play" id="bPlay" title="Avvia / ferma (barra spaziatrice)">▶</button>
     <button class="tb" id="bNext" title="Brano successivo">⏭</button>
+    <button class="tb auto" id="bAuto" title="Prosegui l'ordine della scaletta (avanzamento automatico)">⏩<small>AUTO</small></button>
     <button class="tb" id="bLeft" title="A sinistra: video o mixer">🎬</button>
   </div>
   <div class="sec" id="mixSec">
@@ -317,7 +324,7 @@ body.wide.pgMix #mix{padding-right:26vw}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.1.13';
+const VERSION='0.1.14';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -607,7 +614,8 @@ async function tick(){if(ticking)return;ticking=true;
     else if(playing){pos=waPos();pk=waPeaks();[ml,mr]=waMaster();if(pos>=dur){ended=true;pos=dur;waStop();}}
     updTime();meters(pk,ip,ml,mr);clickLed(rk);syncVideo(false);
     if(ended&&playing){playing=false;$('bPlay').textContent='▶';$('bPlay').classList.remove('on');syncVideo(true);
-      if(cfg.auto&&cur<songs.length-1){await loadSong(cur+1,true);continue;}}
+      if(cfg.auto&&cur<songs.length-1){await loadSong(cur+1,true);continue;}
+      status(cur<songs.length-1?'Fine brano. Tocca ⏭ per il successivo: «'+songs[cur+1].name+'».':'Fine della scaletta.');}
     if(!playing&&!cfg.inOn)break;
     await new Promise(r=>setTimeout(r,playing?50:120));}
   }finally{ticking=false;}}
@@ -769,7 +777,9 @@ document.addEventListener('click',e=>{if(!e.target.closest('.menu'))closeMenus()
 function sheet(h,lk){document.body.classList.toggle('lkopen',!!lk);$('sbox').innerHTML=h;$('sheet').classList.toggle('lk',!!lk);$('sheet').classList.add('on');}
 function closeSheet(){document.body.classList.remove('lkopen');document.querySelectorAll('#mix .editing').forEach(x=>x.classList.remove('editing'));setTimeout(fitFaders,30);$('sheet').classList.remove('on');}
 $('sheet').onclick=e=>{if(e.target.id==='sheet')closeSheet();};
-$('miAuto').onclick=()=>{cfg.auto=!cfg.auto;saveCfg();$('miAuto').classList.toggle('on',cfg.auto);closeMenus();status(cfg.auto?'A fine brano parte da solo il successivo.':'A fine brano si ferma.');};
+function autoUI(){$('miAuto').classList.toggle('on',!!cfg.auto);$('bAuto').classList.toggle('on',!!cfg.auto);$('bAuto').querySelector('small').textContent=cfg.auto?'AUTO':'STOP';$('bAuto').title=cfg.auto?'Avanzamento automatico ACCESO: a fine brano parte il successivo':'Avanzamento automatico SPENTO: a fine brano si ferma e aspetta ⏭';}
+$('bAuto').onclick=()=>$('miAuto').onclick();
+$('miAuto').onclick=()=>{cfg.auto=!cfg.auto;saveCfg();autoUI();closeMenus();status(cfg.auto?'A fine brano parte da solo il successivo.':'A fine brano si ferma.');};
 $('miEdit').onclick=()=>{editMode=!editMode;renderList();closeMenus();};
 $('miPrev').onclick=async()=>{cfg.prev=!cfg.prev;saveCfg();$('miPrev').classList.toggle('on',cfg.prev);closeMenus();vFid=-1;await setVideo(songs[cur]);syncVideo(true);};
 $('miAC').onclick=()=>{cfg.mixAC=!cfg.mixAC;saveCfg();applyTheme();closeMenus();};
@@ -809,7 +819,7 @@ $('tbSong').onclick=()=>page('song');$('tbList').onclick=()=>page('list');$('tbM
 new MutationObserver(()=>{$('tbPlay').textContent=$('bPlay').textContent;$('tbPlay').classList.toggle('on',playing);}).observe($('bPlay'),{childList:true,attributes:true});
 // ===== Avvio =====
 (async()=>{
-  leftUI();layout();applyVW();applyTheme();$('miAuto').classList.toggle('on',cfg.auto);$('miPrev').classList.toggle('on',cfg.prev);$('miIn').classList.toggle('on',cfg.inOn&&NATIVE);
+  leftUI();layout();applyVW();applyTheme();autoUI();$('miPrev').classList.toggle('on',cfg.prev);$('miIn').classList.toggle('on',cfg.inOn&&NATIVE);
   if(!NATIVE)cfg.inOn=false;
   try{songs=(await kvGet('songs'))||[];looks=(await kvGet('looks'))||{};}catch(e){songs=[];}
   hdmiUI();showProj();
