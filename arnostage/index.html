@@ -285,6 +285,20 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 #list .it{touch-action:pan-y;position:relative;transition:box-shadow .1s}
 #list .it.dragging{z-index:5;background:var(--card2);box-shadow:0 10px 30px rgba(0,0,0,.7);outline:2px solid var(--acc);transition:none}
 #list.dragmode{user-select:none}
+.x7{}
+@media (max-width:500px){.setbar>.lbl{display:none}.setbar .btn{padding:6px 7px}}
+.cover.on+.sech #setT{display:none}
+.cover{display:none;align-items:center;gap:12px;margin:2px 2px 10px}
+.cover.on{display:flex}
+.cover img{width:96px;height:96px;object-fit:cover;border-radius:12px;border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.5);flex:none}
+.cover b{font-size:19px;display:block}.cover small{color:var(--mut)}
+.cover button{margin-top:6px}
+.sets{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin:8px 0 2px}
+.sets .sc{background:var(--card2);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:12px}
+.sets .sc .im{aspect-ratio:1;background:linear-gradient(135deg,#2b2e33,#16171a);display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--mut)}
+.sets .sc .im img{width:100%;height:100%;object-fit:cover;display:block}
+.sets .sc .tt{padding:5px 7px}.sets .sc .tt b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.sets .sc .tt small{color:var(--mut)}
+#setSel{padding-left:6px}
 </style>
 </head>
 <body>
@@ -356,8 +370,9 @@ body.wide.pgMix .transport .tb.auto small{display:none}
  <div id="colR">
   <div class="sec">
     <div class="ptitle" id="projN">Progetto: —</div>
-    <div class="setbar"><span class="lbl">Scaletta</span><select id="setSel"></select><button class="btn" data-s="new" title="Nuova scaletta">＋</button><button class="btn" data-s="ren" title="Rinomina">✎</button><button class="btn" data-s="dup" title="Duplica">⧉</button><button class="btn" data-s="del" title="Elimina la scaletta">🗑</button></div>
-    <div class="sech"><span id="setT">Scaletta</span><span class="lbl" style="font-weight:400;margin-left:6px">tieni premuto e trascina per spostare</span><span class="sp"></span><button class="btn" id="bEdit">✎ Modifica</button></div>
+    <div class="setbar"><span class="lbl">Scaletta</span><select id="setSel"></select><button class="btn" data-s="new" title="Nuova scaletta">＋</button><button class="btn" data-s="ren" title="Rinomina">✎</button><button class="btn" data-s="dup" title="Duplica">⧉</button><label class="btn" title="Copertina (foto)"><input type="file" id="fCover" accept="image/*" hidden>🖼</label><button class="btn" data-s="del" title="Elimina la scaletta">🗑</button></div>
+    <div class="cover" id="coverBox"></div>
+    <div class="sech"><span id="setT">Scaletta</span><span class="lbl" style="font-weight:400;margin-left:6px">tieni premuto e trascina</span><span class="sp"></span><button class="btn" id="bEdit">✎ Modifica</button></div>
     <div id="list" class="noedit"></div>
   </div>
   <div class="sec">
@@ -376,7 +391,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.2.2';
+const VERSION='0.2.3';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -594,7 +609,7 @@ $('mix').addEventListener('click',async e=>{if(Date.now()-($('mix')._nd||0)<500)
 // ===== Scaletta (più scalette per progetto) e Raccolta brani =====
 let editMode=false;
 const songInfo=x=>{const T=x.tracks||[];return `🎼${T.some(t=>t.click)?' ♩':''}${x.video?' 🎬':''}${x.dur?' · '+fmt(x.dur):''}`;};
-function renderSets(){const st=curSetObj();$('setSel').innerHTML=sets.map(x=>`<option value="${x.id}"${x.id===st.id?' selected':''}>${esc(x.title)} (${x.items.length})</option>`).join('');$('setT').textContent=st.title;}
+function renderSets(){const st=curSetObj();renderCover();$('setSel').innerHTML=sets.map(x=>`<option value="${x.id}"${x.id===st.id?' selected':''}>${esc(x.title)} (${x.items.length})</option>`).join('');$('setT').textContent=st.title;}
 function renderList(){
   renderSets();const l=$('list');l.classList.toggle('noedit',!editMode);$('bEdit').textContent=editMode?'✓ Fine':'✎ Modifica';$('miEdit').classList.toggle('on',editMode);
   if(!songs.length)l.innerHTML='<div class="empty">La scaletta è vuota: aggiungi brani dalla raccolta qui sotto (＋).</div>';
@@ -623,6 +638,12 @@ document.querySelector('.setbar').addEventListener('click',async e=>{const b=e.t
   else if(a==='dup'){const n={id:uid(),title:st.title+' (copia)',items:st.items.slice()};sets.splice(sets.indexOf(st)+1,0,n);await switchSet(n.id);}
   else if(a==='del'){if(!confirm('Eliminare la scaletta «'+st.title+'»? I brani restano nella raccolta.'))return;sets=sets.filter(y=>y!==st);curSet=null;await switchSet(curSetObj().id);}});
 $('setSel').onchange=e=>switchSet(e.target.value);
+function shrinkImage(file,max=600){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');
+  c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL('image/jpeg',0.82));};im.onerror=()=>{URL.revokeObjectURL(u);rej();};im.src=u;});}
+$('fCover').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{curSetObj().cover=await shrinkImage(f);saveSongs();renderList();status('Copertina di «'+curSetObj().title+'» impostata.');}catch(x){status('Non riesco a leggere questa immagine.',true);}});
+function renderCover(){const st=curSetObj(),b=$('coverBox');b.classList.toggle('on',!!st.cover);
+  b.innerHTML=st.cover?`<img src="${st.cover}" alt=""><div><b>${esc(st.title)}</b><small>${st.items.length} brani</small><br><button class="btn" id="cvDel">Togli copertina</button></div>`:'';
+  if(st.cover)$('cvDel').onclick=()=>{if(confirm('Togliere la copertina di «'+st.title+'»?')){delete st.cover;saveSongs();renderList();}};}
 async function switchSet(id){await stop();curSet=id;cur=-1;rebuild();saveSongs();renderList();renderMix();showTitle();if(songs.length)await loadSong(0,false);else setVideo(null);status('Scaletta «'+curSetObj().title+'» ('+songs.length+' brani).');}
 $('bEdit').onclick=()=>{editMode=!editMode;renderList();};
 // riordino della scaletta: tieni premuto un brano e trascinalo su o giù
@@ -1029,7 +1050,7 @@ async function doExport(name,PJ,withVideo){const SG=PJ.lib,LK=PJ.looks;
   }catch(e){jobEnd('Esportazione non riuscita: '+e,true);}finally{busy=false;}
 }
 async function renderProj(){const P=await projects(),names=Object.keys(P).sort((a,b)=>P[b].saved-P[a].saved);
-  const li=d=>`<ol>${d.sets.map(x=>`<li>☰ ${esc(x.title)} · ${x.items.length} brani</li>`).join('')}</ol>`;
+  const li=d=>`<div class="sets">${d.sets.map(x=>`<div class="sc"><div class="im">${x.cover?`<img src="${x.cover}" alt="">`:'☰'}</div><div class="tt"><b>${esc(x.title)}</b><small>${x.items.length} brani</small></div></div>`).join('')}</div>`;
   const J=o=>JSON.stringify(o,(k,v)=>k==='dur'?undefined:v),same=n=>{const d=projData(P[n]);return J({a:d.lib,b:d.sets,l:d.looks})===J({a:lib,b:sets,l:looks});};
   let h='';
   if(!cfg.proj&&lib.length)h+=`<div class="warnx">La raccolta aperta (${lib.length} brani) non è ancora salvata in un progetto. <button class="btn acc" data-a="save">💾 Salva</button></div>`;
