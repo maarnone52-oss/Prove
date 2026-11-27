@@ -68,6 +68,8 @@ final class StageEngine {
     }()
     private var inPeak: Float = 0
     private var mPeakL: Float = 0, mPeakR: Float = 0
+    /// picchi prima del fader (per il LED del click: lampeggia anche con la traccia muta)
+    private let raws: UnsafeMutablePointer<Float> = { let p = UnsafeMutablePointer<Float>.allocate(capacity: 66); p.initialize(repeating: 0, count: 66); return p }()
     private var sessionActive = false
 
     // MARK: - Scheda audio
@@ -272,10 +274,11 @@ final class StageEngine {
         case "pos":
             lock()
             var pk: [Double] = []
-            for i in 0..<voices.count { pk.append(Double(peaks[i])); peaks[i] = 0 }
+            var rk: [Double] = []
+            for i in 0..<voices.count { pk.append(Double(peaks[i])); peaks[i] = 0; if i < 66 { rk.append(Double(raws[i])); raws[i] = 0 } }
             let ip = Double(inPeak); inPeak = 0
             let ml = Double(mPeakL), mr = Double(mPeakR); mPeakL = 0; mPeakR = 0
-            let r: [String: Any] = ["t": pos, "playing": playing, "ended": ended, "pk": pk, "ip": ip, "ml": ml, "mr": mr]
+            let r: [String: Any] = ["t": pos, "playing": playing, "ended": ended, "pk": pk, "ip": ip, "ml": ml, "mr": mr, "rk": rk]
             unlock()
             reply(r)
         case "input":
@@ -405,6 +408,7 @@ final class StageEngine {
             }
             let lv = pk * max(v.gL, v.gR) * mg
             if vi < 66 && lv > peaks[vi] { peaks[vi] = lv }
+            if vi < 66 && pk > raws[vi] { raws[vi] = pk }
         }
         // VU master: uscite dispari = sinistra, pari = destra
         var pl: Float = 0, pr: Float = 0
