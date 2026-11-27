@@ -282,6 +282,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
   <div style="position:relative"><button class="mbtn" data-m="mView">Vista</button>
     <div class="menu" id="mView">
       <button class="chk" id="miPrev">Anteprima del video sull'iPhone</button>
+      <button class="chk" id="miPrevH">Anteprima anche con l'HDMI acceso</button>
       <button class="chk" id="miAC">🎚 Mixer stile ARNOCLICK</button>
       <button class="chk" id="miGray">Tema grigio</button>
       <hr>
@@ -324,7 +325,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.1.14';
+const VERSION='0.1.15';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -582,11 +583,18 @@ async function setVideo(s){
   if(fid)mon({t:'show',id:fid,time:pos-(s.video.off||0)/1000,playing});else mon({t:'black'});
 }
 let lastMon=0;
+// con il monitor HDMI acceso l'anteprima si ferma (decodificare due video insieme rallenta i dispositivi meno recenti)
+const previewOff=()=>hdmiOn&&cfg.hdmi!==false&&!cfg.prevHdmi;
 function syncVideo(force){const s=songs[cur];if(!s||!s.video)return;const vt=pos-(s.video.off||0)/1000;
   const vd=vid.duration;
   if(vUrl&&isFinite(vd)&&vd>0&&vt>=vd-0.05){if(!vid.paused)vid.pause();vid.style.visibility='hidden';}
   else if(vUrl){vid.style.visibility='';if(vt<0||!playing){if(!vid.paused)vid.pause();if(Math.abs(vid.currentTime-Math.max(0,vt))>0.08)vid.currentTime=Math.max(0,vt);}
-    else{if(vid.paused)vid.play().catch(()=>{});if(force||Math.abs(vid.currentTime-vt)>0.25)vid.currentTime=vt;}}
+    else{if(previewOff()){if(!vid.paused)vid.pause();}
+      else{if(vid.paused)vid.play().catch(()=>{});const d=vid.currentTime-vt;
+        // come sul monitor: piccoli scarti si recuperano cambiando appena la velocità, salto solo se molto fuori tempo
+        if(Math.abs(d)>1||(force&&Math.abs(d)>0.15)){vid.currentTime=vt;vid.playbackRate=1;}
+        else if(Math.abs(d)>0.12){const r=1-Math.max(-0.05,Math.min(0.05,d*0.4));if(Math.abs(vid.playbackRate-r)>0.01)vid.playbackRate=r;}
+        else if(Math.abs(d)<0.04&&vid.playbackRate!==1)vid.playbackRate=1;}}}
   const now=performance.now();if(force||now-lastMon>1000){lastMon=now;mon({t:'state',time:vt,playing,seek:!!force});}}
 
 // ===== Trasporto =====
@@ -693,8 +701,8 @@ $('miCard').onclick=async()=>{closeMenus();await refreshCard();
 function hdmiUI(){const e=$('hdmi'),en=cfg.hdmi!==false;e.classList.toggle('on',hdmiOn&&en);e.classList.toggle('off',!en);
   e.textContent=!en?'HDMI spento':hdmiOn?'HDMI ●':'HDMI';}
 function hdmiShow(){const s=songs[cur];if(s&&s.video)mon({t:'show',id:s.video.fid,time:pos-(s.video.off||0)/1000,playing});else mon({t:'black'});}
-window.nativeMonitor=on=>{hdmiOn=on;hdmiUI();if(on){hdmiShow();status('Monitor HDMI collegato'+(cfg.hdmi===false?' (video spento: tocca HDMI per accenderlo).':'.'));}};
-$('hdmi').onclick=()=>{cfg.hdmi=cfg.hdmi===false;saveCfg();hdmiUI();
+window.nativeMonitor=on=>{hdmiOn=on;hdmiUI();prevMsg();if(on){hdmiShow();status('Monitor HDMI collegato'+(cfg.hdmi===false?' (video spento: tocca HDMI per accenderlo).':'.'));}};
+$('hdmi').onclick=()=>{cfg.hdmi=cfg.hdmi===false;saveCfg();hdmiUI();prevMsg();
   if(cfg.hdmi===false){mon({t:'black'});status('Video sul monitor HDMI spento.');}else{hdmiShow();syncVideo(true);status('Video sul monitor HDMI acceso.');}};
 
 // ===== ZIP (progetti ARNOCLICK e archivi di tracce) =====
@@ -779,10 +787,12 @@ function closeSheet(){document.body.classList.remove('lkopen');document.querySel
 $('sheet').onclick=e=>{if(e.target.id==='sheet')closeSheet();};
 function autoUI(){$('miAuto').classList.toggle('on',!!cfg.auto);$('bAuto').classList.toggle('on',!!cfg.auto);$('bAuto').querySelector('small').textContent=cfg.auto?'AUTO':'STOP';$('bAuto').title=cfg.auto?'Avanzamento automatico ACCESO: a fine brano parte il successivo':'Avanzamento automatico SPENTO: a fine brano si ferma e aspetta ⏭';}
 $('bAuto').onclick=()=>$('miAuto').onclick();
-$('miAuto').onclick=()=>{cfg.auto=!cfg.auto;saveCfg();autoUI();closeMenus();status(cfg.auto?'A fine brano parte da solo il successivo.':'A fine brano si ferma.');};
+$('miAuto').onclick=()=>{cfg.auto=!cfg.auto;saveCfg();autoUI();$('miPrevH').classList.toggle('on',!!cfg.prevHdmi);closeMenus();status(cfg.auto?'A fine brano parte da solo il successivo.':'A fine brano si ferma.');};
 $('miEdit').onclick=()=>{editMode=!editMode;renderList();closeMenus();};
 $('miPrev').onclick=async()=>{cfg.prev=!cfg.prev;saveCfg();$('miPrev').classList.toggle('on',cfg.prev);closeMenus();vFid=-1;await setVideo(songs[cur]);syncVideo(true);};
 $('miAC').onclick=()=>{cfg.mixAC=!cfg.mixAC;saveCfg();applyTheme();closeMenus();};
+$('miPrevH').onclick=()=>{cfg.prevHdmi=!cfg.prevHdmi;saveCfg();$('miPrevH').classList.toggle('on',!!cfg.prevHdmi);closeMenus();prevMsg();syncVideo(true);};
+function prevMsg(){const o=previewOff()&&vUrl;$('vph').style.display=o||!vUrl?'flex':'none';if(o)$('vph').innerHTML='Video sul monitor HDMI<br><small>(anteprima in pausa per fluidità — Vista › Anteprima anche con l\'HDMI acceso)</small>';}
 $('miGray').onclick=()=>{cfg.gray=!cfg.gray;saveCfg();applyTheme();closeMenus();};
 function applyTheme(){document.body.classList.toggle('mixac',!!cfg.mixAC);$('miAC').classList.toggle('on',!!cfg.mixAC);setTimeout(fitFaders,30);document.documentElement.dataset.theme=cfg.gray?'gray':'';$('miGray').classList.toggle('on',cfg.gray);}
 function showProj(){$('projN').textContent='Progetto: '+(cfg.proj||'(non salvato)');}
@@ -819,7 +829,7 @@ $('tbSong').onclick=()=>page('song');$('tbList').onclick=()=>page('list');$('tbM
 new MutationObserver(()=>{$('tbPlay').textContent=$('bPlay').textContent;$('tbPlay').classList.toggle('on',playing);}).observe($('bPlay'),{childList:true,attributes:true});
 // ===== Avvio =====
 (async()=>{
-  leftUI();layout();applyVW();applyTheme();autoUI();$('miPrev').classList.toggle('on',cfg.prev);$('miIn').classList.toggle('on',cfg.inOn&&NATIVE);
+  leftUI();layout();applyVW();applyTheme();autoUI();$('miPrevH').classList.toggle('on',!!cfg.prevHdmi);$('miPrev').classList.toggle('on',cfg.prev);$('miIn').classList.toggle('on',cfg.inOn&&NATIVE);
   if(!NATIVE)cfg.inOn=false;
   try{songs=(await kvGet('songs'))||[];looks=(await kvGet('looks'))||{};}catch(e){songs=[];}
   hdmiUI();showProj();
