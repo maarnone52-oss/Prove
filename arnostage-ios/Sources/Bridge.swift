@@ -83,7 +83,12 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWith
             let json = (m["json"] as? String) ?? "{}"
             let files = (m["files"] as? [[String: String]]) ?? []
             DispatchQueue.global(qos: .userInitiated).async {
-                let url = ZipOut.make(name: name, json: json, files: files)
+                var last = Date.distantPast
+                let url = ZipOut.make(name: name, json: json, files: files) { done, total, file in
+                    let now = Date(); if now.timeIntervalSince(last) < 0.15 && done < total { return }; last = now
+                    let f = file.replacingOccurrences(of: "\\", with: "").replacingOccurrences(of: "'", with: "\\'")
+                    DispatchQueue.main.async { self.control?.evaluateJavaScript("window.zipProg&&window.zipProg(\(done),\(total),'\(f)')", completionHandler: nil) }
+                }
                 DispatchQueue.main.async {
                     guard let url = url else { replyHandler(false, "zip non riuscito"); return }
                     self.share(url)
@@ -190,18 +195,18 @@ enum ZipOut {
     private static let table: [UInt32] = (0..<256).map { i -> UInt32 in
         var c = UInt32(i); for _ in 0..<8 { c = (c & 1) != 0 ? 0xEDB88320 ^ (c >> 1) : c >> 1 }; return c
     }
-    static func crc(_ u: URL) -> (UInt32, UInt64)? {
+    static func crc(_ u: URL, _ step: (Int) -> Void = { _ in }) -> (UInt32, UInt64)? {
         guard let h = try? FileHandle(forReadingFrom: u) else { return nil }
         defer { try? h.close() }
         var c: UInt32 = 0xFFFFFFFF, n: UInt64 = 0
         while true {
             let d = h.readData(ofLength: 4 << 20); if d.isEmpty { break }
-            n += UInt64(d.count)
+            n += UInt64(d.count); step(d.count)
             d.withUnsafeBytes { (p: UnsafeRawBufferPointer) in for b in p { c = table[Int((c ^ UInt32(b)) & 0xFF)] ^ (c >> 8) } }
         }
         return (c ^ 0xFFFFFFFF, n)
     }
-    static func make(name: String, json: String, files: [[String: String]]) -> URL? {
+    static func make(name: String, json: String, files: [[String: String]], progress: (UInt64, UInt64, String) -> Void = { _, _, _ in }) -> URL? {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("export", isDirectory: true)
         try? FileManager.default.removeItem(at: dir)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -209,6 +214,10 @@ enum ZipOut {
         guard (try? json.data(using: .utf8)!.write(to: jsonURL)) != nil else { return nil }
         var entries: [(String, URL)] = [("arnostage.json", jsonURL)]
         for f in files { if let id = f["id"], let path = f["path"], let u = MediaStore.url(for: id) { entries.append((path, u)) } }
+        var total: UInt64 = 0
+        for (_, u) in entries { total += UInt64(((try? FileManager.default.attributesOfItem(atPath: u.path))?[.size] as? NSNumber)?.uint64Value ?? 0) }
+        total *= 2   // lettura per il controllo + scrittura
+        var done: UInt64 = 0
         let out = dir.appendingPathComponent(name + ".arnostage.zip")
         FileManager.default.createFile(atPath: out.path, contents: nil)
         guard let w = try? FileHandle(forWritingTo: out) else { return nil }
@@ -217,14 +226,15 @@ enum ZipOut {
         func le16(_ v: Int) -> Data { var x = UInt16(truncatingIfNeeded: v).littleEndian; return Data(bytes: &x, count: 2) }
         func le32(_ v: UInt64) -> Data { var x = UInt32(truncatingIfNeeded: v).littleEndian; return Data(bytes: &x, count: 4) }
         for (path, u) in entries {
-            guard let (c, size) = crc(u) else { continue }
+            let fname = (path as NSString).lastPathComponent
+            guard let (c, size) = crc(u, { done += UInt64($0); progress(done, total, fname) }) else { continue }
             if off > 0xFFFF_FFF0 || size > 0xFFFF_FFF0 { return nil }  // oltre 4 GB non supportato
             let nm = Data(path.utf8)
             var lh = Data(); lh += le32(0x04034b50); lh += le16(20); lh += le16(0x0800); lh += le16(0); lh += le16(0); lh += le16(0x21)
             lh += le32(UInt64(c)); lh += le32(size); lh += le32(size); lh += le16(nm.count); lh += le16(0); lh += nm
             w.write(lh)
             if let r = try? FileHandle(forReadingFrom: u) {
-                while true { let d = r.readData(ofLength: 4 << 20); if d.isEmpty { break }; w.write(d) }
+                while true { let d = r.readData(ofLength: 4 << 20); if d.isEmpty { break }; w.write(d); done += UInt64(d.count); progress(done, total, fname) }
                 try? r.close()
             }
             var ch = Data(); ch += le32(0x02014b50); ch += le16(20); ch += le16(20); ch += le16(0x0800); ch += le16(0); ch += le16(0); ch += le16(0x21)

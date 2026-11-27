@@ -45,11 +45,29 @@ main{flex:1;min-height:0;display:flex;position:relative}
 body:not(.wide) main #colR{display:none}
 body:not(.wide).pgList main #colL{display:none}
 body:not(.wide).pgList main #colR{display:block}
-body.wide #tbList{display:none}
+body.wide:not(.pgProj) #tbList{display:none}
 body.wide #tabs button{padding:5px 4px 4px}
 body.wide #tabs .tp{margin:3px 0}
 body.pgMix #colL>*:not(#mixSec){display:none!important}
 body.pgMix main #colR{display:none!important}
+#colP{display:none}
+body.pgProj main #colL,body.pgProj main #colR{display:none!important}
+body.pgProj main #colP{display:block;flex:1}
+#tabs button{font-size:13px}
+.job{padding:4px 2px}.job b{font-size:15px}.job .bar{height:14px;border-radius:7px;background:var(--line);overflow:hidden;margin:8px 0 4px}
+.job .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc),#22c55e);transition:width .15s}
+.job .row{display:flex;justify-content:space-between;font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums;gap:8px}
+.job.err b{color:var(--del)}.job.ok b{color:var(--ok)}
+.pj{border-top:1px solid var(--line);padding:8px 2px}.pj:first-child{border-top:0}
+.pj .h{display:flex;align-items:center;gap:6px}.pj .h span{flex:1;min-width:0}.pj .h small{color:var(--mut)}
+.pj .h button{background:var(--card2);border:1px solid var(--line);color:var(--fg);border-radius:8px;height:32px;min-width:34px;font-size:13px;padding:0 8px}
+.pj .h .acc{background:var(--acc);border-color:var(--acc);color:#fff}
+.pj ol{margin:6px 0 2px 4px;padding-left:22px;font-size:13px;color:var(--mut)}.pj ol li{padding:1px 0}
+.pj.curp{background:color-mix(in srgb,var(--acc) 10%,transparent);border-radius:8px}
+.expo label{display:flex;gap:10px;align-items:flex-start;padding:8px;border:1px solid var(--line);border-radius:10px;margin:6px 0}
+.expo label input{margin-top:3px;width:20px;height:20px}.expo small{color:var(--mut)}
+.warnx{border:1px solid var(--warn);background:color-mix(in srgb,var(--warn) 12%,transparent);border-radius:10px;padding:8px 10px;font-size:13px;margin:8px 0}
+.warnx.bad{border-color:var(--del);background:color-mix(in srgb,var(--del) 14%,transparent)}
 body.pgMix main #colL{display:flex!important}
 body.pgMix #mixSec{min-height:0}
 body.wide #colR{flex:0 0 min(42%,420px);border-left:1px solid var(--line)}
@@ -324,14 +342,18 @@ body.wide.pgMix .transport .tb.auto small{display:none}
     <div id="list" class="noedit"></div>
   </div>
  </div>
+ <div id="colP">
+  <div class="sec" id="jobSec"><div class="sech">Attività<span class="sp"></span></div><div id="jobBox"><div class="empty">Nessuna importazione o esportazione in corso.</div></div></div>
+  <div class="sec"><div class="sech">Progetti<span class="sp"></span><label class="btn"><input type="file" id="fZip2" accept=".zip,application/zip" hidden>📦 Importa .zip</label></div><div id="projList"></div></div>
+ </div>
 </main>
-<div id="tabs"><button id="tbSong" class="on">🎚 Brano</button><button class="tp" id="tbPlay">▶</button><button id="tbMix">🎛 Mixer</button><button id="tbList">☰ Scaletta</button></div>
+<div id="tabs"><button id="tbSong" class="on">🎚 Brano</button><button class="tp" id="tbPlay">▶</button><button id="tbMix">🎛 Mixer</button><button id="tbList">☰ Scaletta</button><button id="tbProj">📁 Progetti</button></div>
 <div id="status">Pronto.</div>
 <div id="sheet"><div class="box" id="sbox"></div></div>
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.1.17';
+const VERSION='0.1.18';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -374,18 +396,33 @@ const kvGet=k=>tx('kv','readonly',s=>s.get(k));
 let saveT=0;function saveSongs(){clearTimeout(saveT);saveT=setTimeout(()=>{kvSet('songs',songs).catch(()=>{});kvSet('looks',looks).catch(()=>{});},250);}
 async function addFile(name,blob){const id=uid();await fPut(id,name,blob);return id;}
 
+// ===== Attività (importazione / esportazione) con barra di avanzamento =====
+const JOB={};
+const mb=b=>b>=1073741824?(b/1073741824).toFixed(2)+' GB':(b/1048576).toFixed(1)+' MB';
+function jobStart(title){Object.assign(JOB,{on:true,title,pct:0,phase:'',detail:'',t0:Date.now(),res:null,err:false});page('proj');renderJob();}
+function jobSet(pct,phase,detail){if(!JOB.on)return;JOB.pct=Math.max(0,Math.min(1,pct));if(phase!=null)JOB.phase=phase;if(detail!=null)JOB.detail=detail;prog(JOB.pct);renderJobSoon();}
+function jobEnd(res,err){JOB.on=false;JOB.res=res;JOB.err=!!err;JOB.pct=err?JOB.pct:1;prog(null);renderJob();status(res,err);if(!err)renderProj();}
+let rjT=0;function renderJobSoon(){if(!rjT)rjT=setTimeout(()=>{rjT=0;renderJob();},100);}
+function renderJob(){const b=$('jobBox');if(!JOB.title){b.innerHTML='<div class="empty">Nessuna importazione o esportazione in corso.</div>';return;}
+  const el=(Date.now()-JOB.t0)/1000,left=JOB.on&&JOB.pct>0.03?el*(1-JOB.pct)/JOB.pct:null;
+  b.innerHTML=`<div class="job${JOB.on?'':JOB.err?' err':' ok'}"><b>${JOB.on?'⏳ ':JOB.err?'⚠️ ':'✅ '}${esc(JOB.title)}</b>
+   <div class="bar"><i style="width:${(JOB.pct*100).toFixed(1)}%"></i></div>
+   <div class="row"><span>${esc(JOB.on?JOB.phase:JOB.res||'')}</span><span>${(JOB.pct*100).toFixed(0)}%</span></div>
+   <div class="row"><span>${esc(JOB.on?JOB.detail:'')}</span><span>${JOB.on?fmt(el)+(left!=null?' · mancano ~'+fmt(left):''):'durata '+fmt(el)}</span></div></div>`;}
+window.zipProg=(d,t,f)=>jobSet(0.35+0.65*(t?d/t:0),'Creo lo .zip',f+' · '+mb(d/2)+' di '+mb(t/2));
+
 // ===== Copia dei file nell'app (per il motore nativo e il monitor) =====
 const b64Of=blob=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const s=String(r.result);res(s.slice(s.indexOf(',')+1));};r.onerror=rej;r.readAsDataURL(blob);});
 const extOf=n=>{const m=String(n).match(/\.([A-Za-z0-9]{2,5})$/);return m?m[1].toLowerCase():'bin';};
-async function ensureNative(ids,label){
+async function ensureNative(ids,label,cb){
   if(!NS||!ids.length)return;
   const have=await NS.postMessage({op:'has',ids})||[];
-  const miss=ids.filter(i=>have.indexOf(i)<0);
-  for(let i=0;i<miss.length;i++){const f=await fGet(miss[i]);if(!f)continue;
-    const CH=1536*1024,n=Math.max(1,Math.ceil(f.blob.size/CH));
-    for(let k=0;k<n;k++){const b=await b64Of(f.blob.slice(k*CH,(k+1)*CH));
-      await NS.postMessage({op:'put',id:f.id,ext:extOf(f.name),seq:k,last:k===n-1,b64:b});
-      prog((i+(k+1)/n)/miss.length);status('Copio nell\'app: '+f.name+' '+Math.round((k+1)/n*100)+'%');}
+  const miss=ids.filter(i=>have.indexOf(i)<0);const fs=[];let tot=0,done=0;
+  for(const id of miss){const f=await fGet(id);if(f){fs.push(f);tot+=f.blob.size;}}
+  for(const f of fs){const CH=1536*1024,n=Math.max(1,Math.ceil(f.blob.size/CH));
+    for(let k=0;k<n;k++){const sl=f.blob.slice(k*CH,(k+1)*CH),b=await b64Of(sl);
+      await NS.postMessage({op:'put',id:f.id,ext:extOf(f.name),seq:k,last:k===n-1,b64:b});done+=sl.size;
+      if(cb)cb(tot?done/tot:1,f.name,done,tot);else{prog(tot?done/tot:1);status('Copio nell\'app: '+f.name+' '+Math.round((k+1)/n*100)+'%');}}
   }
   prog(null);
 }
@@ -729,7 +766,7 @@ $('hdmi').onclick=()=>{cfg.hdmi=cfg.hdmi===false;saveCfg();hdmiUI();prevMsg();
 
 // ===== ZIP (progetti ARNOCLICK e archivi di tracce) =====
 const blobBuf=b=>b.arrayBuffer?b.arrayBuffer():new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsArrayBuffer(b);});
-async function readZip(file){
+async function readZip(file,cb){
   const tail=new DataView(await blobBuf(file.slice(Math.max(0,file.size-65558))));let p=-1;
   for(let i=tail.byteLength-22;i>=0;i--)if(tail.getUint32(i,true)===0x06054b50){p=i;break;}
   if(p<0)throw new Error('zip');
@@ -743,25 +780,27 @@ async function readZip(file){
     let b=file.slice(start,start+csz);
     if(meth===8){if(!window.DecompressionStream)throw new Error('deflate');b=await new Response(b.stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();}
     else if(meth!==0)continue;
-    out[name]=b;}
+    out[name]=b;if(cb)cb(k+1,n,name);}
   return out;
 }
 const base=n=>String(n).split('/').pop();
 const strip=n=>base(n).replace(/\.[^.]+$/,'');
 function trackName(n,songName){let t=strip(n);if(songName&&t.indexOf(songName)===0&&t.length>songName.length)t=t.slice(songName.length).replace(/^[\s\-–_]+/,'');return t||strip(n);}
 async function importProject(P,files){const name=P.name||'Progetto importato';
-  if(songs.length&&!confirm('Aprire il progetto «'+name+'» ('+(P.songs||[]).length+' brani)? La scaletta attuale viene sostituita (salvala prima se ti serve).')){status('Importazione annullata.');return;}
-  const ids=Object.keys(P.files||{});let k=0;
-  for(const id of ids){prog(++k/ids.length);const b=files[P.files[id]];if(!b)continue;status('Importo '+((P.names||{})[id]||id)+'…');await fPut(id,(P.names||{})[id]||id,b);}
-  prog(null);await stop();songs=P.songs||[];looks=P.looks||{};cur=-1;
+  if(songs.length&&!confirm('Aprire il progetto «'+name+'» ('+(P.songs||[]).length+' brani)? La scaletta attuale viene sostituita (salvala prima se ti serve).')){jobEnd('Importazione annullata.',true);return;}
+  const ids=Object.keys(P.files||{});let tot=0,done=0;ids.forEach(id=>{const b=files[P.files[id]];if(b)tot+=b.size;});
+  for(const id of ids){const b=files[P.files[id]];if(!b)continue;const nm=(P.names||{})[id]||id;
+    jobSet(0.1+0.85*(tot?done/tot:0),'Copio i file nel progetto',nm+' · '+mb(done)+' di '+mb(tot));await fPut(id,nm,b);done+=b.size;}
+  jobSet(0.97,'Apro il progetto','');await stop();songs=P.songs||[];looks=P.looks||{};cur=-1;
   const PR=await projects();let n=name;if(PR[n]&&!confirm('Esiste già un progetto «'+n+'». Sostituirlo?'))n=name+' (importato)';
-  await saveProj(n);saveSongs();renderList();renderMix();showTitle();if(songs.length)await loadSong(0,false);status('Progetto «'+n+'» importato e salvato.');}
+  await saveProj(n);saveSongs();renderList();renderMix();showTitle();jobEnd('Progetto «'+n+'» importato e salvato ('+songs.length+' brani, '+mb(tot)+').');busy=false;if(songs.length)await loadSong(0,false);}
 async function importZip(f){
-  if(busy)return;status('Apro «'+f.name+'»…');prog(0.05);
+  if(busy)return;busy=true;jobStart('Importo «'+f.name+'» ('+mb(f.size)+')');jobSet(0.02,'Leggo lo .zip','');
   let files,meta=null;
-  try{files=await readZip(f);}catch(e){status(e.message==='deflate'?'Questo .zip è compresso in un modo che questo iPhone non sa aprire: aggiorna iOS.':'Il file non è un .zip valido.',true);prog(null);return;}
+  try{files=await readZip(f,(d,t,n)=>jobSet(0.02+0.08*d/t,'Leggo lo .zip',n));}catch(e){busy=false;jobEnd(e.message==='deflate'?'Questo .zip è compresso in un modo che questo iPhone non sa aprire: aggiorna iOS.':'Il file non è un .zip valido.',true);return;}
+  busy=false;
   if(files['arnostage.json']){let P=null;try{P=JSON.parse(new TextDecoder().decode(await blobBuf(files['arnostage.json'])));}catch(e){}
-    if(P&&P.format==='arnostage')return importProject(P,files);}
+    if(P&&P.format==='arnostage'){busy=true;try{return await importProject(P,files);}catch(e){jobEnd('Importazione non riuscita: '+e,true);}finally{busy=false;}}}
   if(files['arnoclick.json']){try{meta=JSON.parse(new TextDecoder().decode(await blobBuf(files['arnoclick.json'])));}catch(e){}}
   const names=Object.keys(files);
   const songName=meta&&meta.name?strip(meta.name):f.name.replace(/\.zip$/i,'').replace(/\s*-\s*ARNOCLICK progetto$/i,'');
@@ -770,17 +809,17 @@ async function importZip(f){
   let k=0;const tot=aud.length+vids.length;
   // il brano originale del progetto ARNOCLICK per primo, poi le altre tracce (click per ultimo)
   aud.sort((a,b)=>(isClick(a)-isClick(b))||((meta&&b===meta.media)-(meta&&a===meta.media)));
-  for(const n of aud){prog(++k/tot);status('Importo '+base(n)+'…');
+  for(const n of aud){++k;jobSet(0.1+0.85*k/tot,'Copio le tracce',base(n));
     const fid=await addFile(base(n),files[n]);const nm=meta&&n===meta.media?'Base':trackName(n,songName);
     song.tracks.push({fid,name:nm,db:0,pan:0,mute:false,solo:false,out:defaultOut(n)});}
-  if(vids.length){const n=(meta&&vids.includes(meta.media))?meta.media:vids[0];prog(++k/tot);status('Importo il video '+base(n)+'…');
+  if(vids.length){const n=(meta&&vids.includes(meta.media))?meta.media:vids[0];++k;jobSet(0.1+0.85*k/tot,'Copio il video',base(n));
     const fid=await addFile(base(n),files[n]);song.video={fid,name:base(n),off:0};
     // video del progetto ARNOCLICK (o senza altre basi): il suo audio diventa la traccia «Base»
     if((meta&&n===meta.media)||!song.tracks.some(t=>!isClick(t.name)))song.tracks.unshift({fid,name:'Audio del video',vid:true,ico:'🎬',db:0,pan:0,mute:false,solo:false,out:'s0'});
     else song.tracks.push({fid,name:'Audio del video',vid:true,ico:'🎬',db:0,pan:0,mute:true,solo:false,out:'s0'});}
   prog(null);
-  if(!song.tracks.length){status('Nello .zip non ci sono tracce audio.',true);return;}
-  songs.push(song);saveSongs();renderList();
+  if(!song.tracks.length){jobEnd('Nello .zip non ci sono tracce audio.',true);return;}
+  songs.push(song);saveSongs();renderList();jobEnd('Importato «'+song.name+'»: '+song.tracks.length+' tracce'+(song.video?' + video':'')+'.');
   const hasClick=song.tracks.some(t=>isClick(t.name));
   await loadSong(songs.length-1,false);
   if(meta&&!hasClick)status('Progetto ARNOCLICK importato, ma lo .zip non contiene il click: aggiungilo con «＋ Traccia» (in ARNOCLICK: Esporta › Click .wav).',true);
@@ -829,7 +868,7 @@ function applyTheme(){document.body.classList.toggle('mixac',!!cfg.mixAC);$('miA
 function showProj(){$('projN').textContent='Progetto: '+(cfg.proj||'(non salvato)');}
 async function projects(){return (await kvGet('projects').catch(()=>null))||{};}
 async function saveProj(name){const P=await projects();P[name]={songs:JSON.parse(JSON.stringify(songs)),looks:JSON.parse(JSON.stringify(looks)),saved:Date.now()};
-  await kvSet('projects',P);cfg.proj=name;saveCfg();showProj();status('Progetto «'+name+'» salvato ('+songs.length+' brani).');}
+  await kvSet('projects',P);cfg.proj=name;saveCfg();showProj();if(document.body.classList.contains('pgProj'))renderProj();status('Progetto «'+name+'» salvato ('+songs.length+' brani).');}
 $('miSave').onclick=async()=>{closeMenus();if(!cfg.proj)return $('miSaveAs').onclick();await saveProj(cfg.proj);};
 $('miSaveAs').onclick=async()=>{closeMenus();const n=prompt('Nome del progetto (scaletta)',cfg.proj||'Concerto');if(!n||!n.trim())return;
   const P=await projects();if(P[n.trim()]&&n.trim()!==cfg.proj&&!confirm('Esiste già «'+n.trim()+'». Sostituirlo?'))return;await saveProj(n.trim());};
@@ -842,16 +881,52 @@ $('miOpen').onclick=async()=>{closeMenus();const P=await projects(),names=Object
   $('pjL').onclick=async e=>{const o=e.target.dataset.o,d=e.target.dataset.d;
     if(o!=null){if(songs.length&&cfg.proj!==o&&!confirm('Sostituire la scaletta attuale con «'+o+'»?'))return;await openProj(o);}
     if(d!=null&&confirm('Eliminare il progetto «'+d+'»? (I brani nella scaletta attuale restano.)')){const P=await projects();delete P[d];await kvSet('projects',P);if(cfg.proj===d){cfg.proj='';saveCfg();showProj();}$('miOpen').onclick();}};};
-$('miShare').onclick=async()=>{closeMenus();if(!songs.length){status('La scaletta è vuota.',true);return;}
+$('miShare').onclick=()=>{closeMenus();exportSheet(cfg.proj||'',songs,looks);};
+async function exportSheet(name,SG,LK){
+  if(!SG.length){status('La scaletta è vuota.',true);return;}
   if(!NATIVE){status('La condivisione del progetto .zip funziona nell\'app per iPhone/iPad.',true);return;}
-  const name=cfg.proj||prompt('Nome del progetto da condividere','Concerto');if(!name)return;
-  const ids=[...new Set(songs.flatMap(x=>x.tracks.map(t=>t.fid).concat(x.video?[x.video.fid]:[])))];
-  status('Preparo i file…');await ensureNative(ids);
-  const names={};for(const id of ids){const f=await fGet(id);names[id]=f?f.name:id;}
-  const files=ids.map(id=>({id,path:'media/'+id+'.'+extOf(names[id])}));
-  const json=JSON.stringify({format:'arnostage',version:VERSION,name,songs,looks,names,files:Object.fromEntries(files.map(f=>[f.id,f.path]))});
-  status('Creo il file «'+name+'.arnostage.zip»…');prog(0.5);
-  try{await NS.postMessage({op:'export',name,json,files});status('Progetto pronto: scegli AirDrop, Messaggi, Salva in File…');}catch(e){status('Non riesco a creare lo .zip: '+e,true);}prog(null);};
+  const vidIds=new Set(SG.filter(x=>x.video).map(x=>x.video.fid)),audIds=new Set(SG.flatMap(x=>x.tracks.map(t=>t.fid)));
+  let aB=0,vB=0;for(const id of new Set([...vidIds,...audIds])){const f=await fGet(id);const z=f?f.blob.size:0;if(audIds.has(id))aB+=z;else vB+=z;}
+  const LIM=4*1073741824,WARN=1.5*1073741824;
+  const msg=t=>t>LIM?`<div class="warnx bad">⛔ Troppo pesante (${mb(t)}): il file .zip non può superare 4 GB. Riduci il carico: esporta solo l'audio o salva meno brani nel progetto.</div>`:t>WARN?`<div class="warnx">⚠️ Pacchetto pesante (${mb(t)}): AirDrop funziona, ma Messaggi e WhatsApp lo rifiuteranno e ci vorrà tempo. Per ridurre il carico esporta solo l'audio.</div>`:'';
+  sheet(`<h3>📤 Condividi progetto</h3><div class="frm"><span>Nome</span><input id="exN" value="${esc(name||'Concerto')}"></div>
+   <div class="expo"><label><input type="radio" name="exK" value="a"> <span><b>Solo audio</b> — ${mb(aB)}<br><small>Tracce, click, mixer e colori. I video non vengono inclusi (se l'audio di un brano viene dal video, quel file resta incluso).</small></span></label>
+   <label><input type="radio" name="exK" value="v" checked> <span><b>Audio e video</b> — ${mb(aB+vB)}<br><small>Tutto il progetto, video compresi.</small></span></label></div>
+   <div id="exW">${msg(aB+vB)}</div>
+   <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn" onclick="closeSheet()">Annulla</button><button class="btn acc" id="exGo">Crea e condividi</button></div>`);
+  const kind=()=>document.querySelector('input[name=exK]:checked').value,tot=()=>kind()==='a'?aB:aB+vB;
+  document.querySelectorAll('input[name=exK]').forEach(r=>r.onchange=()=>{$('exW').innerHTML=msg(tot());$('exGo').disabled=tot()>LIM;});
+  $('exGo').disabled=tot()>LIM;
+  $('exGo').onclick=()=>{const n=$('exN').value.trim()||'Progetto',k=kind();closeSheet();doExport(n,SG,LK,k==='v');};
+}
+async function doExport(name,SG,LK,withVideo){
+  if(busy)return;busy=true;jobStart('Esporto «'+name+'» ('+(withVideo?'audio e video':'solo audio')+')');
+  try{const S=JSON.parse(JSON.stringify(SG));
+    if(!withVideo)S.forEach(x=>{x.video=null;});
+    const ids=[...new Set(S.flatMap(x=>x.tracks.map(t=>t.fid).concat(x.video?[x.video.fid]:[])))];
+    jobSet(0,'Preparo i file','');
+    await ensureNative(ids,null,(f,n,d,t)=>jobSet(f*0.35,'Copio i file nell\'app',n+' · '+mb(d)+' di '+mb(t)));
+    const names={};for(const id of ids){const f=await fGet(id);names[id]=f?f.name:id;}
+    const files=ids.map(id=>({id,path:'media/'+id+'.'+extOf(names[id])}));
+    const json=JSON.stringify({format:'arnostage',version:VERSION,name,video:withVideo,songs:S,looks:LK,names,files:Object.fromEntries(files.map(f=>[f.id,f.path]))});
+    jobSet(0.35,'Creo lo .zip','');
+    await NS.postMessage({op:'export',name,json,files});
+    jobEnd('«'+name+'.arnostage.zip» pronto: scegli AirDrop, Messaggi o Salva in File.');
+  }catch(e){jobEnd('Esportazione non riuscita: '+e,true);}finally{busy=false;}
+}
+async function renderProj(){const P=await projects(),names=Object.keys(P).sort((a,b)=>P[b].saved-P[a].saved);
+  const li=S=>`<ol>${(S||[]).map(x=>`<li>${esc(x.name)}${x.dur?' · '+fmt(x.dur):''}${x.video?' · 🎬':''}</li>`).join('')||'<li>(vuota)</li>'}</ol>`;
+  let h=`<div class="pj curp"><div class="h"><span><b>Scaletta aperta</b> <small>· ${esc(cfg.proj||'non salvata')} · ${songs.length} brani</small></span><button data-a="save">💾</button><button data-a="shc">📤</button></div>${li(songs)}</div>`;
+  h+=names.map(n=>`<div class="pj"><div class="h"><span><b>${esc(n)}</b><br><small>${(P[n].songs||[]).length} brani · ${new Date(P[n].saved).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})}</small></span><button class="acc" data-a="open" data-n="${esc(n)}">Apri</button><button data-a="sh" data-n="${esc(n)}">📤</button><button data-a="del" data-n="${esc(n)}">🗑</button></div>${li(P[n].songs)}</div>`).join('');
+  if(!names.length)h+='<div class="empty">Nessun progetto salvato (File › Salva progetto).</div>';
+  $('projList').innerHTML=h;}
+$('projList').onclick=async e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.a,n=b.dataset.n;
+  if(a==='save')$('miSave').onclick();
+  else if(a==='shc')exportSheet(cfg.proj||'',songs,looks);
+  else if(a==='open'){if(songs.length&&cfg.proj!==n&&!confirm('Sostituire la scaletta attuale con «'+n+'»?'))return;await openProj(n);page('list');}
+  else if(a==='sh'){const P=await projects();exportSheet(n,P[n].songs||[],P[n].looks||{});}
+  else if(a==='del'&&confirm('Eliminare il progetto «'+n+'»? (La scaletta aperta resta.)')){const P=await projects();delete P[n];await kvSet('projects',P);if(cfg.proj===n){cfg.proj='';saveCfg();showProj();}renderProj();}};
+onPick('fZip2',l=>importZip(l[0]));
 $('miNew').onclick=async()=>{closeMenus();if(songs.length&&!confirm('Iniziare un nuovo progetto vuoto? Salva prima quello attuale se ti serve (i progetti salvati restano).'))return;
   await stop();const old=songs;songs=[];looks={};cur=-1;cfg.proj='';saveCfg();for(const x of old)await purge(x);saveSongs();showProj();renderList();renderMix();showTitle();setVideo(null);status('Nuovo progetto.');};
 $('miClear').onclick=async()=>{closeMenus();if(!songs.length||!confirm('Svuotare tutta la scaletta? I brani importati vengono cancellati dall\'app.'))return;
@@ -864,9 +939,9 @@ function leftUI(){document.body.classList.toggle('leftV',!!cfg.leftV);$('bLeft')
 function layout(){const w=innerWidth>innerHeight&&innerWidth>=640,was=document.body.classList.contains('wide');document.body.classList.toggle('wide',w);
   if(w&&!was&&document.body.classList.contains('pgList'))page('song');setTimeout(fitFaders,60);}
 addEventListener('resize',layout);
-function page(l){const p=l===true?'list':l||'song';document.body.classList.toggle('pgList',p==='list');document.body.classList.toggle('pgMix',p==='mix');
+function page(l){const p=l===true?'list':l||'song';document.body.classList.toggle('pgList',p==='list');document.body.classList.toggle('pgMix',p==='mix');document.body.classList.toggle('pgProj',p==='proj');$('tbProj').classList.toggle('on',p==='proj');if(p==='proj')renderProj();
   $('tbList').classList.toggle('on',p==='list');$('tbSong').classList.toggle('on',p==='song');$('tbMix').classList.toggle('on',p==='mix');setTimeout(fitFaders,30);}
-$('tbSong').onclick=()=>page('song');$('tbList').onclick=()=>page('list');$('tbMix').onclick=()=>page('mix');$('tbPlay').onclick=()=>$('bPlay').click();
+$('tbProj').onclick=()=>page('proj');$('tbSong').onclick=()=>page('song');$('tbList').onclick=()=>page('list');$('tbMix').onclick=()=>page('mix');$('tbPlay').onclick=()=>$('bPlay').click();
 new MutationObserver(()=>{$('tbPlay').textContent=$('bPlay').textContent;$('tbPlay').classList.toggle('on',playing);}).observe($('bPlay'),{childList:true,attributes:true});
 // ===== Avvio =====
 (async()=>{
