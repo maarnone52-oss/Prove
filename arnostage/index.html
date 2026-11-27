@@ -217,6 +217,29 @@ body.mixac #mix .vm{background:#08090a;box-shadow:inset 0 1px 3px #000}
 body.mixac #mix .vm i{background:linear-gradient(0deg,#46ff7a 0 70%,#ffb21e 70% 88%,#ff4530 88%);-webkit-mask:repeating-linear-gradient(0deg,#000 0 3px,transparent 3px 4px);mask:repeating-linear-gradient(0deg,#000 0 3px,transparent 3px 4px)}
 body.mixac #mix .clkl{color:#ff4530;text-shadow:0 0 10px rgba(255,69,48,.6)}
 body.mixac #mixSec{background:linear-gradient(180deg,#1e2024,#141518);border-color:#3b3f46}
+.x2{}
+.ptitle{font-size:20px;font-weight:800;margin:2px 2px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Brano in orizzontale, modalità mixer: comandi sotto il mixer */
+body.wide:not(.leftV):not(.pgMix) #mixSec{order:1}
+body.wide:not(.leftV):not(.pgMix) #seek{order:2}
+body.wide:not(.leftV):not(.pgMix) .trow{order:3}
+body.wide:not(.leftV):not(.pgMix) .transport{order:4;margin:2px 0 0}
+body.wide:not(.leftV):not(.pgMix) #mixSec{margin-bottom:4px}
+/* Pagina Mixer in orizzontale: video fisso a destra (1/4) con i comandi sotto; le tracce scorrono sotto */
+body.wide.pgMix #colL{position:relative}
+body.wide.pgMix #colL>#stage:not(#z),body.wide.pgMix #colL>#novid:not(#z),body.wide.pgMix #colL>.trow:not(#z),body.wide.pgMix #colL>.transport:not(#z){display:flex!important;position:absolute;right:8px;width:24vw;z-index:6;margin:0}
+body.wide.pgMix #stage{top:8px;aspect-ratio:16/9;height:auto;box-shadow:0 6px 20px rgba(0,0,0,.7)}
+body.wide.pgMix #novid{top:8px;height:13.5vw;flex-direction:column;justify-content:center;background:#000;border:1px solid var(--line);border-radius:10px;gap:4px}
+body.wide.pgMix #novid .bars{width:60%}
+body.wide.pgMix.novid #colL>#stage:not(#z):not(#y){display:none!important}
+body:not(.novid).wide.pgMix #colL>#novid:not(#z):not(#y){display:none!important}
+body.wide.pgMix #colL>#seek:not(#z){display:block!important;position:absolute;right:8px;width:24vw;z-index:6;margin:0;top:calc(12px + 13.5vw);height:24px;background:var(--bg)}
+body.wide.pgMix .trow{top:calc(36px + 13.5vw);background:var(--bg);font-size:11px}
+body.wide.pgMix .transport{top:calc(52px + 13.5vw);gap:4px;justify-content:space-between;background:var(--bg);padding:4px 0;border-radius:10px}
+body.wide.pgMix .transport .tb{width:auto;flex:1;height:34px;font-size:15px;border-radius:9px}
+body.wide.pgMix #bLeft{display:none}
+body.wide.pgMix #mixSec .sech{padding-right:25vw}
+body.wide.pgMix #mix{padding-right:26vw}
 </style>
 </head>
 <body>
@@ -282,7 +305,8 @@ body.mixac #mixSec{background:linear-gradient(180deg,#1e2024,#141518);border-col
  </div>
  <div id="colR">
   <div class="sec">
-    <div class="sech">Scaletta <span class="lbl" id="projN"></span><span class="sp"></span><button class="btn" id="bEdit">✎ Modifica</button></div>
+    <div class="ptitle" id="projN">Progetto: —</div>
+    <div class="sech">Scaletta<span class="sp"></span><button class="btn" id="bEdit">✎ Modifica</button></div>
     <div id="list" class="noedit"></div>
   </div>
  </div>
@@ -293,7 +317,7 @@ body.mixac #mixSec{background:linear-gradient(180deg,#1e2024,#141518);border-col
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.1.12';
+const VERSION='0.1.13';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -751,7 +775,7 @@ $('miPrev').onclick=async()=>{cfg.prev=!cfg.prev;saveCfg();$('miPrev').classList
 $('miAC').onclick=()=>{cfg.mixAC=!cfg.mixAC;saveCfg();applyTheme();closeMenus();};
 $('miGray').onclick=()=>{cfg.gray=!cfg.gray;saveCfg();applyTheme();closeMenus();};
 function applyTheme(){document.body.classList.toggle('mixac',!!cfg.mixAC);$('miAC').classList.toggle('on',!!cfg.mixAC);setTimeout(fitFaders,30);document.documentElement.dataset.theme=cfg.gray?'gray':'';$('miGray').classList.toggle('on',cfg.gray);}
-function showProj(){$('projN').textContent=cfg.proj?'· '+cfg.proj:'· (non salvata)';}
+function showProj(){$('projN').textContent='Progetto: '+(cfg.proj||'(non salvato)');}
 async function projects(){return (await kvGet('projects').catch(()=>null))||{};}
 async function saveProj(name){const P=await projects();P[name]={songs:JSON.parse(JSON.stringify(songs)),looks:JSON.parse(JSON.stringify(looks)),saved:Date.now()};
   await kvSet('projects',P);cfg.proj=name;saveCfg();showProj();status('Progetto «'+name+'» salvato ('+songs.length+' brani).');}
@@ -776,7 +800,8 @@ $('miAbout').onclick=()=>{closeMenus();sheet(`<h3>ArnoStage ${VERSION} · PROVA<
 // ===== Pagine (verticale) / due colonne (orizzontale) =====
 $('bLeft').onclick=()=>{cfg.leftV=!cfg.leftV;saveCfg();leftUI();};
 function leftUI(){document.body.classList.toggle('leftV',!!cfg.leftV);$('bLeft').textContent=cfg.leftV?'🎛':'🎬';$('bLeft').title=cfg.leftV?'Mostra il mixer':'Mostra il video';setTimeout(fitFaders,30);}
-function layout(){document.body.classList.toggle('wide',innerWidth>innerHeight&&innerWidth>=640);}
+function layout(){const w=innerWidth>innerHeight&&innerWidth>=640,was=document.body.classList.contains('wide');document.body.classList.toggle('wide',w);
+  if(w&&!was&&document.body.classList.contains('pgList'))page('song');setTimeout(fitFaders,60);}
 addEventListener('resize',layout);
 function page(l){const p=l===true?'list':l||'song';document.body.classList.toggle('pgList',p==='list');document.body.classList.toggle('pgMix',p==='mix');
   $('tbList').classList.toggle('on',p==='list');$('tbSong').classList.toggle('on',p==='song');$('tbMix').classList.toggle('on',p==='mix');setTimeout(fitFaders,30);}
