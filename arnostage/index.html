@@ -290,6 +290,8 @@ body.wide.pgMix .transport .tb.auto small{display:none}
   <div style="position:relative"><button class="mbtn" data-m="mFile">File</button>
     <div class="menu" id="mFile">
       <label><input type="file" id="fZip" accept=".zip,application/zip" hidden>📦 Importa .zip (ARNOCLICK o progetto ArnoStage)…</label>
+      <label><input type="file" id="fDir" webkitdirectory multiple hidden>📁 Importa una cartella di brani…</label>
+      <label><input type="file" id="fMany" accept="audio/*,video/*,.zip,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac,.mp4,.mov,.m4v" multiple hidden>🗂 Importa più brani (file audio, video e .zip)…</label>
       <label><input type="file" id="fAud" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" multiple hidden>🎵 Nuovi brani (la base) da file audio…</label>
       <hr>
       <label><input type="file" id="fAdd" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" hidden>♩ Click del brano (aggiungi o sostituisci)…</label>
@@ -355,7 +357,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
     <div id="list" class="noedit"></div>
   </div>
   <div class="sec">
-    <div class="sech">Raccolta brani <span class="lbl" id="libN"></span><span class="sp"></span><label class="btn"><input type="file" id="fAud2" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" multiple hidden>🎵 Nuovi brani</label></div>
+    <div class="sech">Raccolta brani <span class="lbl" id="libN"></span><span class="sp"></span><label class="btn"><input type="file" id="fAud2" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" multiple hidden>🎵 Nuovi</label><label class="btn"><input type="file" id="fMany2" accept="audio/*,video/*,.zip,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac,.mp4,.mov,.m4v" multiple hidden>🗂 Importa</label></div>
     <div id="libList"></div>
   </div>
  </div>
@@ -370,7 +372,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.2.0';
+const VERSION='0.2.1';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -850,27 +852,57 @@ async function importZip(f){
   busy=false;
   if(files['arnostage.json']){let P=null;try{P=JSON.parse(new TextDecoder().decode(await blobBuf(files['arnostage.json'])));}catch(e){}
     if(P&&P.format==='arnostage'){busy=true;try{return await importProject(P,files);}catch(e){jobEnd('Importazione non riuscita: '+e,true);}finally{busy=false;}}}
-  if(files['arnoclick.json']){try{meta=JSON.parse(new TextDecoder().decode(await blobBuf(files['arnoclick.json'])));}catch(e){}}
-  const names=Object.keys(files);
-  const songName=meta&&meta.name?strip(meta.name):f.name.replace(/\.zip$/i,'').replace(/\s*-\s*ARNOCLICK progetto$/i,'');
-  const song={id:uid(),name:songName,tracks:[],video:null};
-  const aud=names.filter(n=>AUD.test(n)),vids=names.filter(n=>VID.test(n));
-  const clk=aud.find(n=>isClick(n)),bas=(meta&&AUD.test(meta.media||'')?meta.media:null)||aud.find(n=>n!==clk);
-  const vidN=vids.length?((meta&&vids.includes(meta.media))?meta.media:vids[0]):null;
-  const todo=[bas,clk,vidN].filter(Boolean);let k=0;
-  if(bas){jobSet(0.1+0.85*(++k)/todo.length,'Copio la base',base(bas));song.tracks.push({fid:await addFile(base(bas),files[bas]),name:'Base',db:0,pan:0,mute:false,solo:false,out:'s0',click:false});}
-  if(clk){jobSet(0.1+0.85*(++k)/todo.length,'Copio il click',base(clk));song.tracks.push({fid:await addFile(base(clk),files[clk]),name:'Click',db:0,pan:0,mute:false,solo:false,out:outs>2?'m2':'s0',click:true});}
-  if(vidN){jobSet(0.1+0.85*(++k)/todo.length,'Copio il video',base(vidN));const fid=await addFile(base(vidN),files[vidN]);song.video={fid,name:base(vidN),off:0};
-    // se non c'è un file audio per la base, la base è l'audio del video
-    song.tracks.push({fid,name:'Audio del video',vid:true,ico:'🎬',db:0,pan:0,mute:!!bas,solo:false,out:'s0'});}
-  prog(null);
-  if(!song.tracks.length){jobEnd('Nello .zip non ci sono tracce audio.',true);return;}
-  const extra=aud.length-(bas?1:0)-(clk?1:0);
-  lib.push(song);curSetObj().items.push(song.id);rebuild();saveSongs();renderList();
-  jobEnd('Importato «'+song.name+'» nella raccolta e in fondo alla scaletta: '+(bas?'Base':'audio del video come base')+(clk?' + Click':'')+(song.video?' + Video':'')+(extra>0?' ('+extra+' altri file audio ignorati)':'')+'.');
-  await loadSong(songs.length-1,false);
-  if(meta&&!clk)status('Brano ARNOCLICK importato senza click: aggiungilo con «＋ Click» nel mixer.',true);
+  if(files['arnoclick.json']){try{meta=JSON.parse(new TextDecoder().decode(await blobBuf(files['arnoclick.json'])));}catch(e){}
+    const songName=meta&&meta.name?strip(meta.name):f.name.replace(/\.zip$/i,'').replace(/\s*-\s*ARNOCLICK progetto$/i,'');
+    const ent=Object.keys(files).map(n=>({n,blob:files[n]}));
+    const song=await songFromGroup(ent,songName,meta,(k,t,w)=>jobSet(0.1+0.85*k/t,w,''));
+    if(!song){jobEnd('Nello .zip non ci sono tracce audio.',true);return;}
+    addSongs([song]);jobEnd('Importato «'+song.name+'» nella raccolta e in fondo alla scaletta: '+descSong(song)+'.');
+    await loadSong(songs.length-1,false);if(!song.tracks.some(t=>t.click))status('Brano importato senza click: aggiungilo con «＋ Click» nel mixer.',true);return;}
+  // .zip con più brani (cartella compressa): ogni sottocartella o gruppo di file con lo stesso nome = un brano
+  await importBatch(Object.keys(files).map(n=>({n,blob:files[n]})),f.name);
 }
+// ===== Importazione di più brani (cartella, più file o .zip di una cartella) =====
+const descSong=x=>[x.tracks.some(t=>!t.click&&!t.vid)?'Base':'audio del video come base'].concat(x.tracks.some(t=>t.click)?['Click']:[],x.video?['Video']:[]).join(' + ');
+function addSongs(L){L.forEach(x=>{lib.push(x);curSetObj().items.push(x.id);});rebuild();saveSongs();renderList();}
+// un gruppo di file → un brano: Base (audio), Click (nome con «click»), Video; se manca la base, la fa l'audio del video
+async function songFromGroup(ent,name,meta,cb){
+  const aud=ent.filter(e=>AUD.test(e.n)),vids=ent.filter(e=>VID.test(e.n));
+  const clk=aud.find(e=>isClick(base(e.n))),bas=(meta&&aud.find(e=>e.n===meta.media))||aud.find(e=>e!==clk);
+  const vid=(meta&&vids.find(e=>e.n===meta.media))||vids[0];
+  const todo=[bas,clk,vid].filter(Boolean);if(!bas&&!vid)return null;let k=0;
+  const song={id:uid(),name,tracks:[],video:null};
+  if(bas){cb&&cb(++k,todo.length,'Copio la base');song.tracks.push({fid:await addFile(base(bas.n),bas.blob),name:'Base',db:0,pan:0,mute:false,solo:false,out:'s0',click:false});}
+  if(clk){cb&&cb(++k,todo.length,'Copio il click');song.tracks.push({fid:await addFile(base(clk.n),clk.blob),name:'Click',db:0,pan:0,mute:false,solo:false,out:outs>2?'m2':'s0',click:true});}
+  if(vid){cb&&cb(++k,todo.length,'Copio il video');const fid=await addFile(base(vid.n),vid.blob);song.video={fid,name:base(vid.n),off:0};
+    song.tracks.push({fid,name:'Audio del video',vid:true,ico:'🎬',db:0,pan:0,mute:!!bas,solo:false,out:'s0'});}
+  return song;}
+const songKey=p=>{const parts=p.split('/').filter(x=>x&&!/^(__MACOSX)$/.test(x));
+  if(parts.length>2)return parts.slice(0,-1).join('/');            // sottocartella = un brano
+  return strip(parts[parts.length-1]).replace(/[\s\-_.(\[]*(click|clic|metronom\w*)\b.*$/i,'').replace(/[\s\-_]+(video|clip)$/i,'').trim().toLowerCase();};
+async function importBatch(ent,label){
+  if(!JOB.on)jobStart('Importo «'+label+'»');
+  ent=ent.filter(e=>!/(^|\/)(__MACOSX|\._|\.DS_Store)/.test(e.n));
+  const zips=ent.filter(e=>/\.zip$/i.test(e.n)),rest=ent.filter(e=>AUD.test(e.n)||VID.test(e.n));
+  // se tutti i file stanno in un'unica cartella principale, quella non conta come brano
+  const tops=new Set(rest.map(e=>e.n.split('/').length>1?e.n.split('/')[0]:''));if(tops.size===1&&[...tops][0])rest.forEach(e=>e.n=e.n.split('/').slice(1).join('/'));
+  const G=new Map();rest.forEach(e=>{const k=songKey(e.n.includes('/')?'x/'+e.n:e.n);if(!G.has(k))G.set(k,[]);G.get(k).push(e);});
+  const groups=[...G.values()],tot=groups.length+zips.length;let k=0;const made=[];let skipped=0;
+  for(const g of groups){const first=g.find(e=>AUD.test(e.n)&&!isClick(base(e.n)))||g.find(e=>VID.test(e.n))||g[0];
+    const nm=g[0].n.includes('/')?g[0].n.split('/').slice(-2,-1)[0]:strip(base(first.n));
+    jobSet(0.1+0.85*k/tot,'Brano '+(k+1)+' di '+tot,nm);const x=await songFromGroup(g,nm,null);k++;if(x)made.push(x);else skipped++;}
+  for(const z of zips){jobSet(0.1+0.85*k/tot,'Brano '+(k+1)+' di '+tot,base(z.n));k++;
+    try{const F=await readZip(z.blob);let meta=null;if(F['arnoclick.json'])try{meta=JSON.parse(new TextDecoder().decode(await blobBuf(F['arnoclick.json'])));}catch(e){}
+      const nm=meta&&meta.name?strip(meta.name):strip(base(z.n)).replace(/\s*-\s*ARNOCLICK progetto$/i,'');
+      const x=await songFromGroup(Object.keys(F).map(n=>({n,blob:F[n]})),nm,meta);if(x)made.push(x);else skipped++;}catch(e){skipped++;}}
+  if(!made.length){jobEnd('Nessun brano trovato (servono file audio .wav/.mp3/.m4a… o video).',true);return;}
+  addSongs(made);
+  jobEnd(made.length+' brani importati nella raccolta e in fondo alla scaletta «'+curSetObj().title+'»'+(skipped?' ('+skipped+' elementi senza audio ignorati)':'')+'.');
+  if(cur<0)await loadSong(songs.length-made.length,false);}
+async function importFolder(list){if(busy||!list.length)return;busy=true;
+  try{const tot=list.reduce((a,f)=>a+f.size,0);jobStart('Importo '+list.length+' file ('+mb(tot)+')');
+    await importBatch(list.map(f=>({n:f.webkitRelativePath||f.name,blob:f})),list.length+' file');}
+  catch(e){jobEnd('Importazione non riuscita: '+e,true);}finally{busy=false;}}
 // ogni file scelto diventa un NUOVO BRANO della raccolta (quel file è la Base) e va in fondo alla scaletta aperta
 async function newFromAudio(list){if(!list.length)return;
   const fs=[...list];const first=songs.length;
@@ -891,10 +923,11 @@ async function addVideo(f){const s=songs[cur];if(!s){status('Prima crea o scegli
   status('Importo il video '+f.name+'…');const fid=await addFile(f.name,f);s.tracks=s.tracks.filter(t=>!t.vid);s.video={fid,name:f.name,off:0};
   s.tracks.push({fid,name:'Audio del video',vid:true,ico:'🎬',db:0,pan:0,mute:s.tracks.some(t=>!isClick(t.name)),solo:false,out:'s0'});saveSongs();await stop();await loadSong(cur,false);}
 const onPick=(id,fn)=>$(id).addEventListener('change',async e=>{const l=[...e.target.files];e.target.value='';closeMenus();if(l.length)await fn(l);});
-onPick('fZip',l=>importZip(l[0]));onPick('fAud',newFromAudio);onPick('fAud2',newFromAudio);onPick('fAdd',addClick);onPick('fAdd2',addClick);onPick('fVid',l=>addVideo(l[0]));
+onPick('fZip',l=>importZip(l[0]));onPick('fDir',importFolder);onPick('fMany2',importFolder);onPick('fMany',importFolder);onPick('fAud',newFromAudio);onPick('fAud2',newFromAudio);onPick('fAdd',addClick);onPick('fAdd2',addClick);onPick('fVid',l=>addVideo(l[0]));
 // trascinamento (Mac/iPad)
 document.addEventListener('dragover',e=>e.preventDefault());
 document.addEventListener('drop',async e=>{e.preventDefault();const l=[...e.dataTransfer.files];if(!l.length)return;
+  if(l.length>1&&l.some(f=>/\.zip$/i.test(f.name)||VID.test(f.name)))return importFolder(l);
   const z=l.find(f=>/\.zip$/i.test(f.name));if(z)return importZip(z);
   const v=l.find(f=>VID.test(f.name));const a=l.filter(f=>AUD.test(f.name)||/^audio\//.test(f.type));
   if(a.length){const c=a.filter(f=>isClick(f.name)),o=a.filter(f=>!isClick(f.name));if(o.length)await newFromAudio(o);if(c.length&&cur>=0)await addClick(c);}if(v)await addVideo(v);});
