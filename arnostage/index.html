@@ -45,7 +45,13 @@ main{flex:1;min-height:0;display:flex;position:relative}
 body:not(.wide) main #colR{display:none}
 body:not(.wide).pgList main #colL{display:none}
 body:not(.wide).pgList main #colR{display:block}
-body.wide #tabs{display:none}
+body.wide #tbList{display:none}
+body.wide #tabs button{padding:5px 4px 4px}
+body.wide #tabs .tp{margin:3px 0}
+body.pgMix #colL>*:not(#mixSec){display:none!important}
+body.pgMix main #colR{display:none!important}
+body.pgMix main #colL{display:flex!important}
+body.pgMix #mixSec{min-height:0}
 body.wide #colR{flex:0 0 min(42%,420px);border-left:1px solid var(--line)}
 #stage{position:relative;background:#000;border:1px solid var(--line);border-radius:10px;overflow:hidden;aspect-ratio:16/9;width:var(--vw,100%);margin:0 auto;display:flex;align-items:center;justify-content:center}
 #grip{height:22px;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:ns-resize;margin-bottom:4px}
@@ -171,6 +177,30 @@ body.lkopen main{padding-bottom:56vh}
 #mix .ord button{width:36px;height:28px}
 body.wide #colL{overflow-y:auto}
 @media (max-height:520px){#mixSec{min-height:200px}}
+.x1{}
+@media (max-width:440px){.mbtn{padding:6px 5px}.brand{font-size:15px;margin-right:2px;gap:5px}#hdmi{padding:3px 5px;font-size:11px}}
+html,body{overflow-x:hidden}
+#colL,#mixSec{min-width:0;max-width:100%}
+/* ===== Mixer stile ARNOCLICK: telaio scuro, fader argentati con scala, display ambra ===== */
+body.mixac #mix .strip{background:linear-gradient(180deg,#2b2e33,#1e2024);border:1px solid #33373e;border-bottom-color:#121316;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 6px rgba(0,0,0,.5)}
+body.mixac #mix .strip[style*="background"]{background-blend-mode:normal}
+body.mixac #mix .strip.mstr{border-color:#ffb21e55}
+body.mixac #mix .hd b{color:#eceef0;letter-spacing:.06em;text-transform:uppercase;font-size:11px}
+body.mixac #mix .hd .lbl{color:#b9bec6}
+body.mixac #mix .tg button,body.mixac #mix .panc,body.mixac #mix .ord button,body.mixac #mix .vstrip .tg button{background:linear-gradient(180deg,#3a3e45,#24272b);border:1px solid #4b5058;border-bottom:3px solid #121316;color:#eceef0;font-weight:700}
+body.mixac #mix .tg .m.on{background:linear-gradient(180deg,#ff6a52,#d42a14);border-color:#ff8a77;border-bottom-color:#6e0d03;color:#fff;box-shadow:0 0 10px rgba(255,69,48,.5)}
+body.mixac #mix .tg .s.on{background:linear-gradient(180deg,#ffc44d,#e89a00);border-color:#ffcf6b;border-bottom-color:#7a5000;color:#1b1305;box-shadow:0 0 10px rgba(255,178,30,.45)}
+body.mixac #mix select{background:#1b1d21;border-color:#3a404b}
+body.mixac #mix .fad{background:repeating-linear-gradient(180deg,transparent 0 calc(10% - 1px),#6d737c calc(10% - 1px) 10%) center/34px calc(100% - 24px) no-repeat}
+body.mixac #mix .fad input::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:#050506;box-shadow:inset 0 1px 2px #000,0 1px 0 rgba(255,255,255,.08)}
+body.mixac #mix .fad input::-webkit-slider-thumb{width:22px;height:44px;margin-top:-19px;border-radius:5px;background:linear-gradient(90deg,#c9ccd1 0,#9aa0a7 45%,#111 47%,#111 53%,#9aa0a7 55%,#d9dce0 100%);box-shadow:0 4px 8px rgba(0,0,0,.7),inset 0 1px 0 #fff,inset 0 -1px 0 #444}
+body.mixac #mix .pn .pan::-webkit-slider-runnable-track{background:#050506;height:4px}
+body.mixac #mix .pn .pan::-webkit-slider-thumb{background:linear-gradient(180deg,#d9dce0,#9aa0a7 45%,#6c7279 50%,#9aa0a7 55%,#c9ccd1);border-radius:4px;width:14px;height:18px;margin-top:-7px}
+body.mixac #mix .db,body.mixac #mix input[type=number]{background:linear-gradient(180deg,#0a0403,#140806);border-radius:6px;box-shadow:inset 0 2px 6px rgba(0,0,0,.9),inset 0 0 0 1px #000;color:#ffb21e;text-shadow:0 0 8px rgba(255,178,30,.55);font:700 13px/1 ui-monospace,"SF Mono",Menlo,monospace;padding:5px 2px;border:0}
+body.mixac #mix .vm{background:#08090a;box-shadow:inset 0 1px 3px #000}
+body.mixac #mix .vm i{background:linear-gradient(0deg,#46ff7a 0 70%,#ffb21e 70% 88%,#ff4530 88%);-webkit-mask:repeating-linear-gradient(0deg,#000 0 3px,transparent 3px 4px);mask:repeating-linear-gradient(0deg,#000 0 3px,transparent 3px 4px)}
+body.mixac #mix .clkl{color:#ff4530;text-shadow:0 0 10px rgba(255,69,48,.6)}
+body.mixac #mixSec{background:linear-gradient(180deg,#1e2024,#141518);border-color:#3b3f46}
 </style>
 </head>
 <body>
@@ -207,6 +237,7 @@ body.wide #colL{overflow-y:auto}
   <div style="position:relative"><button class="mbtn" data-m="mView">Vista</button>
     <div class="menu" id="mView">
       <button class="chk" id="miPrev">Anteprima del video sull'iPhone</button>
+      <button class="chk" id="miAC">🎚 Mixer stile ARNOCLICK</button>
       <button class="chk" id="miGray">Tema grigio</button>
       <hr>
       <button id="miAbout">Informazioni</button>
@@ -239,13 +270,13 @@ body.wide #colL{overflow-y:auto}
   </div>
  </div>
 </main>
-<div id="tabs"><button id="tbSong" class="on">🎚 Brano</button><button class="tp" id="tbPlay">▶</button><button id="tbList">☰ Scaletta</button></div>
+<div id="tabs"><button id="tbSong" class="on">🎚 Brano</button><button class="tp" id="tbPlay">▶</button><button id="tbMix">🎛 Mixer</button><button id="tbList">☰ Scaletta</button></div>
 <div id="status">Pronto.</div>
 <div id="sheet"><div class="box" id="sbox"></div></div>
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.1.10';
+const VERSION='0.1.11';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -678,8 +709,9 @@ $('sheet').onclick=e=>{if(e.target.id==='sheet')closeSheet();};
 $('miAuto').onclick=()=>{cfg.auto=!cfg.auto;saveCfg();$('miAuto').classList.toggle('on',cfg.auto);closeMenus();status(cfg.auto?'A fine brano parte da solo il successivo.':'A fine brano si ferma.');};
 $('miEdit').onclick=()=>{editMode=!editMode;renderList();closeMenus();};
 $('miPrev').onclick=async()=>{cfg.prev=!cfg.prev;saveCfg();$('miPrev').classList.toggle('on',cfg.prev);closeMenus();vFid=-1;await setVideo(songs[cur]);syncVideo(true);};
+$('miAC').onclick=()=>{cfg.mixAC=!cfg.mixAC;saveCfg();applyTheme();closeMenus();};
 $('miGray').onclick=()=>{cfg.gray=!cfg.gray;saveCfg();applyTheme();closeMenus();};
-function applyTheme(){document.documentElement.dataset.theme=cfg.gray?'gray':'';$('miGray').classList.toggle('on',cfg.gray);}
+function applyTheme(){document.body.classList.toggle('mixac',!!cfg.mixAC);$('miAC').classList.toggle('on',!!cfg.mixAC);setTimeout(fitFaders,30);document.documentElement.dataset.theme=cfg.gray?'gray':'';$('miGray').classList.toggle('on',cfg.gray);}
 function showProj(){$('projN').textContent=cfg.proj?'· '+cfg.proj:'· (non salvata)';}
 async function projects(){return (await kvGet('projects').catch(()=>null))||{};}
 async function saveProj(name){const P=await projects();P[name]={songs:JSON.parse(JSON.stringify(songs)),looks:JSON.parse(JSON.stringify(looks)),saved:Date.now()};
@@ -705,8 +737,9 @@ $('miAbout').onclick=()=>{closeMenus();sheet(`<h3>ArnoStage ${VERSION} · PROVA<
 // ===== Pagine (verticale) / due colonne (orizzontale) =====
 function layout(){document.body.classList.toggle('wide',innerWidth>innerHeight&&innerWidth>=640);}
 addEventListener('resize',layout);
-function page(l){document.body.classList.toggle('pgList',l);$('tbList').classList.toggle('on',l);$('tbSong').classList.toggle('on',!l);}
-$('tbSong').onclick=()=>page(false);$('tbList').onclick=()=>page(true);$('tbPlay').onclick=()=>$('bPlay').click();
+function page(l){const p=l===true?'list':l||'song';document.body.classList.toggle('pgList',p==='list');document.body.classList.toggle('pgMix',p==='mix');
+  $('tbList').classList.toggle('on',p==='list');$('tbSong').classList.toggle('on',p==='song');$('tbMix').classList.toggle('on',p==='mix');setTimeout(fitFaders,30);}
+$('tbSong').onclick=()=>page('song');$('tbList').onclick=()=>page('list');$('tbMix').onclick=()=>page('mix');$('tbPlay').onclick=()=>$('bPlay').click();
 new MutationObserver(()=>{$('tbPlay').textContent=$('bPlay').textContent;$('tbPlay').classList.toggle('on',playing);}).observe($('bPlay'),{childList:true,attributes:true});
 // ===== Avvio =====
 (async()=>{
