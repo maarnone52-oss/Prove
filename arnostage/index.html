@@ -353,7 +353,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.1.18';
+const VERSION='0.1.19';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -886,15 +886,17 @@ async function exportSheet(name,SG,LK){
   if(!SG.length){status('La scaletta è vuota.',true);return;}
   if(!NATIVE){status('La condivisione del progetto .zip funziona nell\'app per iPhone/iPad.',true);return;}
   const vidIds=new Set(SG.filter(x=>x.video).map(x=>x.video.fid)),audIds=new Set(SG.flatMap(x=>x.tracks.map(t=>t.fid)));
-  let aB=0,vB=0;for(const id of new Set([...vidIds,...audIds])){const f=await fGet(id);const z=f?f.blob.size:0;if(audIds.has(id))aB+=z;else vB+=z;}
+  const isVidFile=id=>vidIds.has(id)||SG.some(x=>x.tracks.some(t=>t.fid===id&&t.vid));
+  let aB=0,vB=0,eB=0;for(const id of new Set([...vidIds,...audIds])){const f=await fGet(id);const z=f?f.blob.size:0;if(isVidFile(id)||(f&&VID.test(f.name)))vB+=z;else aB+=z;}
+  for(const x of SG)for(const t of x.tracks){const f=await fGet(t.fid);if(f&&(isVidFile(t.fid)||VID.test(f.name)))eB+=(t.dur||x.dur||240)*32000;}
   const LIM=4*1073741824,WARN=1.5*1073741824;
   const msg=t=>t>LIM?`<div class="warnx bad">⛔ Troppo pesante (${mb(t)}): il file .zip non può superare 4 GB. Riduci il carico: esporta solo l'audio o salva meno brani nel progetto.</div>`:t>WARN?`<div class="warnx">⚠️ Pacchetto pesante (${mb(t)}): AirDrop funziona, ma Messaggi e WhatsApp lo rifiuteranno e ci vorrà tempo. Per ridurre il carico esporta solo l'audio.</div>`:'';
   sheet(`<h3>📤 Condividi progetto</h3><div class="frm"><span>Nome</span><input id="exN" value="${esc(name||'Concerto')}"></div>
-   <div class="expo"><label><input type="radio" name="exK" value="a"> <span><b>Solo audio</b> — ${mb(aB)}<br><small>Tracce, click, mixer e colori. I video non vengono inclusi (se l'audio di un brano viene dal video, quel file resta incluso).</small></span></label>
+   <div class="expo"><label><input type="radio" name="exK" value="a"> <span><b>Solo audio</b> — ${mb(aB+eB)}${eB?' circa':''}<br><small>Tracce, click, mixer e colori, senza video.${eB?' L\'audio dei video viene estratto in file audio leggeri (.m4a).':''}</small></span></label>
    <label><input type="radio" name="exK" value="v" checked> <span><b>Audio e video</b> — ${mb(aB+vB)}<br><small>Tutto il progetto, video compresi.</small></span></label></div>
    <div id="exW">${msg(aB+vB)}</div>
    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn" onclick="closeSheet()">Annulla</button><button class="btn acc" id="exGo">Crea e condividi</button></div>`);
-  const kind=()=>document.querySelector('input[name=exK]:checked').value,tot=()=>kind()==='a'?aB:aB+vB;
+  const kind=()=>document.querySelector('input[name=exK]:checked').value,tot=()=>kind()==='a'?aB+eB:aB+vB;
   document.querySelectorAll('input[name=exK]').forEach(r=>r.onchange=()=>{$('exW').innerHTML=msg(tot());$('exGo').disabled=tot()>LIM;});
   $('exGo').disabled=tot()>LIM;
   $('exGo').onclick=()=>{const n=$('exN').value.trim()||'Progetto',k=kind();closeSheet();doExport(n,SG,LK,k==='v');};
@@ -902,11 +904,18 @@ async function exportSheet(name,SG,LK){
 async function doExport(name,SG,LK,withVideo){
   if(busy)return;busy=true;jobStart('Esporto «'+name+'» ('+(withVideo?'audio e video':'solo audio')+')');
   try{const S=JSON.parse(JSON.stringify(SG));
+    const vset=new Set(S.filter(x=>x.video).map(x=>x.video.fid));
     if(!withVideo)S.forEach(x=>{x.video=null;});
-    const ids=[...new Set(S.flatMap(x=>x.tracks.map(t=>t.fid).concat(x.video?[x.video.fid]:[])))];
+    let ids=[...new Set(S.flatMap(x=>x.tracks.map(t=>t.fid).concat(x.video?[x.video.fid]:[])))];
     jobSet(0,'Preparo i file','');
-    await ensureNative(ids,null,(f,n,d,t)=>jobSet(f*0.35,'Copio i file nell\'app',n+' · '+mb(d)+' di '+mb(t)));
+    await ensureNative(ids,null,(f,n,d,t)=>jobSet(f*(withVideo?0.35:0.2),'Copio i file nell\'app',n+' · '+mb(d)+' di '+mb(t)));
     const names={};for(const id of ids){const f=await fGet(id);names[id]=f?f.name:id;}
+    if(!withVideo){ // tracce che leggono l'audio da un file video: estraggo solo l'audio
+      const vids=ids.filter(id=>vset.has(id)||VID.test(names[id]||'')||S.some(x=>x.tracks.some(t=>t.fid===id&&t.vid)));const map={};
+      for(let k=0;k<vids.length;k++){const id=vids[k],nid=id+'a';jobSet(0.2+0.15*k/vids.length,'Estraggo l\'audio dai video',(names[id]||id)+' ('+(k+1)+'/'+vids.length+')');
+        const r=await NS.postMessage({op:'extract',id,nid});if(r&&r.ok){map[id]=nid;names[nid]=strip(names[id]||id)+'.m4a';}}
+      S.forEach(x=>x.tracks.forEach(t=>{if(map[t.fid]){t.fid=map[t.fid];t.vid=false;}}));
+      ids=[...new Set(S.flatMap(x=>x.tracks.map(t=>t.fid)))];}
     const files=ids.map(id=>({id,path:'media/'+id+'.'+extOf(names[id])}));
     const json=JSON.stringify({format:'arnostage',version:VERSION,name,video:withVideo,songs:S,looks:LK,names,files:Object.fromEntries(files.map(f=>[f.id,f.path]))});
     jobSet(0.35,'Creo lo .zip','');

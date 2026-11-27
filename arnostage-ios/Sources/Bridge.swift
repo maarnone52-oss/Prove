@@ -95,6 +95,26 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWith
                     replyHandler(true, nil)
                 }
             }
+        case "extract":   // estrae solo l'audio di un video in .m4a (per l'esportazione «solo audio»)
+            guard let id = m["id"] as? String, let nid = m["nid"] as? String, let u = MediaStore.url(for: id) else { replyHandler(nil, "file mancante"); return }
+            if let e = MediaStore.url(for: nid) {
+                let sz = ((try? FileManager.default.attributesOfItem(atPath: e.path))?[.size] as? NSNumber)?.doubleValue ?? 0
+                replyHandler(["ok": true, "size": sz], nil); return
+            }
+            guard let ex = AVAssetExportSession(asset: AVURLAsset(url: u), presetName: AVAssetExportPresetAppleM4A) else { replyHandler(nil, "estrazione non disponibile"); return }
+            let out = MediaStore.dir.appendingPathComponent(MediaStore.safe(nid) + ".m4a.part")
+            try? FileManager.default.removeItem(at: out)
+            ex.outputURL = out; ex.outputFileType = .m4a
+            ex.exportAsynchronously {
+                DispatchQueue.main.async {
+                    guard ex.status == .completed else { try? FileManager.default.removeItem(at: out); replyHandler(nil, ex.error?.localizedDescription ?? "estrazione non riuscita"); return }
+                    let fin = MediaStore.dir.appendingPathComponent(MediaStore.safe(nid) + ".m4a")
+                    try? FileManager.default.removeItem(at: fin)
+                    try? FileManager.default.moveItem(at: out, to: fin)
+                    let sz = ((try? FileManager.default.attributesOfItem(atPath: fin.path))?[.size] as? NSNumber)?.doubleValue ?? 0
+                    replyHandler(["ok": true, "size": sz], nil)
+                }
+            }
         case "del":
             if let id = m["id"] as? String { MediaStore.remove(id) }
             replyHandler(true, nil)
