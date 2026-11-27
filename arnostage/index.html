@@ -279,7 +279,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
   <div style="position:relative"><button class="mbtn" data-m="mFile">File</button>
     <div class="menu" id="mFile">
       <label><input type="file" id="fZip" accept=".zip,application/zip" hidden>📦 Importa .zip (ARNOCLICK o progetto ArnoStage)…</label>
-      <label><input type="file" id="fAud" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" multiple hidden>🎵 Nuovo brano da file audio…</label>
+      <label><input type="file" id="fAud" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" multiple hidden>🎵 Nuovo brano in scaletta da file audio…</label>
       <hr>
       <label><input type="file" id="fAdd" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" multiple hidden>＋ Aggiungi tracce al brano…</label>
       <label><input type="file" id="fVid" accept="video/*,.mp4,.mov,.m4v" hidden>🎬 Abbina un video al brano…</label>
@@ -354,7 +354,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.1.20';
+const VERSION='0.1.21';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -825,12 +825,16 @@ async function importZip(f){
   await loadSong(songs.length-1,false);
   if(meta&&!hasClick)status('Progetto ARNOCLICK importato, ma lo .zip non contiene il click: aggiungilo con «＋ Traccia» (in ARNOCLICK: Esporta › Click .wav).',true);
 }
+// ogni file scelto diventa un NUOVO BRANO in fondo alla scaletta, con quel file come traccia «Base»
 async function newFromAudio(list){if(!list.length)return;
-  const fs=[...list].sort((a,b)=>isClick(a.name)-isClick(b.name));
-  const song={id:uid(),name:strip(fs[0].name),tracks:[],video:null};
-  for(let i=0;i<fs.length;i++){status('Importo '+fs[i].name+'…');prog((i+1)/fs.length);
-    const fid=await addFile(fs[i].name,fs[i]);song.tracks.push(mkTrack(song,fid,fs[i].name,i===0?'Base':trackName(fs[i].name,song.name)));}
-  prog(null);songs.push(song);saveSongs();await loadSong(songs.length-1,false);}
+  const fs=[...list];const first=songs.length;
+  for(let i=0;i<fs.length;i++){status('Aggiungo alla scaletta: '+fs[i].name+'…');prog((i+1)/fs.length);
+    const fid=await addFile(fs[i].name,fs[i]);
+    songs.push({id:uid(),name:strip(fs[i].name),tracks:[{fid,name:'Base',db:0,pan:0,mute:false,solo:false,out:'s0',click:false}],video:null});}
+  prog(null);saveSongs();renderList();if(!document.body.classList.contains('wide'))page('list');
+  const it=$('list').querySelector(`.it[data-i="${first}"]`);if(it)it.scrollIntoView({block:'center',behavior:'smooth'});
+  if(cur<0)await loadSong(first,false);
+  status(fs.length===1?'«'+strip(fs[0].name)+'» aggiunto alla scaletta (traccia Base). Toccalo per aprirlo nel mixer.':fs.length+' brani aggiunti alla scaletta.');}
 function mkTrack(s,fid,fname,name){const t={fid,name,db:0,pan:0,mute:false,solo:false,out:'s0',click:false};
   if(clickIdx(s)<0&&confirm('«'+fname+'»\n\nÈ la traccia del CLICK?\n(OK = sì, va nella traccia CLICK · Annulla = traccia normale)')){t.click=true;t.name='Click';t.out=outs>2?'m2':'s0';}
   return t;}
