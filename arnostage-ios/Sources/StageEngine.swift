@@ -58,16 +58,19 @@ final class StageEngine {
 
     // Ingressi della scheda
     private(set) var inOn = false
-    private var inA = 0, inB = 1, inGain: Float = 1, inOut = 0, inOutSt = true, inMute = false
+    /// strisce degli ingressi (per suonare sulle basi): canali della scheda, volume, uscita
+    private struct InStrip { var a = 0, b = -1, g: Float = 1, out = 0, st = true, mute = false }
+    private var inStrips: [InStrip] = []
+    private let maxIn = 32
+    private var capCh = 0
     private var inChannels = 0
     private let ringSize = 16384
-    private let ringA = UnsafeMutablePointer<Float>.allocate(capacity: 16384)
-    private let ringB = UnsafeMutablePointer<Float>.allocate(capacity: 16384)
+    private let rings = UnsafeMutablePointer<Float>.allocate(capacity: 16384 * 32)
     private var ringW = 0, ringR = 0
     private let ringLock: UnsafeMutablePointer<os_unfair_lock> = {
         let p = UnsafeMutablePointer<os_unfair_lock>.allocate(capacity: 1); p.initialize(to: os_unfair_lock()); return p
     }()
-    private var inPeak: Float = 0
+    private let inPeaks: UnsafeMutablePointer<Float> = { let p = UnsafeMutablePointer<Float>.allocate(capacity: 32); p.initialize(repeating: 0, count: 32); return p }()
     private var mPeakL: Float = 0, mPeakR: Float = 0
     /// picchi prima del fader (per il LED del click: lampeggia anche con la traccia muta)
     private let raws: UnsafeMutablePointer<Float> = { let p = UnsafeMutablePointer<Float>.allocate(capacity: 66); p.initialize(repeating: 0, count: 66); return p }()
@@ -279,15 +282,21 @@ final class StageEngine {
             var pk: [Double] = []
             var rk: [Double] = []
             for i in 0..<voices.count { pk.append(Double(peaks[i])); peaks[i] = 0; if i < 66 { rk.append(Double(raws[i])); raws[i] = 0 } }
-            let ip = Double(inPeak); inPeak = 0
+            var ipk: [Double] = []
+            for i in 0..<min(32, inStrips.count) { ipk.append(Double(inPeaks[i])); inPeaks[i] = 0 }
             let ml = Double(mPeakL), mr = Double(mPeakR); mPeakL = 0; mPeakR = 0
-            let r: [String: Any] = ["t": pos, "playing": playing, "ended": ended, "pk": pk, "ip": ip, "ml": ml, "mr": mr, "rk": rk]
+            let r: [String: Any] = ["t": pos, "playing": playing, "ended": ended, "pk": pk, "ipk": ipk, "ml": ml, "mr": mr, "rk": rk]
             unlock()
             reply(r)
-        case "input":
+        case "inputs":
             let on = (m["on"] as? Bool) ?? false
-            inA = max(0, Int(num("a"))); inB = Int(num("b")); inGain = Float(num("gain"))
-            inOut = max(0, Int(num("out"))); inOutSt = (m["om"] as? String) != "mono"; inMute = (m["mute"] as? Bool) ?? false
+            var list: [InStrip] = []
+            for d in (m["list"] as? [[String: Any]]) ?? [] {
+                let n: (String) -> Double = { (d[$0] as? NSNumber)?.doubleValue ?? 0 }
+                list.append(InStrip(a: max(0, min(maxIn - 1, Int(n("a")))), b: min(maxIn - 1, Int(n("b"))), g: Float(n("gain")), out: max(0, Int(n("out"))),
+                                    st: (d["om"] as? String) != "mono", mute: (d["mute"] as? Bool) ?? false))
+            }
+            os_unfair_lock_lock(ringLock); inStrips = list; os_unfair_lock_unlock(ringLock)
             if on != inOn {
                 inOn = on
                 needRebuild = true
@@ -324,22 +333,17 @@ final class StageEngine {
 
     private func capture(_ n: Int, _ abl: UnsafePointer<AudioBufferList>) {
         let list = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: abl))
-        var pa: UnsafeMutablePointer<Float>? = nil, pb: UnsafeMutablePointer<Float>? = nil
-        var idx = 0
-        for b in list {
-            if idx == inA { pa = b.mData?.assumingMemoryBound(to: Float.self) }
-            if idx == inB { pb = b.mData?.assumingMemoryBound(to: Float.self) }
-            idx += 1
-            if idx > max(inA, inB) { break }
-        }
-        guard let a = pa else { return }
         let mask = ringSize - 1
         os_unfair_lock_lock(ringLock)
-        for i in 0..<n {
-            let w = (ringW + i) & mask
-            ringA[w] = a[i]
-            ringB[w] = pb?[i] ?? a[i]
+        var c = 0
+        for b in list where c < maxIn {
+            if let p = b.mData?.assumingMemoryBound(to: Float.self) {
+                let base = rings + c * ringSize
+                for i in 0..<n { base[(ringW + i) & mask] = p[i] }
+            }
+            c += 1
         }
+        capCh = c
         ringW += n
         if ringW - ringR > ringSize { ringR = ringW - ringSize }
         os_unfair_lock_unlock(ringLock)
@@ -351,21 +355,24 @@ final class StageEngine {
         var avail = ringW - ringR
         if avail > n * 3 { ringR = ringW - n; avail = n }   // il ritardo non deve crescere
         let k = min(n, avail)
-        if k <= 0 { return }
+        if k <= 0 || capCh == 0 { return }
         let mask = ringSize - 1
-        let o0 = min(inOut, nOut - 1), o1 = min(inOut + 1, nOut - 1)
-        let two = inB >= 0 && inB != inA
-        let g = inMute ? 0 : inGain
-        var pk: Float = 0
-        for f in 0..<k {
-            let r = (ringR + f) & mask
-            let ra = ringA[r], rb = two ? ringB[r] : ringA[r]
-            let a = abs(ra) > abs(rb) ? abs(ra) : abs(rb); if a > pk { pk = a }
-            let va = ra * g, vb = rb * g
-            if inOutSt && o1 != o0 { if mono { let mm = (va + vb) * 0.5; outs[o0][f] += mm; outs[o1][f] += mm } else { outs[o0][f] += va; outs[o1][f] += vb } }
-            else { outs[o0][f] += two ? (va + vb) * 0.5 : va }
+        for (si, s) in inStrips.enumerated() {
+            let ca = min(s.a, capCh - 1), two = s.b >= 0 && s.b != s.a && s.b < capCh
+            let ra = rings + ca * ringSize, rb = rings + (two ? s.b : ca) * ringSize
+            let o0 = min(s.out, nOut - 1), o1 = min(s.out + 1, nOut - 1)
+            let g = s.mute ? 0 : s.g
+            var pk: Float = 0
+            for f in 0..<k {
+                let r = (ringR + f) & mask
+                let xa = ra[r], xb = rb[r]
+                let a = abs(xa) > abs(xb) ? abs(xa) : abs(xb); if a > pk { pk = a }
+                let va = xa * g, vb = xb * g
+                if s.st && o1 != o0 { if mono { let mm = (va + vb) * 0.5; outs[o0][f] += mm; outs[o1][f] += mm } else { outs[o0][f] += va; outs[o1][f] += vb } }
+                else { outs[o0][f] += two ? (va + vb) * 0.5 : va }
+            }
+            if si < 32 && pk > inPeaks[si] { inPeaks[si] = pk }
         }
-        if pk > inPeak { inPeak = pk }
         ringR += k
     }
 

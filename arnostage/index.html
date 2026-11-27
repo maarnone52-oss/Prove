@@ -270,6 +270,17 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 #mix .tg .mono.on{background:var(--acc);border-color:var(--acc);color:#fff;box-shadow:0 0 8px color-mix(in srgb,var(--acc) 60%,transparent)}
 #mix .panc{display:inline-flex;align-items:center;justify-content:center;border-radius:50%!important;pointer-events:none;color:#fff;background:#2a5a36!important;border:1px solid #1d3d25!important;font-weight:800}
 #mix .panc.off{background:#ff3b30!important;border-color:#a1150c!important;box-shadow:0 0 8px rgba(255,59,48,.7)}
+.x5{}
+.setbar{display:flex;align-items:center;gap:6px;margin:0 2px 8px}
+.setbar select{flex:1;min-width:0;font:inherit;font-size:15px;font-weight:700;padding:6px;border-radius:8px;background:var(--card2);color:var(--fg);border:1px solid var(--line)}
+.setbar .btn{padding:6px 9px}
+#libList .li{display:flex;align-items:center;gap:6px;padding:7px 4px;border-top:1px solid var(--line)}
+#libList .li:first-child{border-top:0}
+#libList .li .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#libList .li .t small{color:var(--mut)}
+#libList .li button{background:var(--card2);border:1px solid var(--line);color:var(--fg);border-radius:7px;height:30px;min-width:30px;font-size:13px}
+#libList .li .in{color:var(--ok);font-size:11px;font-weight:700}
+#addClk.hide,#addIn.hide{display:none}
 </style>
 </head>
 <body>
@@ -279,9 +290,9 @@ body.wide.pgMix .transport .tb.auto small{display:none}
   <div style="position:relative"><button class="mbtn" data-m="mFile">File</button>
     <div class="menu" id="mFile">
       <label><input type="file" id="fZip" accept=".zip,application/zip" hidden>📦 Importa .zip (ARNOCLICK o progetto ArnoStage)…</label>
-      <label><input type="file" id="fAud" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" multiple hidden>🎵 Nuovo brano in scaletta da file audio…</label>
+      <label><input type="file" id="fAud" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" multiple hidden>🎵 Nuovi brani (la base) da file audio…</label>
       <hr>
-      <label><input type="file" id="fAdd" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" multiple hidden>＋ Aggiungi tracce al brano…</label>
+      <label><input type="file" id="fAdd" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" hidden>♩ Click del brano (aggiungi o sostituisci)…</label>
       <label><input type="file" id="fVid" accept="video/*,.mp4,.mov,.m4v" hidden>🎬 Abbina un video al brano…</label>
       <hr>
       <button id="miSave">💾 Salva progetto</button>
@@ -290,7 +301,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
       <button id="miShare">📤 Condividi progetto (.zip: AirDrop, Messaggi, File)…</button>
       <button id="miNew">🆕 Nuovo progetto</button>
       <hr>
-      <button id="miClear">🗑 Svuota la scaletta…</button>
+      <button id="miClear">🧹 Svuota la scaletta (i brani restano nella raccolta)…</button>
     </div></div>
   <div style="position:relative"><button class="mbtn" data-m="mList">Scaletta</button>
     <div class="menu" id="mList">
@@ -332,15 +343,20 @@ body.wide.pgMix .transport .tb.auto small{display:none}
     <button class="tb" id="bLeft" title="A sinistra: video o mixer">🎬</button>
   </div>
   <div class="sec" id="mixSec">
-    <div class="sech">Mixer<span class="sp"></span><span class="lbl" style="font-weight:400">tieni premuto e trascina per spostare</span><label class="btn"><input type="file" id="fAdd2" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" multiple hidden>＋ Traccia</label></div>
+    <div class="sech">Mixer<span class="sp"></span><span class="lbl" style="font-weight:400">tieni premuto e trascina per spostare</span><label class="btn" id="addClk"><input type="file" id="fAdd2" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" hidden>＋ Click</label><button class="btn" id="addIn">＋ Ingresso</button></div>
     <div id="mix"></div>
   </div>
  </div>
  <div id="colR">
   <div class="sec">
     <div class="ptitle" id="projN">Progetto: —</div>
-    <div class="sech">Scaletta<span class="sp"></span><button class="btn" id="bEdit">✎ Modifica</button></div>
+    <div class="setbar"><span class="lbl">Scaletta</span><select id="setSel"></select><button class="btn" data-s="new" title="Nuova scaletta">＋</button><button class="btn" data-s="ren" title="Rinomina">✎</button><button class="btn" data-s="dup" title="Duplica">⧉</button><button class="btn" data-s="del" title="Elimina la scaletta">🗑</button></div>
+    <div class="sech"><span id="setT">Scaletta</span><span class="sp"></span><button class="btn" id="bEdit">✎ Modifica</button></div>
     <div id="list" class="noedit"></div>
+  </div>
+  <div class="sec">
+    <div class="sech">Raccolta brani <span class="lbl" id="libN"></span><span class="sp"></span><label class="btn"><input type="file" id="fAud2" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" multiple hidden>🎵 Nuovi brani</label></div>
+    <div id="libList"></div>
   </div>
  </div>
  <div id="colP">
@@ -354,7 +370,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.1.21';
+const VERSION='0.2.0';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -362,7 +378,7 @@ const NATIVE=!!NE;
 const eng=o=>NE.postMessage(o);
 function mon(o){if(!NATIVE&&cfg.hdmi===false&&o.t!=='black')return;if(NM)try{NM.postMessage(JSON.stringify(o));}catch(e){}}
 
-let songs=[],cur=-1,playing=false,pos=0,dur=0,hdmiOn=false,outs=2,ins=0,cardName='',busy=false;
+let lib=[],sets=[],curSet=null,songs=[],cur=-1,playing=false,pos=0,dur=0,hdmiOn=false,outs=2,ins=0,cardName='',busy=false;
 let cfg={auto:false,prev:true,gray:false,master:0,inOn:false,inA:0,inB:1,inDb:0,inOut:'s0',inMute:false};
 try{Object.assign(cfg,JSON.parse(localStorage.getItem('arnostage.cfg')||'{}'));}catch(e){}
 const saveCfg=()=>{try{localStorage.setItem('arnostage.cfg',JSON.stringify(cfg));}catch(e){}};
@@ -374,7 +390,7 @@ const COLS=['','#ef4444','#f97316','#eab308','#22c55e','#14b8a6','#3b82f6','#8b5
 const ICONS=[['🎤','Voce'],['🎙️','Microfono'],['🎸','Chitarra'],['🎸','Basso'],['🎹','Tastiera'],['🥁','Batteria'],['🪘','Percussioni'],['🪇','Maracas'],['🎷','Sax'],['🎺','Tromba'],['🎻','Violino'],['🪕','Banjo'],['🪗','Fisarmonica'],['🪈','Flauto'],['🎼','Base'],['🎵','Musica'],['♩','Click'],['🎧','Cuffie'],['🔊','Uscita'],['🎛️','Mixer']];
 const stripBg=(c,i)=>c?`background:color-mix(in srgb,${c} ${i==null?35:i}%,var(--card))`:'';
 let looks={};
-const lkey=t=>t.vid?'#video':isClick(t.name)?'#click':String(t.name).trim().toLowerCase();
+const lkey=t=>t.vid?'#video':(t.click||(t.click==null&&isClick(t.name)))?'#click':'#base';
 const L=t=>{const g=looks[lkey(t)]||{};return {col:t.col!=null?t.col:(g.col||''),int:t.int!=null?t.int:(g.int==null?35:g.int),ico:t.ico||g.ico||(t.vid?'🎬':defIco(t.name)),lab:t.lab||g.lab};};
 const defIco=n=>isClick(n)?'♩':'🎼';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -394,7 +410,18 @@ const fGet=id=>tx('files','readonly',s=>s.get(id));
 const fDel=id=>tx('files','readwrite',s=>s.delete(id));
 const kvSet=(k,v)=>tx('kv','readwrite',s=>s.put(v,k));
 const kvGet=k=>tx('kv','readonly',s=>s.get(k));
-let saveT=0;function saveSongs(){clearTimeout(saveT);saveT=setTimeout(()=>{kvSet('songs',songs).catch(()=>{});kvSet('looks',looks).catch(()=>{});},250);}
+let saveT=0;function saveSongs(){clearTimeout(saveT);saveT=setTimeout(()=>{kvSet('lib',lib).catch(()=>{});kvSet('sets',sets).catch(()=>{});kvSet('curSet',curSet).catch(()=>{});kvSet('looks',looks).catch(()=>{});},250);}
+// ===== Raccolta brani e scalette =====
+// Un brano ha solo: Base (audio), Click, Video e Audio del video. Le altre strisce del mixer sono gli ingressi della scheda.
+function normSong(s){const T=s.tracks||[];const v=T.find(t=>t.vid),c=T.find(t=>!t.vid&&(t.click!=null?t.click:isClick(t.name))),b=T.find(t=>t!==v&&t!==c);
+  if(b){b.click=false;b.vid=false;if(!b.name||b.name==='Audio del video')b.name='Base';}
+  if(c){c.click=true;c.vid=false;}
+  s.tracks=[b,c,v].filter(Boolean);return s;}
+function curSetObj(){let x=sets.find(y=>y.id===curSet);if(!x){if(!sets.length)sets.push({id:uid(),title:'Scaletta 1',items:[]});x=sets[0];curSet=x.id;}return x;}
+function rebuild(){const m={};lib.forEach(x=>m[x.id]=x);const st=curSetObj();st.items=st.items.filter(id=>m[id]);songs=st.items.map(id=>m[id]);}
+function projData(p){p=p||{};if(p.lib)return {lib:p.lib,sets:p.sets&&p.sets.length?p.sets:[{id:uid(),title:'Scaletta 1',items:p.lib.map(x=>x.id)}],curSet:p.curSet,looks:p.looks||{}};
+  const L=(p.songs||[]).map(x=>Object.assign({},x,{id:x.id||uid()}));return {lib:L,sets:[{id:uid(),title:'Scaletta 1',items:L.map(x=>x.id)}],curSet:null,looks:p.looks||{}};}
+function setProject(d){lib=d.lib||[];lib.forEach(normSong);sets=d.sets||[];curSet=d.curSet||null;looks=d.looks||{};cur=-1;rebuild();}
 async function addFile(name,blob){const id=uid();await fPut(id,name,blob);return id;}
 
 // ===== Attività (importazione / esportazione) con barra di avanzamento =====
@@ -475,7 +502,7 @@ function renderMix(){
   const fad=(a,min,max,v)=>`<div class="fad"><input type="range" data-a="${a}" min="${min}" max="${max}" step="0.5" value="${v}"></div>`;
   const ci=clickIdx(s);
   s.tracks.forEach((t,i)=>{const lk=L(t);add('t:'+t.fid,`<div class="strip${i===ci?' isclk':''}" data-k="t:${t.fid}" data-i="${i}" style="${stripBg(lk.col,lk.int)}">
-    <button class="x" data-a="del" title="Togli la traccia dal brano">✕</button>
+    ${t.click||t.vid?'<button class="x" data-a="del" title="Togli la traccia dal brano">✕</button>':''}
     <div class="hd" data-a="look" title="Colore e icona"><span class="ico">${lk.ico}</span><b>${esc(t.name)}</b><span class="lbl">${t.dur?fmtL(t.dur):''}</span></div>
     ${i===ci?'<div class="clkl"><i class="led" id="ledS"></i>CLICK</div>':''}
     <div class="tg"><button class="m${t.mute?' on':''}" data-a="mute">M</button><button class="s${t.solo?' on':''}" data-a="solo">S</button></div>
@@ -483,12 +510,13 @@ function renderMix(){
     <div class="pn"><input type="range" class="pan" data-a="pan" min="-1" max="1" step="0.05" value="${t.pan||0}" title="Panorama"><span class="panc${Math.abs(t.pan||0)>0.001?' off':''}" title="Rosso = panorama non al centro (doppio tocco sul cursore per centrarlo)">C</span></div>
     <div class="body">${fad('db',-60,6,t.db)}<div class="vm"><i></i></div></div>
     <div class="db">${dbs(t.db)} dB</div>${ord('t:'+t.fid)}</div>`);});
-  if(cfg.inOn)add('in',`<div class="strip" data-k="in" data-i="in" style="${stripBg(cfg.inCol,cfg.inInt)}">
-    <div class="hd" data-a="look" title="Colore e icona"><span class="ico">${cfg.inIco||'🎤'}</span><b>${cfg.inName?esc(cfg.inName):'Ingresso'}</b><span class="lbl">In ${cfg.inA+1}${cfg.inB>=0&&cfg.inB!==cfg.inA?'-'+(cfg.inB+1):''}</span></div>
-    <div class="tg"><button class="m${cfg.inMute?' on':''}" data-a="imute">M</button><button data-a="icfg">⚙</button></div>
-    <select data-a="iout">${outOptions(cfg.inOut)}</select><div class="pn"></div>
-    <div class="body">${fad('idb',-60,12,cfg.inDb)}<div class="vm"><i></i></div></div>
-    <div class="db">${dbs(cfg.inDb)} dB</div>${ord('in')}</div>`);
+  if(cfg.inOn)cfg.inputs.forEach((x,k)=>add('in'+k,`<div class="strip" data-k="in${k}" data-i="in${k}" style="${stripBg(x.col,x.int)}">
+    <button class="x" data-a="idel" title="Togli l'ingresso">✕</button>
+    <div class="hd" data-a="look" title="Colore e icona"><span class="ico">${x.ico||'🎤'}</span><b>${esc(x.name||('Ingresso '+(k+1)))}</b><span class="lbl">In ${x.a+1}${x.b>=0&&x.b!==x.a?'-'+(x.b+1):''}</span></div>
+    <div class="tg"><button class="m${x.mute?' on':''}" data-a="imute">M</button><button data-a="icfg">⚙</button></div>
+    <select data-a="iout">${outOptions(x.out)}</select><div class="pn"></div>
+    <div class="body">${fad('idb',-60,12,x.db)}<div class="vm"><i></i></div></div>
+    <div class="db">${dbs(x.db)} dB</div>${ord('in'+k)}</div>`));
   add('master',`<div class="strip mstr" data-k="master" data-i="master" style="${stripBg(cfg.mCol,cfg.mInt)}">
     <div class="hd" data-a="look" title="Colore e icona"><span class="ico">${cfg.mIco||'🔊'}</span><b>Master</b><span class="lbl">${NATIVE?esc(cardName)+' · '+outs+' out':'browser'}</span></div>
     <div class="tg"><button class="mono${cfg.mono?' on':''}" data-a="mono" title="Ascolto in mono">MONO</button></div>
@@ -504,6 +532,7 @@ function renderMix(){
     <div class="db">${s.video.off>0?'+':''}${s.video.off||0} ms</div>${ord('video')}</div>`);
   const O=(s.order||[]).filter(k=>B[k]);K.forEach(k=>{if(!O.includes(k)){const f=O.findIndex(x=>!x.startsWith('t:'));O.splice(k.startsWith('t:')&&f>=0?f:O.length,0,k);}});
   mixKeys=O;document.body.classList.toggle('hasclk',ci>=0);
+  $('addClk').classList.toggle('hide',ci>=0);$('addIn').classList.toggle('hide',!(NATIVE&&cfg.inOn&&cfg.inputs.length<Math.max(1,ins)));
   m.innerHTML=O.map(k=>B[k]).join('');fitFaders();
 }
 // tutto il mixer si ridimensiona in proporzione all'altezza disponibile
@@ -515,13 +544,13 @@ $('mix').addEventListener('input',e=>{const el=e.target,a=el.dataset.a,s=songs[c
   const row=el.closest('.strip'),i=row&&+row.dataset.i;
   if(a==='db'||a==='pan'){const t=s.tracks[i];if(a==='pan'&&Math.abs(+el.value)<0.08)el.value=0;t[a]=+el.value;if(a==='pan'){const c=row.querySelector('.panc');if(c)c.classList.toggle('off',Math.abs(t.pan)>0.001);}if(a==='db')row.querySelector('.db').textContent=(t.db<=-60?'-∞':(t.db>0?'+':'')+t.db.toFixed(1))+' dB';sendStrips();saveSongs();}
   else if(a==='mdb'){cfg.master=+el.value;row.querySelector('.db').textContent=(cfg.master<=-60?'-∞':(cfg.master>0?'+':'')+cfg.master.toFixed(1))+' dB';if(NATIVE)eng({op:'master',g:dbg(cfg.master)});else waMix();saveCfg();}
-  else if(a==='idb'){cfg.inDb=+el.value;row.querySelector('.db').textContent=(cfg.inDb<=-60?'-∞':(cfg.inDb>0?'+':'')+cfg.inDb.toFixed(1))+' dB';sendInput();saveCfg();}
+  else if(a==='idb'){const x=cfg.inputs[+row.dataset.i.slice(2)];x.db=+el.value;row.querySelector('.db').textContent=(x.db<=-60?'-∞':(x.db>0?'+':'')+x.db.toFixed(1))+' dB';sendInput();saveCfg();}
   else if(a==='voffr'){s.video.off=+el.value;const st=el.closest('.strip');st.querySelector('input[type=number]').value=s.video.off;st.querySelector('.db').textContent=(s.video.off>0?'+':'')+s.video.off+' ms';saveSongs();sendStrips();if(!NATIVE&&playing)waPlay(waPos());syncVideo(true);}
   else if(a==='voffn'){s.video.off=+el.value||0;saveSongs();sendStrips();if(!NATIVE&&playing)waPlay(waPos());syncVideo(true);}
 });
 $('mix').addEventListener('change',e=>{const el=e.target,a=el.dataset.a,s=songs[cur];if(!s)return;const row=el.closest('.strip');
   if(a==='out'){s.tracks[+row.dataset.i].out=el.value;sendStrips();saveSongs();}
-  else if(a==='iout'){cfg.inOut=el.value;sendInput();saveCfg();}});
+  else if(a==='iout'){cfg.inputs[+row.dataset.i.slice(2)].out=el.value;sendInput();saveCfg();}});
 (()=>{let lt={el:null,t:0};const DEF={db:0,pan:0,idb:0,mdb:0,voffr:0};
   const reset=el=>{const v=DEF[el.dataset.a];if(v==null)return;const go=()=>{el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));};go();setTimeout(go,60);setTimeout(go,250);};
   $('mix').addEventListener('pointerdown',e=>{const el=e.target;if(el.type!=='range')return;const now=Date.now();
@@ -544,46 +573,61 @@ $('mix').addEventListener('dblclick',e=>{if(e.target.dataset.a==='voffr'){songs[
 $('mix').addEventListener('click',async e=>{if(Date.now()-($('mix')._nd||0)<500)return;const el=e.target.closest('[data-a]');if(!el||el.tagName==='INPUT'||el.tagName==='SELECT')return;
   const a=el.dataset.a,s=songs[cur];if(!s)return;const row=el.closest('.strip'),i=row?+row.dataset.i:-1;
   if(a==='mute'||a==='solo'){s.tracks[i][a]=!s.tracks[i][a];renderMix();sendStrips();saveSongs();}
-  else if(a==='del'){if(!confirm('Togliere la traccia «'+s.tracks[i].name+'» dal brano?'))return;s.tracks.splice(i,1);saveSongs();await loadSong(cur,false);}
+  else if(a==='del'){const t=s.tracks[i];if(!t.click&&!t.vid)return;if(!confirm('Togliere «'+t.name+'» dal brano?'))return;s.tracks.splice(i,1);saveSongs();await stop();await loadSong(cur,false);}
   else if(a==='up'||a==='dn'){const k=el.dataset.k,O=mixKeys.slice(),j=O.indexOf(k),n=a==='up'?j-1:j+1;if(j<0||n<0||n>=O.length)return;[O[j],O[n]]=[O[n],O[j]];s.order=O;saveSongs();renderMix();}
   else if(a==='look')lookSheet(row.dataset.i);
   else if(a==='mono'){cfg.mono=!cfg.mono;saveCfg();sendMono();renderMix();status(cfg.mono?'Master in MONO.':'Master in stereo.');}
-  else if(a==='imute'){cfg.inMute=!cfg.inMute;saveCfg();sendInput();renderMix();}
-  else if(a==='icfg')inputSheet();
+  else if(a==='imute'){const x=cfg.inputs[+row.dataset.i.slice(2)];x.mute=!x.mute;saveCfg();sendInput();renderMix();}
+  else if(a==='icfg')inputSheet(+row.dataset.i.slice(2));
+  else if(a==='idel'){const k=+row.dataset.i.slice(2);if(!confirm('Togliere «'+(cfg.inputs[k].name||'Ingresso '+(k+1))+'»?'))return;cfg.inputs.splice(k,1);saveCfg();sendInput();renderMix();}
   else if(a==='voff'){s.video.off=(s.video.off||0)+(+el.dataset.d);saveSongs();renderMix();sendStrips();if(!NATIVE&&playing)waPlay(waPos());syncVideo(true);}
   else if(a==='vaud'){s.tracks.push({fid:s.video.fid,name:'Audio del video',vid:true,ico:'🎬',db:0,pan:0,mute:false,solo:false,out:'s0'});saveSongs();await stop();await loadSong(cur,false);}
   else if(a==='vdel'){if(!confirm('Togliere il video (e il suo audio) dal brano?'))return;s.tracks=s.tracks.filter(t=>!t.vid&&t.fid!==s.video.fid);s.video=null;saveSongs();await loadSong(cur,false);}
 });
 
-// ===== Scaletta =====
+// ===== Scaletta (più scalette per progetto) e Raccolta brani =====
 let editMode=false;
+const songInfo=x=>{const T=x.tracks||[];return `🎼${T.some(t=>t.click)?' ♩':''}${x.video?' 🎬':''}${x.dur?' · '+fmt(x.dur):''}`;};
+function renderSets(){const st=curSetObj();$('setSel').innerHTML=sets.map(x=>`<option value="${x.id}"${x.id===st.id?' selected':''}>${esc(x.title)} (${x.items.length})</option>`).join('');$('setT').textContent=st.title;}
 function renderList(){
-  const l=$('list');l.classList.toggle('noedit',!editMode);$('bEdit').textContent=editMode?'✓ Fine':'✎ Modifica';$('miEdit').classList.toggle('on',editMode);
-  if(!songs.length){l.innerHTML='<div class="empty">La scaletta è vuota.</div>';return;}
-  l.innerHTML=songs.map((s,i)=>`<div class="it${i===cur?' cur':''}" data-i="${i}"><span class="n">${i+1}</span><span class="t">${esc(s.name)}<br><small>${s.tracks.length} tracce${s.video?' · video':''}${s.dur?' · '+fmt(s.dur):''}</small></span>
-    <button class="ed" data-a="up">▲</button><button class="ed" data-a="dn">▼</button><button class="ed" data-a="ren">✎</button><button class="ed" data-a="dup">⧉</button><button class="ed" data-a="del">🗑</button></div>`).join('');
-}
+  renderSets();const l=$('list');l.classList.toggle('noedit',!editMode);$('bEdit').textContent=editMode?'✓ Fine':'✎ Modifica';$('miEdit').classList.toggle('on',editMode);
+  if(!songs.length)l.innerHTML='<div class="empty">La scaletta è vuota: aggiungi brani dalla raccolta qui sotto (＋).</div>';
+  else l.innerHTML=songs.map((s,i)=>`<div class="it${i===cur?' cur':''}" data-i="${i}"><span class="n">${i+1}</span><span class="t">${esc(s.name)}<br><small>${songInfo(s)}</small></span>
+    <button class="ed" data-a="up">▲</button><button class="ed" data-a="dn">▼</button><button class="ed" data-a="ren" title="Rinomina il brano">✎</button><button class="ed" data-a="rm" title="Togli dalla scaletta">✕</button></div>`).join('');
+  renderLib();}
+function renderLib(){const st=curSetObj();$('libN').textContent='('+lib.length+')';
+  $('libList').innerHTML=lib.length?lib.map(x=>`<div class="li" data-id="${x.id}"><span class="t">${esc(x.name)}${st.items.includes(x.id)?' <span class="in">● in scaletta</span>':''}<br><small>${songInfo(x)}</small></span><button data-a="add" title="Aggiungi in fondo alla scaletta">＋</button><button data-a="ren" title="Rinomina">✎</button><button data-a="del" title="Elimina dalla raccolta">🗑</button></div>`).join(''):'<div class="empty">Nessun brano: «🎵 Nuovi brani» (un file audio = un brano con la sua Base) o File › Importa .zip di ARNOCLICK.</div>';}
 $('list').addEventListener('click',async e=>{const it=e.target.closest('.it');if(!it)return;const i=+it.dataset.i,b=e.target.closest('button');
   if(!b){if(i!==cur){await stop();await loadSong(i,false);}if(!document.body.classList.contains('wide'))page(false);return;}
-  const a=b.dataset.a;
-  if(a==='up'&&i>0){[songs[i-1],songs[i]]=[songs[i],songs[i-1]];if(cur===i)cur--;else if(cur===i-1)cur++;}
-  else if(a==='dn'&&i<songs.length-1){[songs[i+1],songs[i]]=[songs[i],songs[i+1]];if(cur===i)cur++;else if(cur===i+1)cur--;}
+  const a=b.dataset.a,st=curSetObj(),I=st.items;
+  if(a==='up'&&i>0){[I[i-1],I[i]]=[I[i],I[i-1]];if(cur===i)cur--;else if(cur===i-1)cur++;}
+  else if(a==='dn'&&i<I.length-1){[I[i+1],I[i]]=[I[i],I[i+1]];if(cur===i)cur++;else if(cur===i+1)cur--;}
   else if(a==='ren'){const n=prompt('Nome del brano',songs[i].name);if(n&&n.trim())songs[i].name=n.trim();if(i===cur)showTitle();}
-  else if(a==='dup'){const c=JSON.parse(JSON.stringify(songs[i]));c.id=uid();c.name+=' (copia)';songs.splice(i+1,0,c);if(cur>i)cur++;}
-  else if(a==='del'){if(!confirm('Eliminare «'+songs[i].name+'» dalla scaletta?'))return;const gone=songs.splice(i,1)[0];
-    if(i===cur){await stop();cur=-1;if(songs.length)await loadSong(Math.min(i,songs.length-1),false);else{renderMix();showTitle();}}else if(cur>i)cur--;
-    purge(gone);}
-  saveSongs();renderList();});
+  else if(a==='rm'){I.splice(i,1);if(i===cur){await stop();cur=-1;rebuild();if(songs.length)await loadSong(Math.min(i,songs.length-1),false);else{renderMix();showTitle();setVideo(null);}}else if(cur>i)cur--;}
+  rebuild();saveSongs();renderList();});
+$('libList').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const id=b.closest('.li').dataset.id,x=lib.find(y=>y.id===id);if(!x)return;const a=b.dataset.a;
+  if(a==='add'){curSetObj().items.push(id);rebuild();saveSongs();renderList();status('«'+x.name+'» aggiunto in fondo a «'+curSetObj().title+'».');if(cur<0)await loadSong(songs.length-1,false);}
+  else if(a==='ren'){const n=prompt('Nome del brano',x.name);if(n&&n.trim()){x.name=n.trim();saveSongs();renderList();showTitle();}}
+  else if(a==='del'){const nIn=sets.filter(st=>st.items.includes(id)).length;if(!confirm('Eliminare «'+x.name+'» dalla raccolta?'+(nIn?'\nVerrà tolto anche da '+nIn+' scalett'+(nIn>1?'e':'a')+'.':'')))return;
+    const wasCur=songs[cur]&&songs[cur].id===id;if(wasCur)await stop();lib=lib.filter(y=>y!==x);sets.forEach(st=>st.items=st.items.filter(y=>y!==id));rebuild();saveSongs();
+    if(wasCur){cur=-1;if(songs.length)await loadSong(0,false);else{renderMix();showTitle();setVideo(null);}}else cur=songs.indexOf(songs[cur]);renderList();purge(x);}});
+document.querySelector('.setbar').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.s,st=curSetObj();
+  if(a==='new'){const t=prompt('Titolo della nuova scaletta','Scaletta '+(sets.length+1));if(!t||!t.trim())return;const n={id:uid(),title:t.trim(),items:[]};sets.push(n);await switchSet(n.id);}
+  else if(a==='ren'){const t=prompt('Titolo della scaletta',st.title);if(t&&t.trim()){st.title=t.trim();saveSongs();renderList();}}
+  else if(a==='dup'){const n={id:uid(),title:st.title+' (copia)',items:st.items.slice()};sets.splice(sets.indexOf(st)+1,0,n);await switchSet(n.id);}
+  else if(a==='del'){if(!confirm('Eliminare la scaletta «'+st.title+'»? I brani restano nella raccolta.'))return;sets=sets.filter(y=>y!==st);curSet=null;await switchSet(curSetObj().id);}});
+$('setSel').onchange=e=>switchSet(e.target.value);
+async function switchSet(id){await stop();curSet=id;cur=-1;rebuild();saveSongs();renderList();renderMix();showTitle();if(songs.length)await loadSong(0,false);else setVideo(null);status('Scaletta «'+curSetObj().title+'» ('+songs.length+' brani).');}
 $('bEdit').onclick=()=>{editMode=!editMode;renderList();};
 async function purge(song){ // elimina i file che nessun brano usa più (nemmeno nei progetti salvati)
-  const used=new Set(),all=songs.slice();const P=(await kvGet('projects').catch(()=>null))||{};Object.values(P).forEach(p=>(p.songs||[]).forEach(x=>all.push(x)));all.forEach(s=>{s.tracks.forEach(t=>used.add(t.fid));if(s.video)used.add(s.video.fid);});
+  const used=new Set(),all=lib.slice();const P=(await kvGet('projects').catch(()=>null))||{};Object.values(P).forEach(p=>(p.lib||p.songs||[]).forEach(x=>all.push(x)));all.forEach(s=>{s.tracks.forEach(t=>used.add(t.fid));if(s.video)used.add(s.video.fid);});
   const ids=song.tracks.map(t=>t.fid).concat(song.video?[song.video.fid]:[]).filter(id=>!used.has(id));
   for(const id of ids){try{await fDel(id);}catch(e){}if(NS)try{NS.postMessage({op:'del',id});}catch(e){}delete WA.bufs[id];}
 }
 
 // ===== Caricamento del brano =====
 let vUrl=null,vFid=null;
-function showTitle(){const s=songs[cur];$('songT').innerHTML=s?esc(s.name)+' <small>'+(cur+1)+'/'+songs.length+'</small>':'—';}
+function showTitle(){const s=songs[cur];$('songT').innerHTML=s?esc(s.name)+' <small>'+(cur+1)+'/'+songs.length+' · '+esc(curSetObj().title)+'</small>':'—';}
 async function loadSong(i,autoplay){
   if(busy)return;busy=true;
   try{
@@ -676,8 +720,8 @@ function updTime(){$('tCur').textContent=fmt(pos);$('tDur').textContent=fmt(dur)
 let ticking=false;
 async function tick(){if(ticking)return;ticking=true;
   try{while(true){
-    let pk=[],ip=0,ml=0,mr=0,rk=null,ended=false;
-    if(NATIVE){const r=await eng({op:'pos'});if(r){pos=r.t;pk=r.pk||[];ip=r.ip||0;ml=r.ml||0;mr=r.mr||0;rk=r.rk;ended=r.ended;if(!r.playing&&playing&&!ended){}}}
+    let pk=[],ip=[],ml=0,mr=0,rk=null,ended=false;
+    if(NATIVE){const r=await eng({op:'pos'});if(r){pos=r.t;pk=r.pk||[];ip=r.ipk||[];ml=r.ml||0;mr=r.mr||0;rk=r.rk;ended=r.ended;if(!r.playing&&playing&&!ended){}}}
     else if(playing){pos=waPos();pk=waPeaks();[ml,mr]=waMaster();if(pos>=dur){ended=true;pos=dur;waStop();}}
     updTime();meters(pk,ip,ml,mr);clickLed(rk);syncVideo(false);
     if(ended&&playing){playing=false;$('bPlay').textContent='▶';$('bPlay').classList.remove('on');syncVideo(true);
@@ -696,42 +740,46 @@ const lv=p=>p<=0.0001?0:Math.max(0,Math.min(100,(20*Math.log10(p)+48)/48*100));
 function meters(pk,ip,ml,mr){const rows=$('mix').querySelectorAll('.strip[data-i]');
   rows.forEach(r=>{const i=r.dataset.i,b=r.querySelectorAll('.vm i');if(!b[0])return;
     if(i==='master'){b[0].style.height=lv(ml||0)+'%';if(b[1])b[1].style.height=lv(mr||0)+'%';return;}
-    b[0].style.height=(i==='in'?lv(ip):lv(pk[+i]||0))+'%';});}
+    b[0].style.height=(/^in\d+$/.test(i)?lv((ip||[])[+i.slice(2)]||0):lv(pk[+i]||0))+'%';});}
 
-// ===== Ingressi della scheda =====
-function sendInput(){if(!NATIVE)return;const o=outVal(cfg.inOut);
-  return eng({op:'input',on:!!cfg.inOn,a:cfg.inA,b:cfg.inB,gain:dbg(cfg.inDb),out:o.out,om:o.om,mute:!!cfg.inMute});}
+// ===== Ingressi della scheda (strisce per suonare sulle basi: quante ne consente la scheda) =====
+if(!Array.isArray(cfg.inputs))cfg.inputs=[{a:cfg.inA||0,b:cfg.inB==null?1:cfg.inB,db:cfg.inDb||0,out:cfg.inOut||'s0',mute:!!cfg.inMute,name:cfg.inName||'',ico:cfg.inIco,lab:cfg.inLab,col:cfg.inCol,int:cfg.inInt}];
+function sendInput(){if(!NATIVE)return;
+  return eng({op:'inputs',on:!!cfg.inOn,list:cfg.inputs.map(x=>{const o=outVal(x.out);return {a:x.a,b:x.b,gain:dbg(x.db),out:o.out,om:o.om,mute:!!x.mute};})});}
 $('miIn').onclick=async()=>{closeMenus();if(!NATIVE){status('Gli ingressi della scheda funzionano nell\'app per iPhone/iPad.',true);return;}
   cfg.inOn=!cfg.inOn;saveCfg();const r=await sendInput();if(cfg.inOn&&r&&r.ok===false){cfg.inOn=false;saveCfg();status('Permesso per gli ingressi negato: Impostazioni › ArnoStage › Microfono.',true);}
-  $('miIn').classList.toggle('on',cfg.inOn);await refreshCard();renderMix();if(cfg.inOn){status('Ingressi attivi: suona sulle basi (cuffie consigliate).');tick();}};
-function inputSheet(){closeMenus();
+  if(cfg.inOn&&!cfg.inputs.length){cfg.inputs.push({a:0,b:-1,db:0,out:'s0',mute:false,name:''});saveCfg();sendInput();}
+  $('miIn').classList.toggle('on',cfg.inOn);await refreshCard();renderMix();if(cfg.inOn){status('Ingressi attivi: '+cfg.inputs.length+' (la scheda ne ha '+ins+'). ＋ Ingresso nel mixer per aggiungerne.');tick();}};
+$('addIn').onclick=()=>{const used=new Set();cfg.inputs.forEach(x=>{used.add(x.a);if(x.b>=0)used.add(x.b);});let a=0;while(used.has(a)&&a<ins-1)a++;
+  cfg.inputs.push({a,b:-1,db:0,out:'s0',mute:false,name:''});saveCfg();sendInput();renderMix();inputSheet(cfg.inputs.length-1);};
+function inputSheet(k){closeMenus();if(k==null)k=0;if(!cfg.inputs[k]){if(!cfg.inputs.length)cfg.inputs.push({a:0,b:-1,db:0,out:'s0',mute:false,name:''});k=0;}const x=cfg.inputs[k];
   let opt=sel=>{let h='';for(let c=0;c<Math.max(ins,2);c++)h+=`<option value="${c}"${sel===c?' selected':''}>Ingresso ${c+1}</option>`;return h;};
-  sheet(`<h3>🎸 Ingressi: suona sulle basi</h3><p>Scegli gli ingressi della scheda (es. chitarra e voce) e le uscite dove ascoltarli insieme alle basi. ${NATIVE?'Scheda: '+esc(cardName)+' · '+ins+' ingressi.':'Disponibile solo nell\'app.'}</p>
-   <div class="frm"><span>Canale 1</span><select id="iA">${opt(cfg.inA)}</select>
-   <span>Canale 2</span><select id="iB"><option value="-1"${cfg.inB<0?' selected':''}>— nessuno (mono)</option>${opt(cfg.inB)}</select>
-   <span>Uscita</span><select id="iO">${outOptions(cfg.inOut)}</select></div>
-   <p>Il volume e il muto dell'ingresso sono nel mixer, sotto le tracce.</p><div style="text-align:right;margin-top:10px"><button class="btn acc" id="iOk">OK</button></div>`);
-  $('iOk').onclick=async()=>{cfg.inA=+$('iA').value;cfg.inB=+$('iB').value;cfg.inOut=$('iO').value;saveCfg();await sendInput();closeSheet();renderMix();};}
-$('miInCfg').onclick=inputSheet;
+  sheet(`<h3>🎸 ${esc(x.name||'Ingresso '+(k+1))}: suona sulle basi</h3><p>Scegli quale ingresso della scheda usare (uno per uno strumento o microfono, due per uno stereo) e dove ascoltarlo. ${NATIVE?'Scheda: '+esc(cardName)+' · '+ins+' ingressi.':'Disponibile solo nell\'app.'}</p>
+   <div class="frm"><span>Nome</span><input id="iN" value="${esc(x.name||'')}" placeholder="es. Chitarra, Voce"><span>Canale 1</span><select id="iA">${opt(x.a)}</select>
+   <span>Canale 2</span><select id="iB"><option value="-1"${x.b<0?' selected':''}>— nessuno (mono)</option>${opt(x.b)}</select>
+   <span>Uscita</span><select id="iO">${outOptions(x.out)}</select></div>
+   <p>Volume e muto sono nella sua striscia del mixer.</p><div style="text-align:right;margin-top:10px"><button class="btn acc" id="iOk">OK</button></div>`);
+  $('iOk').onclick=async()=>{x.name=$('iN').value.trim();x.a=+$('iA').value;x.b=+$('iB').value;x.out=$('iO').value;saveCfg();await sendInput();closeSheet();renderMix();};}
+$('miInCfg').onclick=()=>inputSheet(0);
 // ===== Colore, intensità e icona di una striscia =====
-function lookSheet(i){const s=songs[cur],mst=i==='master',inp=i==='in'||mst,P=mst?'m':'in',t=inp?null:s.tracks[+i];
-  const get=()=>inp?{col:cfg[P+'Col']||'',int:cfg[P+'Int']==null?35:cfg[P+'Int'],ico:cfg[P+'Ico']||(mst?'🔊':'🎤'),lab:cfg[P+'Lab'],name:cfg[P+'Name']||''}:Object.assign(L(t),{name:t.name});
-  const set=o=>{if(inp){if('col'in o)cfg[P+'Col']=o.col;if('int'in o)cfg[P+'Int']=o.int;if('ico'in o){cfg[P+'Ico']=o.ico;cfg[P+'Lab']=o.lab;}if('name'in o)cfg[P+'Name']=o.name;saveCfg();}
+function lookSheet(i){const s=songs[cur],mst=i==='master',isIn=/^in\d+$/.test(i),inp=mst||isIn,IO=isIn?cfg.inputs[+i.slice(2)]:null,t=inp?null:s.tracks[+i];
+  const get=()=>mst?{col:cfg.mCol||'',int:cfg.mInt==null?35:cfg.mInt,ico:cfg.mIco||'🔊',lab:cfg.mLab,name:''}:isIn?{col:IO.col||'',int:IO.int==null?35:IO.int,ico:IO.ico||'🎤',lab:IO.lab,name:IO.name||''}:Object.assign(L(t),{name:t.name});
+  const set=o=>{if(mst){if('col'in o)cfg.mCol=o.col;if('int'in o)cfg.mInt=o.int;if('ico'in o){cfg.mIco=o.ico;cfg.mLab=o.lab;}saveCfg();}
+    else if(isIn){Object.assign(IO,o);saveCfg();}
     else if(cfg.lookAll!==false){const nm=o.name;delete o.name;if(nm)t.name=nm;
       if(Object.keys(o).length){const k=lkey(t);looks[k]=Object.assign(L(t),looks[k]||{},o);
-        songs.forEach(x=>x.tracks.forEach(y=>{if(lkey(y)===k){delete y.col;delete y.int;delete y.ico;delete y.lab;}}));}
+        lib.forEach(x=>x.tracks.forEach(y=>{if(lkey(y)===k){delete y.col;delete y.int;delete y.ico;delete y.lab;}}));}
       saveSongs();}
     else{Object.assign(t,o);saveSongs();}renderMix();const r=$('mix').querySelector(`.strip[data-i="${i}"]`);if(r)r.classList.add('editing');};
   const g=get();
   const row=$('mix').querySelector(`.strip[data-i="${i}"]`);
-  const opts=mixKeys.map(k=>{const el=$('mix').querySelector(`.strip[data-k="${k}"]`);if(!el||el.dataset.i==null)return '';const n=el.dataset.i==='master'?'Master':el.dataset.i==='in'?(cfg.inName||'Ingresso'):s.tracks[+el.dataset.i].name;return `<option value="${el.dataset.i}"${el.dataset.i===String(i)?' selected':''}>${esc(n)}</option>`;}).join('');
+  const opts=mixKeys.map(k=>{const el=$('mix').querySelector(`.strip[data-k="${k}"]`);if(!el||el.dataset.i==null)return '';const di=el.dataset.i,n=di==='master'?'Master':/^in\d+$/.test(di)?(cfg.inputs[+di.slice(2)].name||'Ingresso '+(+di.slice(2)+1)):s.tracks[+di].name;return `<option value="${el.dataset.i}"${el.dataset.i===String(i)?' selected':''}>${esc(n)}</option>`;}).join('');
   sheet(`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><b style="flex:none">Modifica:</b><select id="lkSel" style="flex:1;font:inherit;font-size:16px;padding:7px;border-radius:8px;background:var(--card);color:var(--fg);border:1px solid var(--line)">${opts}</select></div>
    <h3 style="display:none">${mst?'Master':inp?'Ingresso':'Traccia'}</h3>
    <div class="frm" style="${mst?'display:none':''}"><span>Nome</span><input id="lkN" value="${esc(g.name)}" placeholder="${inp?'es. Chitarra':''}"></div>
    <p>Colore del fondo</p><div class="pal" id="lkP">${COLS.map(c=>`<button data-c="${c}" class="${c===g.col?'on':''}" style="background:${c||'var(--card)'}">${c?'':'∅'}</button>`).join('')}</div>
    <p>Intensità del colore: <b id="lkV">${g.int}%</b></p><input type="range" id="lkI" min="5" max="90" step="1" value="${g.int}">
-   ${inp?'':`<label style="display:flex;gap:8px;align-items:center;font-size:14px;margin:8px 0"><input type="checkbox" id="lkClk" ${clickIdx(s)===+i?'checked':''}> È la traccia del CLICK (LED rosso)</label>`}
-   ${inp?'':`<label style="display:flex;gap:8px;align-items:center;font-size:14px;margin:8px 0"><input type="checkbox" id="lkAll" ${cfg.lookAll!==false?'checked':''}> Uguale in tutti i brani della scaletta (tracce con lo stesso nome)</label>`}
+   ${inp?'':`<label style="display:flex;gap:8px;align-items:center;font-size:14px;margin:8px 0"><input type="checkbox" id="lkAll" ${cfg.lookAll!==false?'checked':''}> Uguale in tutti i brani (Base, Click, Audio del video)</label>`}
    <p>Icona</p><div class="icos" id="lkC">${ICONS.map(([e,n])=>`<button data-e="${e}" data-l="${n}" class="${e===g.ico&&(!g.lab||g.lab===n)?'on':''}">${e}<small>${n}</small></button>`).join('')}</div>
    <div style="text-align:right;margin-top:12px"><button class="btn acc" onclick="closeSheet()">Fine</button></div>`,true);
   const mark=()=>{$('mix').querySelectorAll('.editing').forEach(x=>x.classList.remove('editing'));const r=$('mix').querySelector(`.strip[data-i="${i}"]`);if(r){r.classList.add('editing');setTimeout(()=>r.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'}),60);}};
@@ -787,14 +835,14 @@ async function readZip(file,cb){
 const base=n=>String(n).split('/').pop();
 const strip=n=>base(n).replace(/\.[^.]+$/,'');
 function trackName(n,songName){let t=strip(n);if(songName&&t.indexOf(songName)===0&&t.length>songName.length)t=t.slice(songName.length).replace(/^[\s\-–_]+/,'');return t||strip(n);}
-async function importProject(P,files){const name=P.name||'Progetto importato';
-  if(songs.length&&!confirm('Aprire il progetto «'+name+'» ('+(P.songs||[]).length+' brani)? La scaletta attuale viene sostituita (salvala prima se ti serve).')){jobEnd('Importazione annullata.',true);return;}
+async function importProject(P,files){const name=P.name||'Progetto importato',D=projData(P);
+  if(lib.length&&!confirm('Aprire il progetto «'+name+'» ('+D.lib.length+' brani, '+D.sets.length+' scalett'+(D.sets.length>1?'e':'a')+')? Il progetto aperto viene sostituito (salvalo prima se ti serve).')){jobEnd('Importazione annullata.',true);return;}
   const ids=Object.keys(P.files||{});let tot=0,done=0;ids.forEach(id=>{const b=files[P.files[id]];if(b)tot+=b.size;});
   for(const id of ids){const b=files[P.files[id]];if(!b)continue;const nm=(P.names||{})[id]||id;
     jobSet(0.1+0.85*(tot?done/tot:0),'Copio i file nel progetto',nm+' · '+mb(done)+' di '+mb(tot));await fPut(id,nm,b);done+=b.size;}
-  jobSet(0.97,'Apro il progetto','');await stop();songs=P.songs||[];looks=P.looks||{};cur=-1;
+  jobSet(0.97,'Apro il progetto','');await stop();setProject(D);
   const PR=await projects();let n=name;if(PR[n]&&!confirm('Esiste già un progetto «'+n+'». Sostituirlo?'))n=name+' (importato)';
-  await saveProj(n);saveSongs();renderList();renderMix();showTitle();jobEnd('Progetto «'+n+'» importato e salvato ('+songs.length+' brani, '+mb(tot)+').');busy=false;if(songs.length)await loadSong(0,false);}
+  await saveProj(n);saveSongs();renderList();renderMix();showTitle();jobEnd('Progetto «'+n+'» importato e salvato ('+lib.length+' brani, '+sets.length+' scalett'+(sets.length>1?'e':'a')+', '+mb(tot)+').');busy=false;if(songs.length)await loadSong(0,false);}
 async function importZip(f){
   if(busy)return;busy=true;jobStart('Importo «'+f.name+'» ('+mb(f.size)+')');jobSet(0.02,'Leggo lo .zip','');
   let files,meta=null;
@@ -807,51 +855,49 @@ async function importZip(f){
   const songName=meta&&meta.name?strip(meta.name):f.name.replace(/\.zip$/i,'').replace(/\s*-\s*ARNOCLICK progetto$/i,'');
   const song={id:uid(),name:songName,tracks:[],video:null};
   const aud=names.filter(n=>AUD.test(n)),vids=names.filter(n=>VID.test(n));
-  let k=0;const tot=aud.length+vids.length;
-  // il brano originale del progetto ARNOCLICK per primo, poi le altre tracce (click per ultimo)
-  aud.sort((a,b)=>(isClick(a)-isClick(b))||((meta&&b===meta.media)-(meta&&a===meta.media)));
-  for(const n of aud){++k;jobSet(0.1+0.85*k/tot,'Copio le tracce',base(n));
-    const fid=await addFile(base(n),files[n]);const nm=meta&&n===meta.media?'Base':trackName(n,songName);
-    song.tracks.push({fid,name:nm,db:0,pan:0,mute:false,solo:false,out:defaultOut(n)});}
-  if(vids.length){const n=(meta&&vids.includes(meta.media))?meta.media:vids[0];++k;jobSet(0.1+0.85*k/tot,'Copio il video',base(n));
-    const fid=await addFile(base(n),files[n]);song.video={fid,name:base(n),off:0};
-    // video del progetto ARNOCLICK (o senza altre basi): il suo audio diventa la traccia «Base»
-    if((meta&&n===meta.media)||!song.tracks.some(t=>!isClick(t.name)))song.tracks.unshift({fid,name:'Audio del video',vid:true,ico:'🎬',db:0,pan:0,mute:false,solo:false,out:'s0'});
-    else song.tracks.push({fid,name:'Audio del video',vid:true,ico:'🎬',db:0,pan:0,mute:true,solo:false,out:'s0'});}
+  const clk=aud.find(n=>isClick(n)),bas=(meta&&AUD.test(meta.media||'')?meta.media:null)||aud.find(n=>n!==clk);
+  const vidN=vids.length?((meta&&vids.includes(meta.media))?meta.media:vids[0]):null;
+  const todo=[bas,clk,vidN].filter(Boolean);let k=0;
+  if(bas){jobSet(0.1+0.85*(++k)/todo.length,'Copio la base',base(bas));song.tracks.push({fid:await addFile(base(bas),files[bas]),name:'Base',db:0,pan:0,mute:false,solo:false,out:'s0',click:false});}
+  if(clk){jobSet(0.1+0.85*(++k)/todo.length,'Copio il click',base(clk));song.tracks.push({fid:await addFile(base(clk),files[clk]),name:'Click',db:0,pan:0,mute:false,solo:false,out:outs>2?'m2':'s0',click:true});}
+  if(vidN){jobSet(0.1+0.85*(++k)/todo.length,'Copio il video',base(vidN));const fid=await addFile(base(vidN),files[vidN]);song.video={fid,name:base(vidN),off:0};
+    // se non c'è un file audio per la base, la base è l'audio del video
+    song.tracks.push({fid,name:'Audio del video',vid:true,ico:'🎬',db:0,pan:0,mute:!!bas,solo:false,out:'s0'});}
   prog(null);
   if(!song.tracks.length){jobEnd('Nello .zip non ci sono tracce audio.',true);return;}
-  songs.push(song);saveSongs();renderList();jobEnd('Importato «'+song.name+'»: '+song.tracks.length+' tracce'+(song.video?' + video':'')+'.');
-  const hasClick=song.tracks.some(t=>isClick(t.name));
+  const extra=aud.length-(bas?1:0)-(clk?1:0);
+  lib.push(song);curSetObj().items.push(song.id);rebuild();saveSongs();renderList();
+  jobEnd('Importato «'+song.name+'» nella raccolta e in fondo alla scaletta: '+(bas?'Base':'audio del video come base')+(clk?' + Click':'')+(song.video?' + Video':'')+(extra>0?' ('+extra+' altri file audio ignorati)':'')+'.');
   await loadSong(songs.length-1,false);
-  if(meta&&!hasClick)status('Progetto ARNOCLICK importato, ma lo .zip non contiene il click: aggiungilo con «＋ Traccia» (in ARNOCLICK: Esporta › Click .wav).',true);
+  if(meta&&!clk)status('Brano ARNOCLICK importato senza click: aggiungilo con «＋ Click» nel mixer.',true);
 }
-// ogni file scelto diventa un NUOVO BRANO in fondo alla scaletta, con quel file come traccia «Base»
+// ogni file scelto diventa un NUOVO BRANO della raccolta (quel file è la Base) e va in fondo alla scaletta aperta
 async function newFromAudio(list){if(!list.length)return;
   const fs=[...list];const first=songs.length;
-  for(let i=0;i<fs.length;i++){status('Aggiungo alla scaletta: '+fs[i].name+'…');prog((i+1)/fs.length);
-    const fid=await addFile(fs[i].name,fs[i]);
-    songs.push({id:uid(),name:strip(fs[i].name),tracks:[{fid,name:'Base',db:0,pan:0,mute:false,solo:false,out:'s0',click:false}],video:null});}
-  prog(null);saveSongs();renderList();if(!document.body.classList.contains('wide'))page('list');
+  for(let i=0;i<fs.length;i++){status('Nuovo brano: '+fs[i].name+'…');prog((i+1)/fs.length);
+    const fid=await addFile(fs[i].name,fs[i]);const x={id:uid(),name:strip(fs[i].name),tracks:[{fid,name:'Base',db:0,pan:0,mute:false,solo:false,out:'s0',click:false}],video:null};
+    lib.push(x);curSetObj().items.push(x.id);}
+  prog(null);rebuild();saveSongs();renderList();if(!document.body.classList.contains('wide'))page('list');
   const it=$('list').querySelector(`.it[data-i="${first}"]`);if(it)it.scrollIntoView({block:'center',behavior:'smooth'});
   if(cur<0)await loadSong(first,false);
-  status(fs.length===1?'«'+strip(fs[0].name)+'» aggiunto alla scaletta (traccia Base). Toccalo per aprirlo nel mixer.':fs.length+' brani aggiunti alla scaletta.');}
-function mkTrack(s,fid,fname,name){const t={fid,name,db:0,pan:0,mute:false,solo:false,out:'s0',click:false};
-  if(clickIdx(s)<0&&confirm('«'+fname+'»\n\nÈ la traccia del CLICK?\n(OK = sì, va nella traccia CLICK · Annulla = traccia normale)')){t.click=true;t.name='Click';t.out=outs>2?'m2':'s0';}
-  return t;}
-async function addTracks(list){const s=songs[cur];if(!s){return newFromAudio(list);}
-  for(const f of list){status('Importo '+f.name+'…');const fid=await addFile(f.name,f);s.tracks.push(mkTrack(s,fid,f.name,trackName(f.name,s.name)));}
-  saveSongs();await stop();await loadSong(cur,false);}
+  status(fs.length===1?'«'+strip(fs[0].name)+'» aggiunto alla raccolta e in fondo alla scaletta.':fs.length+' brani aggiunti alla raccolta e in fondo alla scaletta.');}
+// click del brano aperto (uno solo: se c'è già viene sostituito)
+async function addClick(list){const s=songs[cur],f=list[0];if(!s){status('Prima apri un brano della scaletta.',true);return;}
+  const old=s.tracks.find(t=>t.click);if(old&&!confirm('Il brano ha già un click. Sostituirlo con «'+f.name+'»?'))return;
+  status('Importo il click '+f.name+'…');const fid=await addFile(f.name,f);
+  const t={fid,name:'Click',db:old?old.db:0,pan:old?old.pan:0,mute:false,solo:false,out:old?old.out:(outs>2?'m2':'s0'),click:true};
+  s.tracks=s.tracks.filter(x=>!x.click);s.tracks.splice(1,0,t);normSong(s);saveSongs();await stop();await loadSong(cur,false);if(old)purge({tracks:[old]});}
 async function addVideo(f){const s=songs[cur];if(!s){status('Prima crea o scegli un brano.',true);return;}
   status('Importo il video '+f.name+'…');const fid=await addFile(f.name,f);s.tracks=s.tracks.filter(t=>!t.vid);s.video={fid,name:f.name,off:0};
   s.tracks.push({fid,name:'Audio del video',vid:true,ico:'🎬',db:0,pan:0,mute:s.tracks.some(t=>!isClick(t.name)),solo:false,out:'s0'});saveSongs();await stop();await loadSong(cur,false);}
 const onPick=(id,fn)=>$(id).addEventListener('change',async e=>{const l=[...e.target.files];e.target.value='';closeMenus();if(l.length)await fn(l);});
-onPick('fZip',l=>importZip(l[0]));onPick('fAud',newFromAudio);onPick('fAdd',addTracks);onPick('fAdd2',addTracks);onPick('fVid',l=>addVideo(l[0]));
+onPick('fZip',l=>importZip(l[0]));onPick('fAud',newFromAudio);onPick('fAud2',newFromAudio);onPick('fAdd',addClick);onPick('fAdd2',addClick);onPick('fVid',l=>addVideo(l[0]));
 // trascinamento (Mac/iPad)
 document.addEventListener('dragover',e=>e.preventDefault());
 document.addEventListener('drop',async e=>{e.preventDefault();const l=[...e.dataTransfer.files];if(!l.length)return;
   const z=l.find(f=>/\.zip$/i.test(f.name));if(z)return importZip(z);
   const v=l.find(f=>VID.test(f.name));const a=l.filter(f=>AUD.test(f.name)||/^audio\//.test(f.type));
-  if(a.length)await (cur>=0?addTracks(a):newFromAudio(a));if(v)await addVideo(v);});
+  if(a.length){const c=a.filter(f=>isClick(f.name)),o=a.filter(f=>!isClick(f.name));if(o.length)await newFromAudio(o);if(c.length&&cur>=0)await addClick(c);}if(v)await addVideo(v);});
 
 // ===== Menu e fogli =====
 function closeMenus(){document.querySelectorAll('.menu.open,.mbtn.open').forEach(x=>x.classList.remove('open'));sendRect();}
@@ -872,23 +918,24 @@ $('miGray').onclick=()=>{cfg.gray=!cfg.gray;saveCfg();applyTheme();closeMenus();
 function applyTheme(){document.body.classList.toggle('mixac',!!cfg.mixAC);$('miAC').classList.toggle('on',!!cfg.mixAC);setTimeout(fitFaders,30);document.documentElement.dataset.theme=cfg.gray?'gray':'';$('miGray').classList.toggle('on',cfg.gray);}
 function showProj(){$('projN').textContent='Progetto: '+(cfg.proj||'(non salvato)');}
 async function projects(){return (await kvGet('projects').catch(()=>null))||{};}
-async function saveProj(name){const P=await projects();P[name]={songs:JSON.parse(JSON.stringify(songs)),looks:JSON.parse(JSON.stringify(looks)),saved:Date.now()};
-  await kvSet('projects',P);cfg.proj=name;saveCfg();showProj();if(document.body.classList.contains('pgProj'))renderProj();status('Progetto «'+name+'» salvato ('+songs.length+' brani).');}
+const projNow=()=>JSON.parse(JSON.stringify({lib,sets,curSet,looks}));
+async function saveProj(name){const P=await projects();P[name]=Object.assign(projNow(),{saved:Date.now()});
+  await kvSet('projects',P);cfg.proj=name;saveCfg();showProj();if(document.body.classList.contains('pgProj'))renderProj();status('Progetto «'+name+'» salvato ('+lib.length+' brani, '+sets.length+' scalett'+(sets.length>1?'e':'a')+').');}
 $('miSave').onclick=async()=>{closeMenus();if(!cfg.proj)return $('miSaveAs').onclick();await saveProj(cfg.proj);};
 $('miSaveAs').onclick=async()=>{closeMenus();const n=prompt('Nome del progetto (scaletta)',cfg.proj||'Concerto');if(!n||!n.trim())return;
   const P=await projects();if(P[n.trim()]&&n.trim()!==cfg.proj&&!confirm('Esiste già «'+n.trim()+'». Sostituirlo?'))return;await saveProj(n.trim());};
 async function openProj(name){const P=await projects(),p=P[name];if(!p)return;await stop();
-  songs=JSON.parse(JSON.stringify(p.songs||[]));looks=JSON.parse(JSON.stringify(p.looks||{}));cur=-1;cfg.proj=name;saveCfg();saveSongs();showProj();closeSheet();
+  setProject(JSON.parse(JSON.stringify(projData(p))));cfg.proj=name;saveCfg();saveSongs();showProj();closeSheet();
   renderList();renderMix();showTitle();if(songs.length)await loadSong(0,false);else{setVideo(null);}status('Progetto «'+name+'» aperto.');}
 $('miOpen').onclick=async()=>{closeMenus();const P=await projects(),names=Object.keys(P).sort((a,b)=>P[b].saved-P[a].saved);
-  sheet(`<h3>📂 Apri progetto</h3>${names.length?'':'<p>Nessun progetto salvato: usa File › Salva progetto con nome.</p>'}<div id="pjL">${names.map(n=>`<div class="it" style="display:flex;gap:6px;align-items:center;padding:8px 4px;border-top:1px solid var(--line)"><span style="flex:1"><b>${esc(n)}</b><br><small class="lbl">${(P[n].songs||[]).length} brani · ${new Date(P[n].saved).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})}</small></span><button class="btn acc" data-o="${esc(n)}">Apri</button><button class="btn" data-d="${esc(n)}">🗑</button></div>`).join('')}</div>
+  sheet(`<h3>📂 Apri progetto</h3>${names.length?'':'<p>Nessun progetto salvato: usa File › Salva progetto con nome.</p>'}<div id="pjL">${names.map(n=>`<div class="it" style="display:flex;gap:6px;align-items:center;padding:8px 4px;border-top:1px solid var(--line)"><span style="flex:1"><b>${esc(n)}</b><br><small class="lbl">${projData(P[n]).lib.length} brani · ${new Date(P[n].saved).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})}</small></span><button class="btn acc" data-o="${esc(n)}">Apri</button><button class="btn" data-d="${esc(n)}">🗑</button></div>`).join('')}</div>
   <p>Aprendo un progetto, la scaletta attuale viene sostituita: salvala prima se ti serve.</p><div style="text-align:right"><button class="btn" onclick="closeSheet()">Chiudi</button></div>`);
   $('pjL').onclick=async e=>{const o=e.target.dataset.o,d=e.target.dataset.d;
-    if(o!=null){if(songs.length&&cfg.proj!==o&&!confirm('Sostituire la scaletta attuale con «'+o+'»?'))return;await openProj(o);}
+    if(o!=null){if(lib.length&&cfg.proj!==o&&!confirm('Sostituire la scaletta attuale con «'+o+'»?'))return;await openProj(o);}
     if(d!=null&&confirm('Eliminare il progetto «'+d+'»? (I brani nella scaletta attuale restano.)')){const P=await projects();delete P[d];await kvSet('projects',P);if(cfg.proj===d){cfg.proj='';saveCfg();showProj();}$('miOpen').onclick();}};};
-$('miShare').onclick=()=>{closeMenus();exportSheet(cfg.proj||'',songs,looks);};
-async function exportSheet(name,SG,LK){
-  if(!SG.length){status('La scaletta è vuota.',true);return;}
+$('miShare').onclick=()=>{closeMenus();exportSheet(cfg.proj||'',projNow());};
+async function exportSheet(name,PJ){const SG=PJ.lib;
+  if(!SG.length){status('La raccolta è vuota.',true);return;}
   if(!NATIVE){status('La condivisione del progetto .zip funziona nell\'app per iPhone/iPad.',true);return;}
   const vidIds=new Set(SG.filter(x=>x.video).map(x=>x.video.fid)),audIds=new Set(SG.flatMap(x=>x.tracks.map(t=>t.fid)));
   const isVidFile=id=>vidIds.has(id)||SG.some(x=>x.tracks.some(t=>t.fid===id&&t.vid));
@@ -904,9 +951,9 @@ async function exportSheet(name,SG,LK){
   const kind=()=>document.querySelector('input[name=exK]:checked').value,tot=()=>kind()==='a'?aB+eB:aB+vB;
   document.querySelectorAll('input[name=exK]').forEach(r=>r.onchange=()=>{$('exW').innerHTML=msg(tot());$('exGo').disabled=tot()>LIM;});
   $('exGo').disabled=tot()>LIM;
-  $('exGo').onclick=()=>{const n=$('exN').value.trim()||'Progetto',k=kind();closeSheet();doExport(n,SG,LK,k==='v');};
+  $('exGo').onclick=()=>{const n=$('exN').value.trim()||'Progetto',k=kind();closeSheet();doExport(n,PJ,k==='v');};
 }
-async function doExport(name,SG,LK,withVideo){
+async function doExport(name,PJ,withVideo){const SG=PJ.lib,LK=PJ.looks;
   if(busy)return;busy=true;jobStart('Esporto «'+name+'» ('+(withVideo?'audio e video':'solo audio')+')');
   try{const S=JSON.parse(JSON.stringify(SG));
     const vset=new Set(S.filter(x=>x.video).map(x=>x.video.fid));
@@ -922,33 +969,33 @@ async function doExport(name,SG,LK,withVideo){
       S.forEach(x=>x.tracks.forEach(t=>{if(map[t.fid]){t.fid=map[t.fid];t.vid=false;}}));
       ids=[...new Set(S.flatMap(x=>x.tracks.map(t=>t.fid)))];}
     const files=ids.map(id=>({id,path:'media/'+id+'.'+extOf(names[id])}));
-    const json=JSON.stringify({format:'arnostage',version:VERSION,name,video:withVideo,songs:S,looks:LK,names,files:Object.fromEntries(files.map(f=>[f.id,f.path]))});
+    const json=JSON.stringify({format:'arnostage',v:2,version:VERSION,name,video:withVideo,lib:S,sets:PJ.sets,curSet:PJ.curSet,looks:LK,names,files:Object.fromEntries(files.map(f=>[f.id,f.path]))});
     jobSet(0.35,'Creo lo .zip','');
     await NS.postMessage({op:'export',name,json,files});
     jobEnd('«'+name+'.arnostage.zip» pronto: scegli AirDrop, Messaggi o Salva in File.');
   }catch(e){jobEnd('Esportazione non riuscita: '+e,true);}finally{busy=false;}
 }
 async function renderProj(){const P=await projects(),names=Object.keys(P).sort((a,b)=>P[b].saved-P[a].saved);
-  const li=S=>`<ol>${(S||[]).map(x=>`<li>${esc(x.name)}${x.dur?' · '+fmt(x.dur):''}${x.video?' · 🎬':''}</li>`).join('')||'<li>(vuota)</li>'}</ol>`;
-  const J=o=>JSON.stringify(o,(k,v)=>k==='dur'?undefined:v),same=n=>J({s:P[n].songs,l:P[n].looks||{}})===J({s:songs,l:looks});
+  const li=d=>`<ol>${d.sets.map(x=>`<li>☰ ${esc(x.title)} · ${x.items.length} brani</li>`).join('')}</ol>`;
+  const J=o=>JSON.stringify(o,(k,v)=>k==='dur'?undefined:v),same=n=>{const d=projData(P[n]);return J({a:d.lib,b:d.sets,l:d.looks})===J({a:lib,b:sets,l:looks});};
   let h='';
-  if(!cfg.proj&&songs.length)h+=`<div class="warnx">La scaletta aperta (${songs.length} brani) non è ancora salvata in un progetto. <button class="btn acc" data-a="save">💾 Salva</button></div>`;
+  if(!cfg.proj&&lib.length)h+=`<div class="warnx">La raccolta aperta (${lib.length} brani) non è ancora salvata in un progetto. <button class="btn acc" data-a="save">💾 Salva</button></div>`;
   else if(cfg.proj&&P[cfg.proj]&&!same(cfg.proj))h+=`<div class="warnx">Hai modifiche non salvate in «${esc(cfg.proj)}». <button class="btn acc" data-a="save">💾 Salva</button></div>`;
-  h+=names.map(n=>`<div class="pj${n===cfg.proj?' curp':''}"><div class="h"><span><b>${esc(n)}</b>${n===cfg.proj?' <small class="open">● aperto</small>':''}<br><small>${(P[n].songs||[]).length} brani · ${new Date(P[n].saved).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})}</small></span><button class="acc" data-a="open" data-n="${esc(n)}">Apri</button><button data-a="sh" data-n="${esc(n)}">📤</button><button data-a="del" data-n="${esc(n)}">🗑</button></div>${li(P[n].songs)}</div>`).join('');
+  h+=names.map(n=>`<div class="pj${n===cfg.proj?' curp':''}"><div class="h"><span><b>${esc(n)}</b>${n===cfg.proj?' <small class="open">● aperto</small>':''}<br><small>${projData(P[n]).lib.length} brani in raccolta · ${new Date(P[n].saved).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})}</small></span><button class="acc" data-a="open" data-n="${esc(n)}">Apri</button><button data-a="sh" data-n="${esc(n)}">📤</button><button data-a="del" data-n="${esc(n)}">🗑</button></div>${li(projData(P[n]))}</div>`).join('');
   if(!names.length)h+='<div class="empty">Nessun progetto salvato (File › Salva progetto).</div>';
   $('projList').innerHTML=h;}
 $('projList').onclick=async e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.a,n=b.dataset.n;
   if(a==='save')$('miSave').onclick();
-  else if(a==='shc')exportSheet(cfg.proj||'',songs,looks);
-  else if(a==='open'){if(songs.length&&cfg.proj!==n&&!confirm('Sostituire la scaletta attuale con «'+n+'»?'))return;await openProj(n);page('list');}
-  else if(a==='sh'){const P=await projects();exportSheet(n,P[n].songs||[],P[n].looks||{});}
+  else if(a==='shc')exportSheet(cfg.proj||'',projNow());
+  else if(a==='open'){if(lib.length&&cfg.proj!==n&&!confirm('Sostituire la scaletta attuale con «'+n+'»?'))return;await openProj(n);page('list');}
+  else if(a==='sh'){const P=await projects();exportSheet(n,projData(P[n]));}
   else if(a==='del'&&confirm('Eliminare il progetto «'+n+'»? (La scaletta aperta resta.)')){const P=await projects();delete P[n];await kvSet('projects',P);if(cfg.proj===n){cfg.proj='';saveCfg();showProj();}renderProj();}};
 onPick('fZip2',l=>importZip(l[0]));
-$('miNew').onclick=async()=>{closeMenus();if(songs.length&&!confirm('Iniziare un nuovo progetto vuoto? Salva prima quello attuale se ti serve (i progetti salvati restano).'))return;
-  await stop();const old=songs;songs=[];looks={};cur=-1;cfg.proj='';saveCfg();for(const x of old)await purge(x);saveSongs();showProj();renderList();renderMix();showTitle();setVideo(null);status('Nuovo progetto.');};
-$('miClear').onclick=async()=>{closeMenus();if(!songs.length||!confirm('Svuotare tutta la scaletta? I brani importati vengono cancellati dall\'app.'))return;
-  await stop();const old=songs;songs=[];cur=-1;for(const s of old)await purge(s);saveSongs();renderList();renderMix();showTitle();setVideo(null);status('Scaletta svuotata.');};
-$('miAbout').onclick=()=>{closeMenus();sheet(`<h3>ArnoStage ${VERSION} · PROVA</h3><p>Lettore di basi multitraccia (base stereo + click e altre tracce) con video abbinato in sync, mixer, uscite separate della scheda audio, ingressi per suonare sulle basi e uscita HDMI.</p><p>${NATIVE?'App '+esc(window.nativeVer||''):'Versione web (browser)'}.</p><p>© 2026 Maurizio Arnone. Tutti i diritti riservati.</p><div style="text-align:right"><button class="btn acc" onclick="closeSheet()">OK</button></div>`);};
+$('miNew').onclick=async()=>{closeMenus();if(lib.length&&!confirm('Iniziare un nuovo progetto vuoto? Salva prima quello attuale se ti serve (i progetti salvati restano).'))return;
+  await stop();const old=lib;setProject({lib:[],sets:[],looks:{}});cfg.proj='';saveCfg();for(const x of old)await purge(x);saveSongs();showProj();renderList();renderMix();showTitle();setVideo(null);status('Nuovo progetto.');};
+$('miClear').onclick=async()=>{closeMenus();if(!songs.length||!confirm('Svuotare la scaletta «'+curSetObj().title+'»? I brani restano nella raccolta.'))return;
+  await stop();curSetObj().items=[];rebuild();cur=-1;saveSongs();renderList();renderMix();showTitle();setVideo(null);status('Scaletta svuotata.');};
+$('miAbout').onclick=()=>{closeMenus();sheet(`<h3>ArnoStage ${VERSION} · PROVA</h3><p>Raccolte di brani (base, click, video e audio del video) da mettere in una o più scalette, con mixer, uscite separate della scheda audio, ingressi per suonare sulle basi e video in sync sull'HDMI.</p><p>${NATIVE?'App '+esc(window.nativeVer||''):'Versione web (browser)'}.</p><p>© 2026 Maurizio Arnone. Tutti i diritti riservati.</p><div style="text-align:right"><button class="btn acc" onclick="closeSheet()">OK</button></div>`);};
 
 // ===== Pagine (verticale) / due colonne (orizzontale) =====
 $('bLeft').onclick=()=>{cfg.leftV=!cfg.leftV;saveCfg();leftUI();};
@@ -964,12 +1011,13 @@ new MutationObserver(()=>{$('tbPlay').textContent=$('bPlay').textContent;$('tbPl
 (async()=>{
   leftUI();layout();applyVW();applyTheme();autoUI();$('miPrevH').classList.toggle('on',!!cfg.prevHdmi);$('miPrev').classList.toggle('on',cfg.prev);$('miIn').classList.toggle('on',cfg.inOn&&NATIVE);
   if(!NATIVE)cfg.inOn=false;
-  try{songs=(await kvGet('songs'))||[];looks=(await kvGet('looks'))||{};}catch(e){songs=[];}
+  try{let L=await kvGet('lib');if(L){setProject({lib:L,sets:(await kvGet('sets'))||[],curSet:await kvGet('curSet'),looks:(await kvGet('looks'))||{}});}
+    else{setProject(projData({songs:(await kvGet('songs'))||[],looks:(await kvGet('looks'))||{}}));saveSongs();}}catch(e){setProject({lib:[],sets:[]});}
   hdmiUI();showProj();
   await refreshCard();
   if(NATIVE&&cfg.inOn)await sendInput();
   renderList();renderMix();showTitle();
-  if(songs.length){await loadSong(0,false);}else status('Benvenuto: File › Importa progetto ARNOCLICK (.zip) per iniziare.');
+  if(songs.length){await loadSong(0,false);}else status(lib.length?'Scegli o aggiungi i brani nella scaletta (☰ Scaletta).':'Benvenuto: File › Importa .zip di ARNOCLICK o 🎵 Nuovi brani per iniziare.');
   if(cfg.inOn)tick();
 })();
 </script>
