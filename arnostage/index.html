@@ -66,6 +66,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 .strip .fr{grid-column:1/-1;display:flex;align-items:center;gap:8px}
 .strip .fr .pan{width:76px;flex:none}
 .meter{grid-column:1/-1;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.meter.mst{height:6px;border-radius:3px;margin-top:1px}
+.panc{flex:none;width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:var(--card2);color:var(--fg);font-size:11px;padding:0}
 .meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--ok) 0 70%,var(--warn) 70% 88%,var(--del) 88%);transition:width .06s linear}
 .strip{border-radius:9px;margin-top:3px}
 .strip .ico{font-size:17px;flex:none}
@@ -169,7 +171,7 @@ body.lkopen main{padding-bottom:56vh}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.1.4';
+const VERSION='0.1.5';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -227,7 +229,7 @@ async function ensureNative(ids,label){
 
 // ===== Motore Web Audio (solo per provare nel browser: tutto sulle uscite 1-2) =====
 const WA={ctx:null,bufs:{},nodes:[],t0:0,from:0,mg:null};
-function waCtx(){if(!WA.ctx){WA.ctx=new (window.AudioContext||window.webkitAudioContext)();WA.mg=WA.ctx.createGain();WA.mg.connect(WA.ctx.destination);}return WA.ctx;}
+function waCtx(){if(!WA.ctx){WA.ctx=new (window.AudioContext||window.webkitAudioContext)();WA.mg=WA.ctx.createGain();WA.mg.connect(WA.ctx.destination);const sp=WA.ctx.createChannelSplitter(2);WA.mg.connect(sp);WA.aL=WA.ctx.createAnalyser();WA.aR=WA.ctx.createAnalyser();WA.aL.fftSize=WA.aR.fftSize=512;sp.connect(WA.aL,0);sp.connect(WA.aR,1);WA.dL=new Float32Array(512);}return WA.ctx;}
 async function waLoad(id){if(WA.bufs[id])return WA.bufs[id];const f=await fGet(id);if(!f)throw 0;
   const ab=await f.blob.arrayBuffer();const b=await new Promise((res,rej)=>waCtx().decodeAudioData(ab,res,rej));WA.bufs[id]=b;return b;}
 function waStop(){WA.nodes.forEach(n=>{try{n.src.stop();}catch(e){}n.src.disconnect();});WA.nodes=[];}
@@ -241,6 +243,7 @@ function waPlay(from){const c=waCtx();if(c.state!=='running')c.resume();waStop()
 function waPos(){return WA.ctx?Math.max(WA.from,WA.from+WA.ctx.currentTime-WA.t0):0;}
 function waMix(){const s=songs[cur];if(!s||!WA.mg)return;WA.mg.gain.value=dbg(cfg.master);
   s.tracks.forEach((t,i)=>{const n=WA.nodes[i];if(!n)return;n.g.gain.value=effGain(s,t);if(n.p)n.p.pan.value=t.pan||0;});}
+function waMaster(){if(!WA.aL)return[0,0];const pk=a=>{a.getFloatTimeDomainData(WA.dL);let m=0;for(const v of WA.dL){const x=Math.abs(v);if(x>m)m=x;}return m;};return[pk(WA.aL),pk(WA.aR)];}
 function waPeaks(){return WA.nodes.map(n=>{if(!n)return 0;n.an.getFloatTimeDomainData(n.data);let m=0;for(const v of n.data){const a=Math.abs(v);if(a>m)m=a;}return m;});}
 
 // ===== Mixer =====
@@ -265,19 +268,19 @@ function renderMix(){
     <div class="nm"><span class="ico">${t.ico||defIco(t.name)}</span><b data-a="look" title="Colore e icona">${esc(t.name)}</b><span class="lbl" style="flex:none">${t.dur?"⏱ "+fmtL(t.dur):''}</span><span class="db">${t.db<=-60?'-∞':(t.db>0?'+':'')+t.db.toFixed(1)} dB</span></div>
     <div class="tg"><button class="m${t.mute?' on':''}" data-a="mute">M</button><button class="s${t.solo?' on':''}" data-a="solo">S</button>
       <select data-a="out">${outOptions(t.out)}</select><button class="x" data-a="del" title="Togli la traccia dal brano">✕</button></div>
-    <div class="fr"><span class="lbl">Vol</span><input type="range" data-a="db" min="-60" max="6" step="0.5" value="${t.db}"><span class="lbl">Pan</span><input type="range" class="pan" data-a="pan" min="-1" max="1" step="0.05" value="${t.pan||0}" title="Panorama (doppio tocco: al centro)"></div>
+    <div class="fr"><span class="lbl">Vol</span><input type="range" data-a="db" min="-60" max="6" step="0.5" value="${t.db}"><span class="lbl">Pan</span><input type="range" class="pan" data-a="pan" min="-1" max="1" step="0.05" value="${t.pan||0}" title="Panorama"><button class="panc" data-a="panc" title="Panorama al centro">C</button></div>
     <div class="meter"><i></i></div></div>`;});
   if(cfg.inOn)h+=`<div class="strip" data-i="in" style="${stripBg(cfg.inCol,cfg.inInt)}"><div class="nm"><span class="ico">${cfg.inIco||'🎤'}</span><b data-a="look" title="Colore e icona">${cfg.inName?esc(cfg.inName)+' · ':''}Ingresso ${cfg.inA+1}${cfg.inB>=0&&cfg.inB!==cfg.inA?'-'+(cfg.inB+1):''}</b><span class="db">${cfg.inDb<=-60?'-∞':(cfg.inDb>0?'+':'')+(+cfg.inDb).toFixed(1)} dB</span></div>
     <div class="tg"><button class="m${cfg.inMute?' on':''}" data-a="imute">M</button><select data-a="iout">${outOptions(cfg.inOut)}</select><button data-a="icfg">⚙</button></div>
     <div class="fr"><input type="range" data-a="idb" min="-60" max="12" step="0.5" value="${cfg.inDb}"></div><div class="meter"><i></i></div></div>`;
-  h+=`<div class="strip" data-i="master"><div class="nm"><b>Master</b><span class="db">${cfg.master<=-60?'-∞':(cfg.master>0?'+':'')+(+cfg.master).toFixed(1)} dB</span></div><div class="tg"><span class="lbl">${NATIVE?esc(cardName)+' · '+outs+' uscite':'browser · uscite 1-2'}</span></div>
-    <div class="fr"><input type="range" data-a="mdb" min="-60" max="6" step="0.5" value="${cfg.master}"></div></div>`;
+  h+=`<div class="strip" data-i="master" style="${stripBg(cfg.mCol,cfg.mInt)}"><div class="nm"><span class="ico">${cfg.mIco||'🔊'}</span><b data-a="look" title="Colore e icona">Master</b><span class="db">${cfg.master<=-60?'-∞':(cfg.master>0?'+':'')+(+cfg.master).toFixed(1)} dB</span></div><div class="tg"><span class="lbl">${NATIVE?esc(cardName)+' · '+outs+' uscite':'browser · uscite 1-2'}</span></div>
+    <div class="fr"><input type="range" data-a="mdb" min="-60" max="6" step="0.5" value="${cfg.master}"></div><div class="meter mst"><i></i></div><div class="meter mst"><i></i></div></div>`;
   if(s.video)h+=`<div class="vrow">🎬 <b>${esc(s.video.name)}</b><span class="lbl">sync</span><button class="btn" data-a="voff" data-d="-40">−</button><input type="number" step="10" data-a="voffn" value="${s.video.off||0}"><span class="lbl">ms</span><button class="btn" data-a="voff" data-d="40">＋</button><button class="btn" data-a="vdel">✕</button></div>`;
   m.innerHTML=h;
 }
 $('mix').addEventListener('input',e=>{const el=e.target,a=el.dataset.a,s=songs[cur];if(!s)return;
   const row=el.closest('.strip'),i=row&&+row.dataset.i;
-  if(a==='db'||a==='pan'){const t=s.tracks[i];t[a]=+el.value;if(a==='db')row.querySelector('.db').textContent=(t.db<=-60?'-∞':(t.db>0?'+':'')+t.db.toFixed(1))+' dB';sendStrips();saveSongs();}
+  if(a==='db'||a==='pan'){const t=s.tracks[i];if(a==='pan'&&Math.abs(+el.value)<0.08)el.value=0;t[a]=+el.value;if(a==='db')row.querySelector('.db').textContent=(t.db<=-60?'-∞':(t.db>0?'+':'')+t.db.toFixed(1))+' dB';sendStrips();saveSongs();}
   else if(a==='mdb'){cfg.master=+el.value;row.querySelector('.db').textContent=(cfg.master<=-60?'-∞':(cfg.master>0?'+':'')+cfg.master.toFixed(1))+' dB';if(NATIVE)eng({op:'master',g:dbg(cfg.master)});else waMix();saveCfg();}
   else if(a==='idb'){cfg.inDb=+el.value;row.querySelector('.db').textContent=(cfg.inDb<=-60?'-∞':(cfg.inDb>0?'+':'')+cfg.inDb.toFixed(1))+' dB';sendInput();saveCfg();}
   else if(a==='voffn'){s.video.off=+el.value||0;saveSongs();syncVideo(true);}
@@ -291,6 +294,7 @@ $('mix').addEventListener('click',async e=>{const el=e.target.closest('[data-a]'
   if(a==='mute'||a==='solo'){s.tracks[i][a]=!s.tracks[i][a];renderMix();sendStrips();saveSongs();}
   else if(a==='del'){if(!confirm('Togliere la traccia «'+s.tracks[i].name+'» dal brano?'))return;s.tracks.splice(i,1);saveSongs();await loadSong(cur,false);}
   else if(a==='look')lookSheet(row.dataset.i);
+  else if(a==='panc'){s.tracks[i].pan=0;row.querySelector('.pan').value=0;sendStrips();saveSongs();}
   else if(a==='imute'){cfg.inMute=!cfg.inMute;saveCfg();sendInput();renderMix();}
   else if(a==='icfg')inputSheet();
   else if(a==='voff'){s.video.off=(s.video.off||0)+(+el.dataset.d);saveSongs();renderMix();syncVideo(true);}
@@ -396,18 +400,18 @@ function updTime(){$('tCur').textContent=fmt(pos);$('tDur').textContent=fmt(dur)
 let ticking=false;
 async function tick(){if(ticking)return;ticking=true;
   try{while(true){
-    let pk=[],ip=0,ended=false;
-    if(NATIVE){const r=await eng({op:'pos'});if(r){pos=r.t;pk=r.pk||[];ip=r.ip||0;ended=r.ended;if(!r.playing&&playing&&!ended){}}}
-    else if(playing){pos=waPos();pk=waPeaks();if(pos>=dur){ended=true;pos=dur;waStop();}}
-    updTime();meters(pk,ip);syncVideo(false);
+    let pk=[],ip=0,ml=0,mr=0,ended=false;
+    if(NATIVE){const r=await eng({op:'pos'});if(r){pos=r.t;pk=r.pk||[];ip=r.ip||0;ml=r.ml||0;mr=r.mr||0;ended=r.ended;if(!r.playing&&playing&&!ended){}}}
+    else if(playing){pos=waPos();pk=waPeaks();[ml,mr]=waMaster();if(pos>=dur){ended=true;pos=dur;waStop();}}
+    updTime();meters(pk,ip,ml,mr);syncVideo(false);
     if(ended&&playing){playing=false;$('bPlay').textContent='▶';$('bPlay').classList.remove('on');syncVideo(true);
       if(cfg.auto&&cur<songs.length-1){await loadSong(cur+1,true);continue;}}
     if(!playing&&!cfg.inOn)break;
     await new Promise(r=>setTimeout(r,playing?50:120));}
   }finally{ticking=false;}}
 const lv=p=>p<=0.0001?0:Math.max(0,Math.min(100,(20*Math.log10(p)+48)/48*100));
-function meters(pk,ip){const rows=$('mix').querySelectorAll('.strip');
-  rows.forEach(r=>{const m=r.querySelector('.meter i');if(!m)return;const i=r.dataset.i;m.style.width=(i==='in'?lv(ip):lv(pk[+i]||0))+'%';});}
+function meters(pk,ip,ml,mr){const rows=$('mix').querySelectorAll('.strip');
+  rows.forEach(r=>{const i=r.dataset.i;if(i==='master'){const b=r.querySelectorAll('.meter i');if(b[0]){b[0].style.width=lv(ml||0)+'%';b[1].style.width=lv(mr||0)+'%';}return;}const m=r.querySelector('.meter i');if(!m)return;m.style.width=(i==='in'?lv(ip):lv(pk[+i]||0))+'%';});}
 
 // ===== Ingressi della scheda =====
 function sendInput(){if(!NATIVE)return;const o=outVal(cfg.inOut);
@@ -425,14 +429,14 @@ function inputSheet(){closeMenus();
   $('iOk').onclick=async()=>{cfg.inA=+$('iA').value;cfg.inB=+$('iB').value;cfg.inOut=$('iO').value;saveCfg();await sendInput();closeSheet();renderMix();};}
 $('miInCfg').onclick=inputSheet;
 // ===== Colore, intensità e icona di una striscia =====
-function lookSheet(i){const s=songs[cur],inp=i==='in',t=inp?null:s.tracks[+i];
-  const get=()=>inp?{col:cfg.inCol||'',int:cfg.inInt==null?35:cfg.inInt,ico:cfg.inIco||'🎤',lab:cfg.inLab,name:cfg.inName||''}:{col:t.col||'',int:t.int==null?35:t.int,ico:t.ico||defIco(t.name),lab:t.lab,name:t.name};
-  const set=o=>{if(inp){if('col'in o)cfg.inCol=o.col;if('int'in o)cfg.inInt=o.int;if('ico'in o){cfg.inIco=o.ico;cfg.inLab=o.lab;}if('name'in o)cfg.inName=o.name;saveCfg();}
+function lookSheet(i){const s=songs[cur],mst=i==='master',inp=i==='in'||mst,P=mst?'m':'in',t=inp?null:s.tracks[+i];
+  const get=()=>inp?{col:cfg[P+'Col']||'',int:cfg[P+'Int']==null?35:cfg[P+'Int'],ico:cfg[P+'Ico']||(mst?'🔊':'🎤'),lab:cfg[P+'Lab'],name:cfg[P+'Name']||''}:{col:t.col||'',int:t.int==null?35:t.int,ico:t.ico||defIco(t.name),lab:t.lab,name:t.name};
+  const set=o=>{if(inp){if('col'in o)cfg[P+'Col']=o.col;if('int'in o)cfg[P+'Int']=o.int;if('ico'in o){cfg[P+'Ico']=o.ico;cfg[P+'Lab']=o.lab;}if('name'in o)cfg[P+'Name']=o.name;saveCfg();}
     else{Object.assign(t,o);saveSongs();}renderMix();};
   const g=get();
   const row=$('mix').querySelector(`.strip[data-i="${i}"]`);
-  sheet(`<h3>${inp?'Ingresso':'Traccia'}: colore e icona</h3>
-   <div class="frm"><span>Nome</span><input id="lkN" value="${esc(g.name)}" placeholder="${inp?'es. Chitarra':''}"></div>
+  sheet(`<h3>${mst?'Master':inp?'Ingresso':'Traccia'}: colore e icona</h3>
+   <div class="frm" style="${mst?'display:none':''}"><span>Nome</span><input id="lkN" value="${esc(g.name)}" placeholder="${inp?'es. Chitarra':''}"></div>
    <p>Colore del fondo</p><div class="pal" id="lkP">${COLS.map(c=>`<button data-c="${c}" class="${c===g.col?'on':''}" style="background:${c||'var(--card)'}">${c?'':'∅'}</button>`).join('')}</div>
    <p>Intensità del colore: <b id="lkV">${g.int}%</b></p><input type="range" id="lkI" min="5" max="90" step="1" value="${g.int}">
    <p>Icona</p><div class="icos" id="lkC">${ICONS.map(([e,n])=>`<button data-e="${e}" data-l="${n}" class="${e===g.ico&&(!g.lab||g.lab===n)?'on':''}">${e}<small>${n}</small></button>`).join('')}</div>

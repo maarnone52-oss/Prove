@@ -66,6 +66,7 @@ final class StageEngine {
         let p = UnsafeMutablePointer<os_unfair_lock>.allocate(capacity: 1); p.initialize(to: os_unfair_lock()); return p
     }()
     private var inPeak: Float = 0
+    private var mPeakL: Float = 0, mPeakR: Float = 0
     private var sessionActive = false
 
     // MARK: - Scheda audio
@@ -272,7 +273,8 @@ final class StageEngine {
             var pk: [Double] = []
             for i in 0..<voices.count { pk.append(Double(peaks[i])); peaks[i] = 0 }
             let ip = Double(inPeak); inPeak = 0
-            let r: [String: Any] = ["t": pos, "playing": playing, "ended": ended, "pk": pk, "ip": ip]
+            let ml = Double(mPeakL), mr = Double(mPeakR); mPeakL = 0; mPeakR = 0
+            let r: [String: Any] = ["t": pos, "playing": playing, "ended": ended, "pk": pk, "ip": ip, "ml": ml, "mr": mr]
             unlock()
             reply(r)
         case "input":
@@ -402,6 +404,11 @@ final class StageEngine {
             let lv = pk * max(v.gL, v.gR) * mg
             if vi < 66 && lv > peaks[vi] { peaks[vi] = lv }
         }
+        // VU master: uscite dispari = sinistra, pari = destra
+        var pl: Float = 0, pr: Float = 0
+        for c in 0..<nOut { let o = outs[c]; var m: Float = 0; for f in 0..<n { let a = abs(o[f]); if a > m { m = a } }; if c % 2 == 0 { if m > pl { pl = m } } else { if m > pr { pr = m } } }
+        if nOut == 1 { pr = pl }
+        if pl > mPeakL { mPeakL = pl }; if pr > mPeakR { mPeakR = pr }
         pos += Double(n) * dt
         if pos >= length { playing = false; ended = true; pos = length }
     }
