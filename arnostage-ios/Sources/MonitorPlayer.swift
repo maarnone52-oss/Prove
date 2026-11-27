@@ -9,6 +9,7 @@ enum MediaStore {
         return d
     }()
     static func safe(_ s: String) -> String { String(s.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) || $0 == "-" || $0 == "_" }) }
+    static func safeName(_ s: String) -> String { let b = s.components(separatedBy: CharacterSet(charactersIn: "/\\:?*\"<>|")).joined(separator: "-").trimmingCharacters(in: .whitespaces); return b.isEmpty ? "Progetto" : String(b.prefix(80)) }
     static func url(for id: String) -> URL? {
         let p = safe(id) + "."
         let list = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []

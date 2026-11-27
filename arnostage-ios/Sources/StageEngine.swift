@@ -54,6 +54,7 @@ final class StageEngine {
     private var pos = 0.0                 // secondi
     private var length = 0.0
     private var master: Float = 1
+    private var mono = false
 
     // Ingressi della scheda
     private(set) var inOn = false
@@ -257,6 +258,8 @@ final class StageEngine {
             let i = Int(num("i"))
             lock(); if i >= 0 && i < voices.count { StageEngine.apply(voices[i], m); length = voices.reduce(0) { max($0, $1.tr.duration + max(0, $1.off)) } }; unlock()
             reply(true)
+        case "mono":
+            lock(); mono = (m["on"] as? Bool) ?? false; unlock(); reply(true)
         case "master":
             lock(); master = Float(num("g")); unlock(); reply(true)
         case "play":
@@ -359,7 +362,7 @@ final class StageEngine {
             let ra = ringA[r], rb = two ? ringB[r] : ringA[r]
             let a = abs(ra) > abs(rb) ? abs(ra) : abs(rb); if a > pk { pk = a }
             let va = ra * g, vb = rb * g
-            if inOutSt && o1 != o0 { outs[o0][f] += va; outs[o1][f] += vb }
+            if inOutSt && o1 != o0 { if mono { let mm = (va + vb) * 0.5; outs[o0][f] += mm; outs[o1][f] += mm } else { outs[o0][f] += va; outs[o1][f] += vb } }
             else { outs[o0][f] += two ? (va + vb) * 0.5 : va }
         }
         if pk > inPeak { inPeak = pk }
@@ -402,7 +405,7 @@ final class StageEngine {
             for f in 0..<n {
                 let l = sample(t, p, 0), r = t.ch > 1 ? sample(t, p, 1) : l
                 let a = abs(l) > abs(r) ? abs(l) : abs(r); if a > pk { pk = a }
-                if stereo { outs[o0][f] += l * gl; outs[o1][f] += r * gr }
+                if stereo { if mono { let mm = (l * gl + r * gr) * 0.5; outs[o0][f] += mm; outs[o1][f] += mm } else { outs[o0][f] += l * gl; outs[o1][f] += r * gr } }
                 else { outs[o0][f] += (l * gl + r * gr) * 0.5 }
                 p += step
             }
