@@ -281,6 +281,10 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 #libList .li button{background:var(--card2);border:1px solid var(--line);color:var(--fg);border-radius:7px;height:30px;min-width:30px;font-size:13px}
 #libList .li .in{color:var(--ok);font-size:11px;font-weight:700}
 #addClk.hide,#addIn.hide{display:none}
+.x6{}
+#list .it{touch-action:pan-y;position:relative;transition:box-shadow .1s}
+#list .it.dragging{z-index:5;background:var(--card2);box-shadow:0 10px 30px rgba(0,0,0,.7);outline:2px solid var(--acc);transition:none}
+#list.dragmode{user-select:none}
 </style>
 </head>
 <body>
@@ -353,7 +357,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
   <div class="sec">
     <div class="ptitle" id="projN">Progetto: —</div>
     <div class="setbar"><span class="lbl">Scaletta</span><select id="setSel"></select><button class="btn" data-s="new" title="Nuova scaletta">＋</button><button class="btn" data-s="ren" title="Rinomina">✎</button><button class="btn" data-s="dup" title="Duplica">⧉</button><button class="btn" data-s="del" title="Elimina la scaletta">🗑</button></div>
-    <div class="sech"><span id="setT">Scaletta</span><span class="sp"></span><button class="btn" id="bEdit">✎ Modifica</button></div>
+    <div class="sech"><span id="setT">Scaletta</span><span class="lbl" style="font-weight:400;margin-left:6px">tieni premuto e trascina per spostare</span><span class="sp"></span><button class="btn" id="bEdit">✎ Modifica</button></div>
     <div id="list" class="noedit"></div>
   </div>
   <div class="sec">
@@ -372,7 +376,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.2.1';
+const VERSION='0.2.2';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -595,11 +599,11 @@ function renderList(){
   renderSets();const l=$('list');l.classList.toggle('noedit',!editMode);$('bEdit').textContent=editMode?'✓ Fine':'✎ Modifica';$('miEdit').classList.toggle('on',editMode);
   if(!songs.length)l.innerHTML='<div class="empty">La scaletta è vuota: aggiungi brani dalla raccolta qui sotto (＋).</div>';
   else l.innerHTML=songs.map((s,i)=>`<div class="it${i===cur?' cur':''}" data-i="${i}"><span class="n">${i+1}</span><span class="t">${esc(s.name)}<br><small>${songInfo(s)}</small></span>
-    <button class="ed" data-a="up">▲</button><button class="ed" data-a="dn">▼</button><button class="ed" data-a="ren" title="Rinomina il brano">✎</button><button class="ed" data-a="rm" title="Togli dalla scaletta">✕</button></div>`).join('');
+    <button class="ed" data-a="ren" title="Rinomina il brano">✎</button><button class="ed" data-a="rm" title="Togli dalla scaletta">✕</button></div>`).join('');
   renderLib();}
 function renderLib(){const st=curSetObj();$('libN').textContent='('+lib.length+')';
   $('libList').innerHTML=lib.length?lib.map(x=>`<div class="li" data-id="${x.id}"><span class="t">${esc(x.name)}${st.items.includes(x.id)?' <span class="in">● in scaletta</span>':''}<br><small>${songInfo(x)}</small></span><button data-a="add" title="Aggiungi in fondo alla scaletta">＋</button><button data-a="ren" title="Rinomina">✎</button><button data-a="del" title="Elimina dalla raccolta">🗑</button></div>`).join(''):'<div class="empty">Nessun brano: «🎵 Nuovi brani» (un file audio = un brano con la sua Base) o File › Importa .zip di ARNOCLICK.</div>';}
-$('list').addEventListener('click',async e=>{const it=e.target.closest('.it');if(!it)return;const i=+it.dataset.i,b=e.target.closest('button');
+$('list').addEventListener('click',async e=>{if(Date.now()-($('list')._nd||0)<500)return;const it=e.target.closest('.it');if(!it)return;const i=+it.dataset.i,b=e.target.closest('button');
   if(!b){if(i!==cur){await stop();await loadSong(i,false);}if(!document.body.classList.contains('wide'))page(false);return;}
   const a=b.dataset.a,st=curSetObj(),I=st.items;
   if(a==='up'&&i>0){[I[i-1],I[i]]=[I[i],I[i-1]];if(cur===i)cur--;else if(cur===i-1)cur++;}
@@ -621,6 +625,22 @@ document.querySelector('.setbar').addEventListener('click',async e=>{const b=e.t
 $('setSel').onchange=e=>switchSet(e.target.value);
 async function switchSet(id){await stop();curSet=id;cur=-1;rebuild();saveSongs();renderList();renderMix();showTitle();if(songs.length)await loadSong(0,false);else setVideo(null);status('Scaletta «'+curSetObj().title+'» ('+songs.length+' brani).');}
 $('bEdit').onclick=()=>{editMode=!editMode;renderList();};
+// riordino della scaletta: tieni premuto un brano e trascinalo su o giù
+(()=>{const L=$('list'),SC=()=>L.closest('#colR');let drag=null,tm=0,p0=null;
+  const stop=()=>{clearTimeout(tm);p0=null;};
+  L.addEventListener('pointerdown',e=>{const it=e.target.closest('.it');if(!it||e.target.closest('button'))return;
+    p0={x:e.clientX,y:e.clientY};tm=setTimeout(()=>{drag={it,i:+it.dataset.i,y0:p0.y,st:SC().scrollTop};it.classList.add('dragging');L.classList.add('dragmode');if(navigator.vibrate)navigator.vibrate(15);},420);});
+  window.addEventListener('pointermove',e=>{if(p0&&!drag&&Math.hypot(e.clientX-p0.x,e.clientY-p0.y)>9)stop();if(!drag)return;
+    const sc=SC(),r=sc.getBoundingClientRect();if(e.clientY<r.top+40)sc.scrollTop-=12;else if(e.clientY>r.bottom-40)sc.scrollTop+=12;
+    drag.it.style.transform=`translateY(${(e.clientY-drag.y0)+(sc.scrollTop-drag.st)}px)`;drag.y=e.clientY;});
+  L.addEventListener('touchmove',e=>{if(drag)e.preventDefault();},{passive:false});
+  window.addEventListener('pointerup',()=>{stop();if(!drag)return;const d=drag;drag=null;L._nd=Date.now();L.classList.remove('dragmode');d.it.classList.remove('dragging');d.it.style.transform='';
+    if(d.y==null)return;const its=[...L.querySelectorAll('.it')].filter(x=>x!==d.it);let at=its.length;
+    for(let j=0;j<its.length;j++){const b=its[j].getBoundingClientRect();if(d.y<b.top+b.height/2){at=j;break;}}
+    const I=curSetObj().items,curId=songs[cur]?songs[cur].id:null,curPos=cur;const [moved]=I.splice(d.i,1);I.splice(at,0,moved);
+    if(curPos===d.i)cur=at;else if(curPos>d.i&&curPos<=at)cur--;else if(curPos<d.i&&curPos>=at)cur++;
+    rebuild();saveSongs();renderList();showTitle();});
+  L.addEventListener('contextmenu',e=>e.preventDefault());})();
 async function purge(song){ // elimina i file che nessun brano usa più (nemmeno nei progetti salvati)
   const used=new Set(),all=lib.slice();const P=(await kvGet('projects').catch(()=>null))||{};Object.values(P).forEach(p=>(p.lib||p.songs||[]).forEach(x=>all.push(x)));all.forEach(s=>{s.tracks.forEach(t=>used.add(t.fid));if(s.video)used.add(s.video.fid);});
   const ids=song.tracks.map(t=>t.fid).concat(song.video?[song.video.fid]:[]).filter(id=>!used.has(id));
