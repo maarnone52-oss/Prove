@@ -364,6 +364,15 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 .pj .h .pcov{flex:0 0 64px;width:64px;min-width:64px}
 .pj .sets{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}
 .pj .h span[data-a]{cursor:pointer}
+.x13{}
+.npw{display:flex;flex-direction:column;align-items:center;gap:12px}
+.npw img{width:min(70vw,280px);aspect-ratio:1;object-fit:cover;border-radius:20px;box-shadow:0 12px 36px rgba(0,0,0,.7);border:1px solid #44454e}
+.npb{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.npl{display:flex;flex-direction:column;gap:6px;width:100%;font-size:13px;color:var(--mut);font-weight:600}
+.npl input{font:inherit;font-size:18px;font-weight:700;padding:10px 12px;border-radius:12px;background:#17181d;color:#fff;border:1px solid #4a4b55}
+.npi{width:100%;font-size:14px;color:#d7d7d2;background:#17181d;border:1px solid #34353d;border-radius:12px;padding:10px 12px}
+.npi.empty0{color:#ffd58a;border-color:#7a5a1a;background:#241b08}
+.npok{width:100%;margin-top:4px;padding:15px;border:0;border-radius:14px;background:linear-gradient(135deg,#22c55e,#15803d);color:#fff;font:inherit;font-size:17px;font-weight:800;box-shadow:0 6px 20px rgba(34,197,94,.35)}
 </style>
 </head>
 <body>
@@ -467,7 +476,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.3.5';
+const VERSION='0.3.6';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -520,7 +529,7 @@ function projData(p){p=p||{};if(p.lib)return {lib:p.lib,sets:p.sets&&p.sets.leng
   const L=(p.songs||[]).map(x=>Object.assign({},x,{id:x.id||uid()}));return {lib:L,sets:[{id:uid(),title:(LANG==='en'?'Setlist 1':'Scaletta 1'),items:L.map(x=>x.id)}],curSet:null,looks:p.looks||{},cover:p.cover||''};}
 let pcover='';
 // copertina automatica del progetto: ogni volta diversa (colori, disegno e iniziali del nome)
-function genCover(name){const c=document.createElement('canvas');c.width=c.height=480;const g=c.getContext('2d'),R=Math.random,h=Math.floor(R()*360),h2=(h+60+Math.floor(R()*180))%360;
+function genCover(name,seed){const c=document.createElement('canvas');c.width=c.height=480;let a0=(seed==null?Math.random()*4294967296:seed)>>>0;const R=()=>{a0=a0+0x6D2B79F5>>>0;let t=a0;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};const g=c.getContext('2d'),h=Math.floor(R()*360),h2=(h+60+Math.floor(R()*180))%360;
   const gr=g.createLinearGradient(0,0,480*R(),480);gr.addColorStop(0,`hsl(${h},70%,${35+R()*15}%)`);gr.addColorStop(1,`hsl(${h2},75%,${18+R()*14}%)`);g.fillStyle=gr;g.fillRect(0,0,480,480);
   const kind=Math.floor(R()*4);g.globalAlpha=.28;
   for(let i=0;i<14;i++){g.fillStyle=g.strokeStyle=`hsl(${(h+i*37)%360},90%,${55+R()*30}%)`;g.lineWidth=6+R()*24;
@@ -1096,7 +1105,7 @@ function applyTheme(){document.body.classList.toggle('mixac',!!cfg.mixAC);$('miA
 function showProj(){$('projN').textContent='Progetto: '+(cfg.proj||'(non salvato)');}
 async function projects(){return (await kvGet('projects').catch(()=>null))||{};}
 const projNow=()=>JSON.parse(JSON.stringify({lib,sets,curSet,looks,cover:pcover}));
-async function saveProj(name){if(!pcover||cfg.proj!==name&&!(await projects())[name])pcover=genCover(name);const P=await projects();P[name]=Object.assign(projNow(),{saved:Date.now()});
+async function saveProj(name){if(!pcover||cfg.proj!==name&&!(await projects())[name])pcover=genCover(name);const P=await projects();const cr=(P[name]&&P[name].created)||(cfg.proj===name&&P[cfg.proj]&&P[cfg.proj].created)||Date.now();P[name]=Object.assign(projNow(),{saved:Date.now(),created:cr});
   await kvSet('projects',P);cfg.proj=name;saveCfg();showProj();if(document.body.classList.contains('pgProj'))renderProj();status('Progetto «'+name+'» salvato ('+lib.length+' brani, '+sets.length+' scalett'+(sets.length>1?'e':'a')+').');}
 $('miSave').onclick=async()=>{closeMenus();if(!cfg.proj)return $('miSaveAs').onclick();await saveProj(cfg.proj);};
 $('miSaveAs').onclick=async()=>{closeMenus();const n=prompt('Nome del progetto (scaletta)',cfg.proj||'Concerto');if(!n||!n.trim())return;
@@ -1171,7 +1180,7 @@ $('projList').onclick=async e=>{const b=e.target.closest('button,[data-a]');if(!
   else if(a==='del'&&confirm('Eliminare il progetto «'+n+'»? (La scaletta aperta resta.)')){const P=await projects();delete P[n];await kvSet('projects',P);if(cfg.proj===n){cfg.proj='';saveCfg();showProj();}renderProj();}};
 onPick('fZip2',l=>importZip(l[0]));
 $('miStart').onclick=()=>{closeMenus();showStart();};
-$('miNew').onclick=async()=>{closeMenus();if(lib.length&&!confirm('Iniziare un nuovo progetto vuoto? Salva prima quello attuale se ti serve (i progetti salvati restano).'))return;
+$('miNew').onclick=async()=>{closeMenus();$('start').classList.add('on');sendRect();return showNewProject();if(lib.length&&!confirm('Iniziare un nuovo progetto vuoto? Salva prima quello attuale se ti serve (i progetti salvati restano).'))return;
   await stop();const old=lib;setProject({lib:[],sets:[],looks:{}});cfg.proj='';pcover='';saveCfg();for(const x of old)await purge(x);saveSongs();showProj();renderList();renderMix();showTitle();setVideo(null);status('Nuovo progetto.');};
 $('miClear').onclick=async()=>{closeMenus();if(!songs.length||!confirm('Svuotare la scaletta «'+curSetObj().title+'»? I brani restano nella raccolta.'))return;
   await stop();curSetObj().items=[];rebuild();cur=-1;saveSongs();renderList();renderMix();showTitle();setVideo(null);status('Scaletta svuotata.');};
@@ -1281,7 +1290,7 @@ const EN_P=[
  ['Progetto: ','Project: '],['(non salvato)','(not saved)'],['● in scaletta','● in setlist'],['● aperto','● open'],[' brani in raccolta',' songs in library'],
  ['La raccolta aperta (','The open library ('],[') non è ancora salvata in un progetto.',') is not saved in a project yet.'],['Hai modifiche non salvate in «','You have unsaved changes in «'],
 
- ['La raccolta è vuota.','The library is empty.'],['Tocca la copertina per aprire un progetto (quello aperto viene sostituito: salvalo prima se ti serve).','Tap the cover to open a project (the open one is replaced: save it first if you need it).'],['Progetti recenti','Recent projects'],['Nuovo progetto','New project'],['Apri progetto','Open project'],['Importa .zip','Import .zip'],['Importa brani','Import songs'],['Continua','Continue'],['Progetto non salvato','Unsaved project'],['Nessun altro progetto salvato.','No other saved projects.'],['🏠 Menu iniziale','🏠 Start menu'],['La raccolta aperta non è salvata. Aprire comunque «','The open library is not saved. Open «'],['versione ','version '],['tieni premuto un brano e trascinalo per spostarlo','press and hold a song, then drag it to move it'],['Aggiungi brani già presenti nel progetto','Add songs already in the project'],
+ ['La raccolta è vuota.','The library is empty.'],['La raccolta aperta non è salvata in un progetto e verrà chiusa. Continuare?','The open library is not saved in a project and will be closed. Continue?'],['Tocca la copertina per aprire un progetto (quello aperto viene sostituito: salvalo prima se ti serve).','Tap the cover to open a project (the open one is replaced: save it first if you need it).'],['Progetti recenti','Recent projects'],['Nuovo progetto','New project'],['Apri progetto','Open project'],['Importa .zip','Import .zip'],['Importa brani','Import songs'],['Continua','Continue'],['Progetto non salvato','Unsaved project'],['Nessun altro progetto salvato.','No other saved projects.'],['🏠 Menu iniziale','🏠 Start menu'],['La raccolta aperta non è salvata. Aprire comunque «','The open library is not saved. Open «'],['versione ','version '],['tieni premuto un brano e trascinalo per spostarlo','press and hold a song, then drag it to move it'],['Aggiungi brani già presenti nel progetto','Add songs already in the project'],
  ['La scaletta è vuota: «🎵 Nuovi» (un file audio = un brano), «🗂 Importa» (cartelle, .zip di ARNOCLICK) o ＋ per i brani già presenti nel progetto.','The setlist is empty: «🎵 New» (one audio file = one song), «🗂 Import» (folders, ARNOCLICK .zip) or ＋ for songs already in the project.'],
  ['» da questa scaletta? (resta nelle altre)','» from this setlist? (it stays in the others)'],['＋ Aggiungi a «','＋ Add to «'],['Brani del progetto che non sono in questa scaletta:','Project songs not in this setlist:'],['Aggiungi','Add'],[' aggiunti in fondo a «',' added to the end of «'],['Elimina','Delete'],['＋ Ingresso','＋ Input'],['Esci','Exit']
 ].sort((a,b)=>b[0].length-a[0].length);
@@ -1310,14 +1319,39 @@ async function showStart(){const P=await projects(),names=Object.keys(P).sort((a
   document.querySelector('#start .sgrid').style.display='';document.querySelector('#start .stit').style.display='';
   $('stList').innerHTML=names.filter(n=>n!==cfg.proj).slice(0,8).map(n=>{const d=projData(P[n]);return `<button class="pr" data-n="${esc(n)}">${cov(d)}<span><b>${esc(n)}</b><br><small>${d.lib.length} ${d.lib.length===1?'brano':'brani'} · ${new Date(P[n].saved).toLocaleDateString(LANG==='en'?'en-GB':'it-IT')}</small></span></button>`;}).join('')||'<div class="empty">Nessun altro progetto salvato.</div>';
   $('start').classList.add('on');setTimeout(sendRect,30);}
+// ===== Nuovo progetto dal menu iniziale: copertina, nome, data di creazione, conferma =====
+let NP=null;
+async function showNewProject(){const now=new Date(),P=await projects();let n=(LANG==='en'?'New project':'Nuovo progetto'),k=2;while(P[n])n=(LANG==='en'?'New project ':'Nuovo progetto ')+(k++);
+  NP={name:n,seed:Math.floor(Math.random()*4294967296),created:now.getTime(),photo:false};NP.cover=genCover(n,NP.seed);
+  document.querySelector('#start .sgrid').style.display='none';document.querySelector('#start .stit').style.display='none';$('stList').innerHTML='';
+  const dt=now.toLocaleString(LANG==='en'?'en-GB':'it-IT',{dateStyle:'long',timeStyle:'short'});
+  $('stCont').innerHTML=`<button class="btn" data-st="back" style="margin-bottom:12px">‹ ${LANG==='en'?'Back':'Indietro'}</button>
+   <div class="otit">${LANG==='en'?'New project':'Nuovo progetto'}</div>
+   <div class="npw"><img id="npImg" src="${NP.cover}" alt="">
+    <div class="npb"><button class="btn" id="npRen">🎲 ${LANG==='en'?'Renew cover':'Rinnova copertina'}</button><label class="btn"><input type="file" id="npPh" accept="image/*" hidden>🖼 ${LANG==='en'?'Choose photo':'Scegli foto'}</label></div>
+    <label class="npl">${LANG==='en'?'Project name':'Nome del progetto'}<input id="npName" value="${esc(n)}" maxlength="60"></label>
+    <div class="npi">🗓 ${LANG==='en'?'Created on':'Creato il'} <b>${esc(dt)}</b></div>
+    <div class="npi empty0">ℹ️ ${LANG==='en'?'The project is empty: after confirming, add songs with «🎵 New» or «🗂 Import» in the setlist.':'Il progetto è vuoto: dopo la conferma aggiungi i brani con «🎵 Nuovi» o «🗂 Importa» nella scaletta.'}</div>
+    <button class="npok" id="npOk">✓ ${LANG==='en'?'Confirm':'Conferma'}</button></div>`;
+  const regen=()=>{if(NP.photo)return;NP.cover=genCover($('npName').value.trim()||n,NP.seed);$('npImg').src=NP.cover;};
+  $('npRen').onclick=()=>{NP.photo=false;NP.seed=Math.floor(Math.random()*4294967296);regen();};
+  let tN=0;$('npName').oninput=()=>{clearTimeout(tN);tN=setTimeout(regen,250);};
+  $('npPh').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{NP.cover=await shrinkImage(f,600);NP.photo=true;$('npImg').src=NP.cover;}catch(x){}};
+  $('npOk').onclick=async()=>{const name=$('npName').value.trim();if(!name){$('npName').focus();return;}
+    const PP=await projects();if(PP[name]&&!confirm('Esiste già «'+name+'». Sostituirlo?'))return;
+    if(lib.length&&!(cfg.proj&&PP[cfg.proj])&&!confirm('La raccolta aperta non è salvata in un progetto e verrà chiusa. Continuare?'))return;
+    await stop();setProject({lib:[],sets:[],looks:{},cover:NP.cover});cfg.proj='';
+    PP[name]=Object.assign(projNow(),{saved:Date.now(),created:NP.created});await kvSet('projects',PP);
+    cfg.proj=name;saveCfg();saveSongs();showProj();renderList();renderMix();showTitle();setVideo(null);hideStart();page('list');
+    status((LANG==='en'?'Project «':'Progetto «')+name+(LANG==='en'?'» created: add songs with 🎵 New or 🗂 Import.':'» creato: aggiungi i brani con 🎵 Nuovi o 🗂 Importa.'));};}
 async function showOpenList(){const P=await projects(),names=Object.keys(P).sort((a,b)=>P[b].saved-P[a].saved);
   $('stCont').innerHTML=`<button class="btn" data-st="back" style="margin-bottom:12px">‹ ${LANG==='en'?'Back':'Indietro'}</button><div class="otit">${LANG==='en'?'Open project':'Apri progetto'}</div>`;
   document.querySelector('#start .sgrid').style.display='none';document.querySelector('#start .stit').style.display='none';
-  $('stList').innerHTML=names.length?`<div class="ogrid">${names.map(n=>{const d=projData(P[n]),c=d.cover||((d.sets||[]).find(x=>x.cover)||{}).cover;return `<button class="oc" data-n="${esc(n)}">${c?`<img src="${c}" alt="">`:'<span class="ph">☰</span>'}<b>${esc(n)}</b><small>${new Date(P[n].saved).toLocaleDateString(LANG==='en'?'en-GB':'it-IT')}</small></button>`;}).join('')}</div>`:'<div class="empty">Nessun progetto salvato.</div>';}
+  $('stList').innerHTML=names.length?`<div class="ogrid">${names.map(n=>{const d=projData(P[n]),c=d.cover||((d.sets||[]).find(x=>x.cover)||{}).cover;return `<button class="oc" data-n="${esc(n)}">${c?`<img src="${c}" alt="">`:'<span class="ph">☰</span>'}<b>${esc(n)}</b><small>${new Date(P[n].created||P[n].saved).toLocaleString(LANG==='en'?'en-GB':'it-IT',{dateStyle:'short',timeStyle:'short'})}</small></button>`;}).join('')}</div>`:'<div class="empty">Nessun progetto salvato.</div>';}
 function hideStart(){$('start').classList.remove('on');setTimeout(sendRect,30);}
 $('start').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
   if(b.dataset.st==='cont'){hideStart();}
-  else if(b.dataset.st==='new'){hideStart();$('miNew').onclick();}
+  else if(b.dataset.st==='new'){showNewProject();}
   else if(b.dataset.st==='open'){showOpenList();}
   else if(b.dataset.st==='back'){showStart();}
   else if(b.dataset.n){hideStart();const P=await projects();if(lib.length&&!(cfg.proj&&P[cfg.proj])&&!confirm('La raccolta aperta non è salvata. Aprire comunque «'+b.dataset.n+'»?'))return showStart();await openProj(b.dataset.n);page('list');}});
