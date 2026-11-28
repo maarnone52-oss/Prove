@@ -413,7 +413,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.2.8';
+const VERSION='0.2.9';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -1112,7 +1112,11 @@ function leftUI(){document.body.classList.toggle('leftV',!!cfg.leftV);$('bLeft')
 function layout(){const w=innerWidth>innerHeight&&innerWidth>=640,was=document.body.classList.contains('wide');document.body.classList.toggle('wide',w);
   if(w&&!was&&document.body.classList.contains('pgList'))page('song');setTimeout(fitFaders,60);}
 addEventListener('resize',layout);
-function page(l){const p=l===true?'list':l||'song';document.body.classList.toggle('pgList',p==='list');document.body.classList.toggle('pgMix',p==='mix');document.body.classList.toggle('pgProj',p==='proj');$('tbProj').classList.toggle('on',p==='proj');if(p==='proj')renderProj();
+let lastPage='song';
+function page(l){const p=l===true?'list':l||'song';
+  // dalla scaletta al brano/mixer: il brano si ferma e torna all'inizio (riparte solo con ▶)
+  if(lastPage==='list'&&(p==='song'||p==='mix')&&songs[cur]){(async()=>{if(playing)await stop();await seekTo(0);})();}
+  lastPage=p;document.body.classList.toggle('pgList',p==='list');document.body.classList.toggle('pgMix',p==='mix');document.body.classList.toggle('pgProj',p==='proj');$('tbProj').classList.toggle('on',p==='proj');if(p==='proj')renderProj();
   $('tbList').classList.toggle('on',p==='list');$('tbSong').classList.toggle('on',p==='song');$('tbMix').classList.toggle('on',p==='mix');setTimeout(fitFaders,30);}
 $('tbProj').onclick=()=>page('proj');$('tbSong').onclick=()=>page('song');$('tbList').onclick=()=>page('list');$('tbMix').onclick=()=>page('mix');$('tbPlay').onclick=()=>$('bPlay').click();
 new MutationObserver(()=>{$('tbPlay').textContent=$('bPlay').textContent;$('tbPlay').classList.toggle('on',playing);}).observe($('bPlay'),{childList:true,attributes:true});
