@@ -390,7 +390,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.2.5';
+const VERSION='0.2.6';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -618,7 +618,7 @@ function renderList(){
 function renderLib(){const st=curSetObj();$('libN').textContent='('+lib.length+')';
   $('libList').innerHTML=lib.length?lib.map(x=>`<div class="li" data-id="${x.id}"><span class="t">${esc(x.name)}${st.items.includes(x.id)?' <span class="in">● in scaletta</span>':''}<br><small>${songInfo(x)}</small></span><button data-a="add" title="Aggiungi in fondo alla scaletta">＋</button><button data-a="ren" title="Rinomina">✎</button><button data-a="del" title="Elimina dalla raccolta">🗑</button></div>`).join(''):'<div class="empty">Nessun brano: «🎵 Nuovi brani» (un file audio = un brano con la sua Base) o File › Importa .zip di ARNOCLICK.</div>';}
 $('list').addEventListener('click',async e=>{if(Date.now()-($('list')._nd||0)<500)return;const it=e.target.closest('.it');if(!it)return;const i=+it.dataset.i,b=e.target.closest('button');
-  if(!b){if(i!==cur){await stop();await loadSong(i,false);}if(!document.body.classList.contains('wide'))page(false);return;}
+  if(!b){if(i!==cur){await stop();await loadSong(i,false);}return;}  // resta sulla scaletta: ▶ in basso per ascoltare
   const a=b.dataset.a,st=curSetObj(),I=st.items;
   if(a==='up'&&i>0){[I[i-1],I[i]]=[I[i],I[i-1]];if(cur===i)cur--;else if(cur===i-1)cur++;}
   else if(a==='dn'&&i<I.length-1){[I[i+1],I[i]]=[I[i],I[i+1]];if(cur===i)cur++;else if(cur===i+1)cur--;}
