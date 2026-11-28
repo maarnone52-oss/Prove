@@ -341,6 +341,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
       <button class="chk" id="miPrevH">Anteprima anche con l'HDMI acceso</button>
       <button class="chk" id="miAC">🎚 Mixer stile ARNOCLICK</button>
       <button class="chk" id="miGray">Tema grigio</button>
+      <button id="miLang">🌐 Lingua: Italiano</button>
       <hr>
       <button id="miAbout">Informazioni</button>
     </div></div>
@@ -391,7 +392,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.2.3';
+const VERSION='0.2.4';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -438,10 +439,10 @@ function normSong(s){const T=s.tracks||[];const v=T.find(t=>t.vid),c=T.find(t=>!
   if(b){b.click=false;b.vid=false;if(!b.name||b.name==='Audio del video')b.name='Base';}
   if(c){c.click=true;c.vid=false;}
   s.tracks=[b,c,v].filter(Boolean);return s;}
-function curSetObj(){let x=sets.find(y=>y.id===curSet);if(!x){if(!sets.length)sets.push({id:uid(),title:'Scaletta 1',items:[]});x=sets[0];curSet=x.id;}return x;}
+function curSetObj(){let x=sets.find(y=>y.id===curSet);if(!x){if(!sets.length)sets.push({id:uid(),title:(LANG==='en'?'Setlist 1':'Scaletta 1'),items:[]});x=sets[0];curSet=x.id;}return x;}
 function rebuild(){const m={};lib.forEach(x=>m[x.id]=x);const st=curSetObj();st.items=st.items.filter(id=>m[id]);songs=st.items.map(id=>m[id]);}
-function projData(p){p=p||{};if(p.lib)return {lib:p.lib,sets:p.sets&&p.sets.length?p.sets:[{id:uid(),title:'Scaletta 1',items:p.lib.map(x=>x.id)}],curSet:p.curSet,looks:p.looks||{}};
-  const L=(p.songs||[]).map(x=>Object.assign({},x,{id:x.id||uid()}));return {lib:L,sets:[{id:uid(),title:'Scaletta 1',items:L.map(x=>x.id)}],curSet:null,looks:p.looks||{}};}
+function projData(p){p=p||{};if(p.lib)return {lib:p.lib,sets:p.sets&&p.sets.length?p.sets:[{id:uid(),title:(LANG==='en'?'Setlist 1':'Scaletta 1'),items:p.lib.map(x=>x.id)}],curSet:p.curSet,looks:p.looks||{}};
+  const L=(p.songs||[]).map(x=>Object.assign({},x,{id:x.id||uid()}));return {lib:L,sets:[{id:uid(),title:(LANG==='en'?'Setlist 1':'Scaletta 1'),items:L.map(x=>x.id)}],curSet:null,looks:p.looks||{}};}
 function setProject(d){lib=d.lib||[];lib.forEach(normSong);sets=d.sets||[];curSet=d.curSet||null;looks=d.looks||{};cur=-1;rebuild();}
 async function addFile(name,blob){const id=uid();await fPut(id,name,blob);return id;}
 
@@ -458,7 +459,7 @@ function renderJob(){const b=$('jobBox');if(!JOB.title){b.innerHTML='<div class=
    <div class="bar"><i style="width:${(JOB.pct*100).toFixed(1)}%"></i></div>
    <div class="row"><span>${esc(JOB.on?JOB.phase:JOB.res||'')}</span><span>${(JOB.pct*100).toFixed(0)}%</span></div>
    <div class="row"><span>${esc(JOB.on?JOB.detail:'')}</span><span>${JOB.on?fmt(el)+(left!=null?' · mancano ~'+fmt(left):''):'durata '+fmt(el)}</span></div></div>`;}
-window.zipProg=(d,t,f)=>jobSet(0.35+0.65*(t?d/t:0),'Creo lo .zip',f+' · '+mb(d/2)+' di '+mb(t/2));
+window.zipProg=(d,t,f)=>jobSet(0.35+0.65*(t?d/t:0),'Creo lo .zip',f+' · '+mb(d/2)+(LANG==='en'?' of ':' di ')+mb(t/2));
 
 // ===== Copia dei file nell'app (per il motore nativo e il monitor) =====
 const b64Of=blob=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const s=String(r.result);res(s.slice(s.indexOf(',')+1));};r.onerror=rej;r.readAsDataURL(blob);});
@@ -533,7 +534,7 @@ function renderMix(){
     <div class="db">${dbs(t.db)} dB</div>${ord('t:'+t.fid)}</div>`);});
   if(cfg.inOn)cfg.inputs.forEach((x,k)=>add('in'+k,`<div class="strip" data-k="in${k}" data-i="in${k}" style="${stripBg(x.col,x.int)}">
     <button class="x" data-a="idel" title="Togli l'ingresso">✕</button>
-    <div class="hd" data-a="look" title="Colore e icona"><span class="ico">${x.ico||'🎤'}</span><b>${esc(x.name||('Ingresso '+(k+1)))}</b><span class="lbl">In ${x.a+1}${x.b>=0&&x.b!==x.a?'-'+(x.b+1):''}</span></div>
+    <div class="hd" data-a="look" title="Colore e icona"><span class="ico">${x.ico||'🎤'}</span><b>${esc(x.name||((LANG==='en'?'Input ':'Ingresso ')+(k+1)))}</b><span class="lbl">In ${x.a+1}${x.b>=0&&x.b!==x.a?'-'+(x.b+1):''}</span></div>
     <div class="tg"><button class="m${x.mute?' on':''}" data-a="imute">M</button><button data-a="icfg">⚙</button></div>
     <select data-a="iout">${outOptions(x.out)}</select><div class="pn"></div>
     <div class="body">${fad('idb',-60,12,x.db)}<div class="vm"><i></i></div></div>
@@ -600,7 +601,7 @@ $('mix').addEventListener('click',async e=>{if(Date.now()-($('mix')._nd||0)<500)
   else if(a==='mono'){cfg.mono=!cfg.mono;saveCfg();sendMono();renderMix();status(cfg.mono?'Master in MONO.':'Master in stereo.');}
   else if(a==='imute'){const x=cfg.inputs[+row.dataset.i.slice(2)];x.mute=!x.mute;saveCfg();sendInput();renderMix();}
   else if(a==='icfg')inputSheet(+row.dataset.i.slice(2));
-  else if(a==='idel'){const k=+row.dataset.i.slice(2);if(!confirm('Togliere «'+(cfg.inputs[k].name||'Ingresso '+(k+1))+'»?'))return;cfg.inputs.splice(k,1);saveCfg();sendInput();renderMix();}
+  else if(a==='idel'){const k=+row.dataset.i.slice(2);if(!confirm('Togliere «'+(cfg.inputs[k].name||(LANG==='en'?'Input ':'Ingresso ')+(k+1))+'»?'))return;cfg.inputs.splice(k,1);saveCfg();sendInput();renderMix();}
   else if(a==='voff'){s.video.off=(s.video.off||0)+(+el.dataset.d);saveSongs();renderMix();sendStrips();if(!NATIVE&&playing)waPlay(waPos());syncVideo(true);}
   else if(a==='vaud'){s.tracks.push({fid:s.video.fid,name:'Audio del video',vid:true,ico:'🎬',db:0,pan:0,mute:false,solo:false,out:'s0'});saveSongs();await stop();await loadSong(cur,false);}
   else if(a==='vdel'){if(!confirm('Togliere il video (e il suo audio) dal brano?'))return;s.tracks=s.tracks.filter(t=>!t.vid&&t.fid!==s.video.fid);s.video=null;saveSongs();await loadSong(cur,false);}
@@ -633,7 +634,7 @@ $('libList').addEventListener('click',async e=>{const b=e.target.closest('button
     const wasCur=songs[cur]&&songs[cur].id===id;if(wasCur)await stop();lib=lib.filter(y=>y!==x);sets.forEach(st=>st.items=st.items.filter(y=>y!==id));rebuild();saveSongs();
     if(wasCur){cur=-1;if(songs.length)await loadSong(0,false);else{renderMix();showTitle();setVideo(null);}}else cur=songs.indexOf(songs[cur]);renderList();purge(x);}});
 document.querySelector('.setbar').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.s,st=curSetObj();
-  if(a==='new'){const t=prompt('Titolo della nuova scaletta','Scaletta '+(sets.length+1));if(!t||!t.trim())return;const n={id:uid(),title:t.trim(),items:[]};sets.push(n);await switchSet(n.id);}
+  if(a==='new'){const t=prompt('Titolo della nuova scaletta',(LANG==='en'?'Setlist ':'Scaletta ')+(sets.length+1));if(!t||!t.trim())return;const n={id:uid(),title:t.trim(),items:[]};sets.push(n);await switchSet(n.id);}
   else if(a==='ren'){const t=prompt('Titolo della scaletta',st.title);if(t&&t.trim()){st.title=t.trim();saveSongs();renderList();}}
   else if(a==='dup'){const n={id:uid(),title:st.title+' (copia)',items:st.items.slice()};sets.splice(sets.indexOf(st)+1,0,n);await switchSet(n.id);}
   else if(a==='del'){if(!confirm('Eliminare la scaletta «'+st.title+'»? I brani restano nella raccolta.'))return;sets=sets.filter(y=>y!==st);curSet=null;await switchSet(curSetObj().id);}});
@@ -797,7 +798,7 @@ $('addIn').onclick=()=>{const used=new Set();cfg.inputs.forEach(x=>{used.add(x.a
   cfg.inputs.push({a,b:-1,db:0,out:'s0',mute:false,name:''});saveCfg();sendInput();renderMix();inputSheet(cfg.inputs.length-1);};
 function inputSheet(k){closeMenus();if(k==null)k=0;if(!cfg.inputs[k]){if(!cfg.inputs.length)cfg.inputs.push({a:0,b:-1,db:0,out:'s0',mute:false,name:''});k=0;}const x=cfg.inputs[k];
   let opt=sel=>{let h='';for(let c=0;c<Math.max(ins,2);c++)h+=`<option value="${c}"${sel===c?' selected':''}>Ingresso ${c+1}</option>`;return h;};
-  sheet(`<h3>🎸 ${esc(x.name||'Ingresso '+(k+1))}: suona sulle basi</h3><p>Scegli quale ingresso della scheda usare (uno per uno strumento o microfono, due per uno stereo) e dove ascoltarlo. ${NATIVE?'Scheda: '+esc(cardName)+' · '+ins+' ingressi.':'Disponibile solo nell\'app.'}</p>
+  sheet(`<h3>🎸 ${esc(x.name||(LANG==='en'?'Input ':'Ingresso ')+(k+1))}: suona sulle basi</h3><p>Scegli quale ingresso della scheda usare (uno per uno strumento o microfono, due per uno stereo) e dove ascoltarlo. ${NATIVE?'Scheda: '+esc(cardName)+' · '+ins+' ingressi.':'Disponibile solo nell\'app.'}</p>
    <div class="frm"><span>Nome</span><input id="iN" value="${esc(x.name||'')}" placeholder="es. Chitarra, Voce"><span>Canale 1</span><select id="iA">${opt(x.a)}</select>
    <span>Canale 2</span><select id="iB"><option value="-1"${x.b<0?' selected':''}>— nessuno (mono)</option>${opt(x.b)}</select>
    <span>Uscita</span><select id="iO">${outOptions(x.out)}</select></div>
@@ -816,7 +817,7 @@ function lookSheet(i){const s=songs[cur],mst=i==='master',isIn=/^in\d+$/.test(i)
     else{Object.assign(t,o);saveSongs();}renderMix();const r=$('mix').querySelector(`.strip[data-i="${i}"]`);if(r)r.classList.add('editing');};
   const g=get();
   const row=$('mix').querySelector(`.strip[data-i="${i}"]`);
-  const opts=mixKeys.map(k=>{const el=$('mix').querySelector(`.strip[data-k="${k}"]`);if(!el||el.dataset.i==null)return '';const di=el.dataset.i,n=di==='master'?'Master':/^in\d+$/.test(di)?(cfg.inputs[+di.slice(2)].name||'Ingresso '+(+di.slice(2)+1)):s.tracks[+di].name;return `<option value="${el.dataset.i}"${el.dataset.i===String(i)?' selected':''}>${esc(n)}</option>`;}).join('');
+  const opts=mixKeys.map(k=>{const el=$('mix').querySelector(`.strip[data-k="${k}"]`);if(!el||el.dataset.i==null)return '';const di=el.dataset.i,n=di==='master'?'Master':/^in\d+$/.test(di)?(cfg.inputs[+di.slice(2)].name||(LANG==='en'?'Input ':'Ingresso ')+(+di.slice(2)+1)):s.tracks[+di].name;return `<option value="${el.dataset.i}"${el.dataset.i===String(i)?' selected':''}>${esc(n)}</option>`;}).join('');
   sheet(`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><b style="flex:none">Modifica:</b><select id="lkSel" style="flex:1;font:inherit;font-size:16px;padding:7px;border-radius:8px;background:var(--card);color:var(--fg);border:1px solid var(--line)">${opts}</select></div>
    <h3 style="display:none">${mst?'Master':inp?'Ingresso':'Traccia'}</h3>
    <div class="frm" style="${mst?'display:none':''}"><span>Nome</span><input id="lkN" value="${esc(g.name)}" placeholder="${inp?'es. Chitarra':''}"></div>
@@ -882,7 +883,7 @@ async function importProject(P,files){const name=P.name||'Progetto importato',D=
   if(lib.length&&!confirm('Aprire il progetto «'+name+'» ('+D.lib.length+' brani, '+D.sets.length+' scalett'+(D.sets.length>1?'e':'a')+')? Il progetto aperto viene sostituito (salvalo prima se ti serve).')){jobEnd('Importazione annullata.',true);return;}
   const ids=Object.keys(P.files||{});let tot=0,done=0;ids.forEach(id=>{const b=files[P.files[id]];if(b)tot+=b.size;});
   for(const id of ids){const b=files[P.files[id]];if(!b)continue;const nm=(P.names||{})[id]||id;
-    jobSet(0.1+0.85*(tot?done/tot:0),'Copio i file nel progetto',nm+' · '+mb(done)+' di '+mb(tot));await fPut(id,nm,b);done+=b.size;}
+    jobSet(0.1+0.85*(tot?done/tot:0),'Copio i file nel progetto',nm+' · '+mb(done)+(LANG==='en'?' of ':' di ')+mb(tot));await fPut(id,nm,b);done+=b.size;}
   jobSet(0.97,'Apro il progetto','');await stop();setProject(D);
   const PR=await projects();let n=name;if(PR[n]&&!confirm('Esiste già un progetto «'+n+'». Sostituirlo?'))n=name+' (importato)';
   await saveProj(n);saveSongs();renderList();renderMix();showTitle();jobEnd('Progetto «'+n+'» importato e salvato ('+lib.length+' brani, '+sets.length+' scalett'+(sets.length>1?'e':'a')+', '+mb(tot)+').');busy=false;if(songs.length)await loadSong(0,false);}
@@ -1034,7 +1035,7 @@ async function doExport(name,PJ,withVideo){const SG=PJ.lib,LK=PJ.looks;
     if(!withVideo)S.forEach(x=>{x.video=null;});
     let ids=[...new Set(S.flatMap(x=>x.tracks.map(t=>t.fid).concat(x.video?[x.video.fid]:[])))];
     jobSet(0,'Preparo i file','');
-    await ensureNative(ids,null,(f,n,d,t)=>jobSet(f*(withVideo?0.35:0.2),'Copio i file nell\'app',n+' · '+mb(d)+' di '+mb(t)));
+    await ensureNative(ids,null,(f,n,d,t)=>jobSet(f*(withVideo?0.35:0.2),'Copio i file nell\'app',n+' · '+mb(d)+(LANG==='en'?' of ':' di ')+mb(t)));
     const names={};for(const id of ids){const f=await fGet(id);names[id]=f?f.name:id;}
     if(!withVideo){ // tracce che leggono l'audio da un file video: estraggo solo l'audio
       const vids=ids.filter(id=>vset.has(id)||VID.test(names[id]||'')||S.some(x=>x.tracks.some(t=>t.fid===id&&t.vid)));const map={};
@@ -1081,6 +1082,112 @@ function page(l){const p=l===true?'list':l||'song';document.body.classList.toggl
   $('tbList').classList.toggle('on',p==='list');$('tbSong').classList.toggle('on',p==='song');$('tbMix').classList.toggle('on',p==='mix');setTimeout(fitFaders,30);}
 $('tbProj').onclick=()=>page('proj');$('tbSong').onclick=()=>page('song');$('tbList').onclick=()=>page('list');$('tbMix').onclick=()=>page('mix');$('tbPlay').onclick=()=>$('bPlay').click();
 new MutationObserver(()=>{$('tbPlay').textContent=$('bPlay').textContent;$('tbPlay').classList.toggle('on',playing);}).observe($('bPlay'),{childList:true,attributes:true});
+// ===== Lingua: italiano / English (traduzione dell'interfaccia al volo) =====
+const LANG=(cfg.lang||((navigator.language||'it').slice(0,2)==='it'?'it':'en'));
+const EN_X={'File':'File','Scaletta':'Setlist','Vista':'View','Base':'Backing','Brano':'Song','Progetti':'Projects','Attività':'Activity','Raccolta brani':'Song library',
+ 'Annulla':'Cancel','Apri':'Open','Chiudi':'Close','Fine':'Done','Nome':'Name','Icona':'Icon','Uscita':'Output','Canale 1':'Channel 1','Canale 2':'Channel 2','Duplica':'Duplicate',
+ 'Rinomina':'Rename','Solo audio':'Audio only','Audio e video':'Audio and video','Colore del fondo':'Background colour','Modifica:':'Edit:','Panorama':'Pan','Informazioni':'About',
+ 'Tema grigio':'Grey theme','Pronto.':'Ready.','HDMI spento':'HDMI off','Audio del video':'Video audio','Voce':'Voice','Microfono':'Microphone','Chitarra':'Guitar','Basso':'Bass',
+ 'Tastiera':'Keyboard','Batteria':'Drums','Percussioni':'Percussion','Tromba':'Trumpet','Violino':'Violin','Fisarmonica':'Accordion','Flauto':'Flute','Musica':'Music','Cuffie':'Headphones',
+ '🎚 Brano':'🎚 Song','☰ Scaletta':'☰ Setlist','📁 Progetti':'📁 Projects','✎ Modifica':'✎ Edit','✓ Fine':'✓ Done','🎵 Nuovi':'🎵 New','🗂 Importa':'🗂 Import','💾 Salva':'💾 Save',
+ 'Intensità del colore:':'Colour intensity:','tieni premuto e trascina':'press and hold to drag','tieni premuto e trascina per spostare':'press and hold, then drag to move',
+ 'Elimina dalla raccolta':'Delete from library','Elimina la scaletta':'Delete setlist','Copertina (foto)':'Cover (photo)','Togli copertina':'Remove cover','Nuova scaletta':'New setlist',
+ 'Rinomina il brano':'Rename song','Togli dalla scaletta':'Remove from setlist','Aggiungi in fondo alla scaletta':'Add to the end of the setlist','Colore e icona':'Colour and icon',
+ 'Ascolto in mono':'Listen in mono','Togli il video':'Remove video','Togli l\'ingresso':'Remove input','Togli la traccia dal brano':'Remove the track from the song',
+ 'Brano precedente':'Previous song','Brano successivo':'Next song','Torna all\'inizio':'Back to start','Avvia / ferma (barra spaziatrice)':'Play / stop (space bar)',
+ 'A sinistra: video o mixer':'Left side: video or mixer','Mostra il mixer':'Show the mixer','Mostra il video':'Show the video','Trascina per ridimensionare il video':'Drag to resize the video',
+ 'Accendi / spegni il video sul monitor HDMI':'Turn the video on the HDMI monitor on / off','— nessuno (mono)':'— none (mono)','es. Chitarra, Voce':'e.g. Guitar, Vocals','Sync del video (doppio tocco: 0)':'Video sync (double tap: 0)',
+ 'Rosso = panorama non al centro (doppio tocco sul cursore per centrarlo)':'Red = pan not centred (double tap the slider to centre it)','Prosegui l\'ordine della scaletta (avanzamento automatico)':'Continue the setlist order (auto advance)'};
+const EN_P=[
+ ['📦 Importa .zip (ARNOCLICK o progetto ArnoStage)…','📦 Import .zip (ARNOCLICK or ArnoStage project)…'],['📁 Importa una cartella di brani…','📁 Import a folder of songs…'],
+ ['🗂 Importa più brani (file audio, video e .zip)…','🗂 Import several songs (audio, video and .zip files)…'],['🎵 Nuovi brani (la base) da file audio…','🎵 New songs (backing) from audio files…'],
+ ['♩ Click del brano (aggiungi o sostituisci)…','♩ Song click (add or replace)…'],['🎬 Abbina un video al brano…','🎬 Attach a video to the song…'],['💾 Salva progetto con nome…','💾 Save project as…'],
+ ['💾 Salva progetto','💾 Save project'],['📂 Apri progetto…','📂 Open project…'],['📂 Apri progetto','📂 Open project'],['📤 Condividi progetto (.zip: AirDrop, Messaggi, File)…','📤 Share project (.zip: AirDrop, Messages, Files)…'],
+ ['📤 Condividi progetto','📤 Share project'],['🆕 Nuovo progetto','🆕 New project'],['🧹 Svuota la scaletta (i brani restano nella raccolta)…','🧹 Clear the setlist (songs stay in the library)…'],
+ ['Passa da sola al brano successivo','Go to the next song automatically'],['Modifica la scaletta (sposta, rinomina, elimina)','Edit the setlist (move, rename, delete)'],
+ ['🎛 Scheda audio e uscite','🎛 Audio interface and outputs'],['🔈 Scegli dove esce l\'audio','🔈 Choose the audio output'],['🎸 Ingressi: suona sulle basi','🎸 Inputs: play along'],
+ ['Impostazioni ingressi…','Input settings…'],['Anteprima anche con l\'HDMI acceso','Preview also with HDMI on'],['Anteprima del video sull\'iPhone','Video preview on the iPhone'],
+ ['🎚 Mixer stile ARNOCLICK','🎚 ARNOCLICK-style mixer'],['🌐 Lingua: Italiano','🌐 Language: Italiano'],['🌐 Language: English','🌐 Language: English'],
+ ['Nessun video abbinato','No video attached'],['(File › Abbina un video al brano)','(File › Attach a video to the song)'],['Nessun video caricato','No video loaded'],
+ ['Anteprima spenta (Vista › Anteprima del video)','Preview off (View › Video preview)'],['Nessuna importazione o esportazione in corso.','No import or export in progress.'],
+ ['Importa un progetto ARNOCLICK (File › Importa) o dei file audio.','Import an ARNOCLICK project (File › Import) or some audio files.'],
+ ['La scaletta è vuota: aggiungi brani dalla raccolta qui sotto (＋).','The setlist is empty: add songs from the library below (＋).'],
+ ['Nessun brano: «🎵 Nuovi brani» (un file audio = un brano con la sua Base) o File › Importa .zip di ARNOCLICK.','No songs: «🎵 New» (one audio file = one song with its backing) or File › Import an ARNOCLICK .zip.'],
+ ['Nessun progetto salvato (File › Salva progetto).','No saved projects (File › Save project).'],['Nessun progetto salvato: usa File › Salva progetto con nome.','No saved projects: use File › Save project as.'],
+ ['Aprendo un progetto, la scaletta attuale viene sostituita: salvala prima se ti serve.','Opening a project replaces the current one: save it first if you need it.'],
+ ['Uguale in tutti i brani (Base, Click, Audio del video)','Same in every song (Backing, Click, Video audio)'],['Crea e condividi','Create and share'],
+ ['Tutto il progetto, video compresi.','The whole project, videos included.'],['Tracce, click, mixer e colori, senza video.','Tracks, click, mixer and colours, without videos.'],
+ [' L\'audio dei video viene estratto in file audio leggeri (.m4a).',' Video audio is extracted into small audio files (.m4a).'],
+ ['Troppo pesante','Too large'],[': il file .zip non può superare 4 GB. Riduci il carico: esporta solo l\'audio o salva meno brani nel progetto.',': the .zip file cannot exceed 4 GB. Reduce the load: export audio only or keep fewer songs in the project.'],
+ ['Pacchetto pesante','Large package'],[': AirDrop funziona, ma Messaggi e WhatsApp lo rifiuteranno e ci vorrà tempo. Per ridurre il carico esporta solo l\'audio.',': AirDrop works, but Messages and WhatsApp will refuse it and it will take time. To reduce the load export audio only.'],
+ ['Volume e muto sono nella sua striscia del mixer.','Volume and mute are on its mixer strip.'],[': suona sulle basi',': play along'],
+ ['Scegli quale ingresso della scheda usare (uno per uno strumento o microfono, due per uno stereo) e dove ascoltarlo.','Choose which interface input to use (one for an instrument or microphone, two for stereo) and where to hear it.'],
+ ['Disponibile solo nell\'app.','Only available in the app.'],['Disponibile nell\'app.','Available in the app.'],['Scheda: ','Interface: '],[' ingressi.',' inputs.'],
+ ['Collega la scheda audio esterna (USB, con l\'adattatore) prima di aprire il brano: ArnoStage usa tutte le sue uscite. Nel mixer scegli per ogni traccia l\'uscita: per esempio la base su Out 1-2 (al pubblico) e il click su Out 3 mono (alle cuffie). Le tracce con «click» nel nome vanno da sole su Out 3, se la scheda ce l\'ha.','Connect the external audio interface (USB, with the adapter) before opening the song: ArnoStage uses all its outputs. In the mixer choose each track\'s output: e.g. the backing on Out 1-2 (front of house) and the click on Out 3 mono (headphones). Tracks with «click» in the name go to Out 3 automatically if the interface has it.'],
+ ['Se colleghi l\'HDMI dopo la scheda, iOS sposta l\'audio sul monitor.','If you connect HDMI after the interface, iOS moves the audio to the monitor.'],
+ ['Per tenerlo sulla scheda: tocca qui sotto «Scegli dove esce l\'audio» e scegli la scheda, oppure collega prima l\'HDMI e per ultima la scheda audio (iOS usa l\'ultima collegata).','To keep it on the interface: tap «Choose the audio output» below and pick the interface, or connect HDMI first and the audio interface last (iOS uses the last one connected).'],
+ ['Video: collega il monitor (adattatore HDMI). Il video del brano va sul monitor a tempo con l\'audio; lo schermo dell\'iPhone resta il pannello di controllo.','Video: connect the monitor (HDMI adapter). The song\'s video plays on the monitor in time with the audio; the iPhone screen stays the control panel.'],
+ ['Nel browser l\'audio esce solo sulle uscite 1-2. Le uscite separate, gli ingressi e l\'HDMI funzionano nell\'app ArnoStage per iPhone e iPad.','In the browser audio only plays on outputs 1-2. Separate outputs, inputs and HDMI work in the ArnoStage app for iPhone and iPad.'],
+ ['Raccolte di brani (base, click, video e audio del video) da mettere in una o più scalette, con mixer, uscite separate della scheda audio, ingressi per suonare sulle basi e video in sync sull\'HDMI.','Song libraries (backing, click, video and video audio) to arrange in one or more setlists, with mixer, separate audio interface outputs, inputs to play along and video in sync on HDMI.'],
+ ['Versione web (browser)','Web version (browser)'],['Tutti i diritti riservati.','All rights reserved.'],
+ // stato e messaggi
+ ['Avanzamento automatico ACCESO: a fine brano parte il successivo','Auto advance ON: the next song starts at the end'],['Avanzamento automatico SPENTO: a fine brano si ferma e aspetta ⏭','Auto advance OFF: stops at the end and waits for ⏭'],
+ ['A fine brano parte da solo il successivo.','The next song starts automatically at the end.'],['A fine brano si ferma.','Stops at the end of the song.'],['Master in MONO.','Master in MONO.'],['Master in stereo.','Master in stereo.'],
+ ['Fine brano. Tocca ⏭ per il successivo: «','End of song. Tap ⏭ for the next one: «'],['Fine della scaletta.','End of the setlist.'],
+ ['Benvenuto: File › Importa .zip di ARNOCLICK o 🎵 Nuovi brani per iniziare.','Welcome: File › Import an ARNOCLICK .zip or 🎵 New songs to start.'],['Scegli o aggiungi i brani nella scaletta (☰ Scaletta).','Choose or add songs in the setlist (☰ Setlist).'],
+ ['Brano importato senza click: aggiungilo con «＋ Click» nel mixer.','Song imported without a click: add it with «＋ Click» in the mixer.'],
+ ['Gli ingressi della scheda funzionano nell\'app per iPhone/iPad.','Interface inputs work in the iPhone/iPad app.'],['La condivisione del progetto .zip funziona nell\'app per iPhone/iPad.','Sharing the project .zip works in the iPhone/iPad app.'],
+ ['Permesso per gli ingressi negato: Impostazioni › ArnoStage › Microfono.','Input permission denied: Settings › ArnoStage › Microphone.'],['Prima apri un brano della scaletta.','First open a song in the setlist.'],
+ ['Prima crea o scegli un brano.','First create or choose a song.'],['Non riesco a leggere questa immagine.','Cannot read this image.'],['Non riesco a leggere un file audio','Cannot read an audio file'],
+ ['Non riesco a leggere «','Cannot read «'],['Nello .zip non ci sono tracce audio.','There are no audio tracks in the .zip.'],['Il file non è un .zip valido.','The file is not a valid .zip.'],
+ ['Questo .zip è compresso in un modo che questo iPhone non sa aprire: aggiorna iOS.','This .zip is compressed in a way this iPhone cannot open: update iOS.'],
+ ['Nessun brano trovato (servono file audio .wav/.mp3/.m4a… o video).','No songs found (audio files .wav/.mp3/.m4a… or videos are needed).'],['Importazione annullata.','Import cancelled.'],
+ ['Importazione non riuscita: ','Import failed: '],['Esportazione non riuscita: ','Export failed: '],['Scaletta svuotata.','Setlist cleared.'],['Nuovo progetto.','New project.'],
+ ['Video sul monitor HDMI acceso.','Video on the HDMI monitor on.'],['Video sul monitor HDMI spento.','Video on the HDMI monitor off.'],['Monitor HDMI collegato','HDMI monitor connected'],
+ [' (video spento: tocca HDMI per accenderlo).',' (video off: tap HDMI to turn it on).'],['Attenzione: l\'audio ora esce su «','Warning: audio now plays on «'],
+ ['». Audio › Scegli dove esce l\'audio per tornare alla scheda.','». Audio › Choose the audio output to go back to the interface.'],['Scheda audio: ','Audio interface: '],[' uscite, ',' outputs, '],
+ ['Ingressi attivi: ','Inputs on: '],[' (la scheda ne ha ',' (the interface has '],['). ＋ Ingresso nel mixer per aggiungerne.','). ＋ Input in the mixer to add more.'],
+ ['» pronto: scegli AirDrop, Messaggi o Salva in File.','» ready: choose AirDrop, Messages or Save to Files.'],['» importato e salvato (','» imported and saved ('],
+ ['» nella raccolta e in fondo alla scaletta: ','» into the library and at the end of the setlist: '],['» aggiunto alla raccolta e in fondo alla scaletta.','» added to the library and at the end of the setlist.'],
+ [' brani aggiunti alla raccolta e in fondo alla scaletta.',' songs added to the library and at the end of the setlist.'],[' brani importati nella raccolta e in fondo alla scaletta «',' songs imported into the library and at the end of the setlist «'],
+ [' elementi senza audio ignorati',' items without audio ignored'],['» aggiunto in fondo a «','» added to the end of «'],['Copertina di «','Cover of «'],['» impostata.','» set.'],
+ ['Pronto anche il successivo: «','Next one ready too: «'],['audio del video come base','video audio as backing'],
+ ['Importato «','Imported «'],['Progetto «','Project «'],['» aperto.','» opened.'],['» salvato (','» saved ('],['Carico «','Loading «'],['» pronto · ','» ready · '],['Preparo «','Preparing «'],
+ ['Nuovo brano: ','New song: '],['Importo il click ','Importing the click '],['Importo il video ','Importing the video '],['Copio nell\'app: ','Copying into the app: '],
+ ['Esporto «','Exporting «'],['Importo «','Importing «'],['Importo ','Importing '],[' file (',' files ('],
+ ['Preparo i file','Preparing the files'],['Leggo lo .zip','Reading the .zip'],['Copio i file nel progetto','Copying files into the project'],['Copio i file nell\'app','Copying files into the app'],
+ ['Estraggo l\'audio dai video','Extracting audio from videos'],['Creo lo .zip','Creating the .zip'],['Apro il progetto','Opening the project'],['Copio la base','Copying the backing'],['Copio il click','Copying the click'],['Copio il video','Copying the video'],
+ ['mancano ~','~ left '],['durata ','duration '],
+ // conferme e domande
+ ['Aprire il progetto «','Open the project «'],['? Il progetto aperto viene sostituito (salvalo prima se ti serve).','? The open project will be replaced (save it first if you need it).'],
+ ['Eliminare il progetto «','Delete the project «'],['»? (I brani nella scaletta attuale restano.)','»? (The songs in the current setlist stay.)'],['»? (La scaletta aperta resta.)','»? (The open setlist stays.)'],
+ ['Eliminare la scaletta «','Delete the setlist «'],['»? I brani restano nella raccolta.','»? The songs stay in the library.'],['» dalla raccolta?','» from the library?'],['Eliminare «','Delete «'],
+ ['Verrà tolto anche da ','It will also be removed from '],['Esiste già un progetto «','A project already exists named «'],['Esiste già «','«'],['». Sostituirlo?','» already exists. Replace it?'],
+ ['Il brano ha già un click. Sostituirlo con «','The song already has a click. Replace it with «'],['Iniziare un nuovo progetto vuoto? Salva prima quello attuale se ti serve (i progetti salvati restano).','Start a new empty project? Save the current one first if you need it (saved projects stay).'],
+ ['Sostituire la scaletta attuale con «','Replace the current setlist with «'],['Svuotare la scaletta «','Clear the setlist «'],['Togliere il video (e il suo audio) dal brano?','Remove the video (and its audio) from the song?'],
+ ['Togliere la copertina di «','Remove the cover of «'],['» dal brano?','» from the song?'],['Togliere «','Remove «'],['Nome del brano','Song name'],['Nome del progetto (scaletta)','Project name'],
+ ['Titolo della nuova scaletta','Title of the new setlist'],['Titolo della scaletta','Setlist title'],['Nome del progetto da condividere','Name of the project to share'],
+ // composizioni ricorrenti
+ ['Progetto: ','Project: '],['(non salvato)','(not saved)'],['● in scaletta','● in setlist'],['● aperto','● open'],[' brani in raccolta',' songs in library'],
+ ['La raccolta aperta (','The open library ('],[') non è ancora salvata in un progetto.',') is not saved in a project yet.'],['Hai modifiche non salvate in «','You have unsaved changes in «'],
+
+ ['La raccolta è vuota.','The library is empty.'],['＋ Ingresso','＋ Input'],['Esci','Exit']
+].sort((a,b)=>b[0].length-a[0].length);
+const EN_R=[[/(\d+) brani\b/g,'$1 songs'],[/(\d+) tracce\b/g,'$1 tracks'],[/(\d+) scalette\b/g,'$1 setlists'],[/(\d+) scaletta\b/g,'$1 setlist'],[/^Brano (\d+) di (\d+)$/,'Song $1 of $2'],[/ · (\d+) di ([\d.]+ [MG]B)$/,' · $1 of $2']];
+function tr(x){if(LANG!=='en'||x==null)return x;x=String(x);if(!/[A-Za-zÀ-ú]/.test(x))return x;const t=x.trim();
+  if(EN_X[t]!=null)return x.replace(t,EN_X[t]);let y=x;for(const [a,b] of EN_P)if(y.includes(a))y=y.split(a).join(b);for(const [r,b] of EN_R)y=y.replace(r,b);return y;}
+function trNode(n){if(n.nodeType===3){if(n.parentNode&&/^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentNode.nodeName))return;const v=tr(n.data);if(v!==n.data)n.data=v;}
+  else if(n.nodeType===1){for(const a of ['title','placeholder'])if(n.hasAttribute&&n.hasAttribute(a)){const v=tr(n.getAttribute(a));if(v!==n.getAttribute(a))n.setAttribute(a,v);}
+    for(const c of n.childNodes)trNode(c);}}
+if(LANG==='en'){document.documentElement.lang='en';
+  const _c=window.confirm.bind(window),_p=window.prompt.bind(window),_a=window.alert.bind(window);
+  window.confirm=m=>_c(tr(m));window.prompt=(m,d)=>_p(tr(m),d);window.alert=m=>_a(tr(m));
+  trNode(document.body);
+  new MutationObserver(ms=>{for(const m of ms){if(m.type==='characterData')trNode(m.target);else if(m.type==='attributes')trNode(m.target);else m.addedNodes.forEach(trNode);}})
+    .observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['title','placeholder']});}
+$('miLang').textContent=LANG==='en'?'🌐 Language: English':'🌐 Lingua: Italiano';
+$('miLang').onclick=()=>{cfg.lang=LANG==='en'?'it':'en';saveCfg();location.reload();};
+
 // ===== Avvio =====
 (async()=>{
   leftUI();layout();applyVW();applyTheme();autoUI();$('miPrevH').classList.toggle('on',!!cfg.prevHdmi);$('miPrev').classList.toggle('on',cfg.prev);$('miIn').classList.toggle('on',cfg.inOn&&NATIVE);
