@@ -373,6 +373,21 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 .npi{width:100%;font-size:14px;color:#d7d7d2;background:#17181d;border:1px solid #34353d;border-radius:12px;padding:10px 12px}
 .npi.empty0{color:#ffd58a;border-color:#7a5a1a;background:#241b08}
 .npok{width:100%;margin-top:4px;padding:15px;border:0;border-radius:14px;background:linear-gradient(135deg,#22c55e,#15803d);color:#fff;font:inherit;font-size:17px;font-weight:800;box-shadow:0 6px 20px rgba(34,197,94,.35)}
+.x14{}
+/* menu iniziale: pagina ferma, i progetti scorrono dentro la loro finestra */
+#start.on{display:flex;flex-direction:column;overflow:hidden}
+#start .sbox{display:flex;flex-direction:column;flex:1;min-height:0;width:100%}
+#stList{flex:1;min-height:120px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:rgba(10,12,18,.75);border:1px solid #34353d;border-radius:16px;padding:10px;box-shadow:inset 0 2px 10px rgba(0,0,0,.5)}
+#stList:empty{display:none}
+#stList .pr:last-child{margin-bottom:0}
+#stList .ogrid{padding:2px}
+/* pagina Progetti: Attività ferma in alto, l'elenco dei progetti scorre nella sua finestra */
+body.pgProj main #colP{display:flex!important;flex-direction:column;overflow:hidden}
+#colP>.sec:last-child{flex:1;min-height:0;display:flex;flex-direction:column;margin-bottom:0}
+#projList{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;border-top:1px solid var(--line);padding-top:4px}
+/* menu a tendina bloccati: non trascinano la pagina, scorrono al loro interno se lunghi */
+.menu{max-height:calc(100vh - var(--sat) - var(--sab) - 70px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+body.menuopen main{pointer-events:none}
 </style>
 </head>
 <body>
@@ -476,7 +491,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.3.7';
+const VERSION='0.3.8';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -1087,8 +1102,8 @@ document.addEventListener('drop',async e=>{e.preventDefault();const l=[...e.data
   if(a.length){const c=a.filter(f=>isClick(f.name)),o=a.filter(f=>!isClick(f.name));if(o.length)await newFromAudio(o);if(c.length&&cur>=0)await addClick(c);}if(v)await addVideo(v);});
 
 // ===== Menu e fogli =====
-function closeMenus(){document.querySelectorAll('.menu.open,.mbtn.open').forEach(x=>x.classList.remove('open'));sendRect();}
-document.querySelectorAll('.mbtn').forEach(b=>b.onclick=e=>{e.stopPropagation();const m=$(b.dataset.m),o=m.classList.contains('open');closeMenus();if(!o){m.classList.add('open');b.classList.add('open');}sendRect();});
+function closeMenus(){document.querySelectorAll('.menu.open,.mbtn.open').forEach(x=>x.classList.remove('open'));document.body.classList.remove('menuopen');sendRect();}
+document.querySelectorAll('.mbtn').forEach(b=>b.onclick=e=>{e.stopPropagation();const m=$(b.dataset.m),o=m.classList.contains('open');closeMenus();if(!o){m.classList.add('open');b.classList.add('open');}document.body.classList.toggle('menuopen',!!document.querySelector('.menu.open'));sendRect();});
 document.addEventListener('click',e=>{if(!e.target.closest('.menu'))closeMenus();});
 function sheet(h,lk){document.body.classList.toggle('lkopen',!!lk);$('sbox').innerHTML=h;$('sheet').classList.toggle('lk',!!lk);$('sheet').classList.add('on');sendRect();}
 function closeSheet(){setTimeout(sendRect,30);document.body.classList.remove('lkopen');document.querySelectorAll('#mix .editing').forEach(x=>x.classList.remove('editing'));setTimeout(fitFaders,30);$('sheet').classList.remove('on');}
@@ -1317,7 +1332,7 @@ async function showStart(){const P=await projects(),names=Object.keys(P).sort((a
   const cd=cfg.proj&&P[cfg.proj]?projData(P[cfg.proj]):(lib.length?{lib,sets,looks,cover:pcover}:null);
   $('stCont').innerHTML=cd?`<button class="go" data-st="cont">${cov(cd)}<span><small>Continua</small><b>${esc(cfg.proj||'Progetto non salvato')}</b><small>${cd.lib.length} ${cd.lib.length===1?'brano':'brani'} · ${cd.sets.length} playlist</small></span></button>`:'';
   document.querySelector('#start .sgrid').style.display='';document.querySelector('#start .stit').style.display='';
-  $('stList').innerHTML=names.filter(n=>n!==cfg.proj).slice(0,8).map(n=>{const d=projData(P[n]);return `<button class="pr" data-n="${esc(n)}">${cov(d)}<span><b>${esc(n)}</b><br><small>${d.lib.length} ${d.lib.length===1?'brano':'brani'} · ${new Date(P[n].saved).toLocaleDateString(LANG==='en'?'en-GB':'it-IT')}</small></span></button>`;}).join('')||'<div class="empty">Nessun altro progetto salvato.</div>';
+  $('stList').innerHTML=names.filter(n=>n!==cfg.proj).map(n=>{const d=projData(P[n]);return `<button class="pr" data-n="${esc(n)}">${cov(d)}<span><b>${esc(n)}</b><br><small>${d.lib.length} ${d.lib.length===1?'brano':'brani'} · ${new Date(P[n].saved).toLocaleDateString(LANG==='en'?'en-GB':'it-IT')}</small></span></button>`;}).join('')||'<div class="empty">Nessun altro progetto salvato.</div>';
   $('start').classList.add('on');setTimeout(sendRect,30);}
 // ===== Nuovo progetto dal menu iniziale: copertina, nome, data di creazione, conferma =====
 let NP=null;
