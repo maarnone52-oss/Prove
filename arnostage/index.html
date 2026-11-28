@@ -350,6 +350,13 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 @keyframes splOut{to{opacity:0;transform:scale(1.03)}}
 @keyframes splShine{to{transform:translateX(80%)}}
 @keyframes splBg{to{opacity:0;visibility:hidden}}
+.x11{}
+.otit{font-size:22px;font-weight:800;margin:0 4px 12px}
+.ogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px}
+.ogrid .oc{display:flex;flex-direction:column;align-items:stretch;gap:3px;background:none;border:0;color:#fff;font:inherit;text-align:left;padding:0}
+.ogrid .oc img,.ogrid .oc .ph{width:100%;aspect-ratio:1;object-fit:cover;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.6);border:1px solid #3a3b44;background:#22232a;display:flex;align-items:center;justify-content:center;font-size:40px}
+.ogrid .oc b{font-size:14px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ogrid .oc small{color:var(--mut);font-size:11px}
+.ogrid .oc:active img{transform:scale(.97)}
 </style>
 </head>
 <body>
@@ -453,7 +460,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.3.3';
+const VERSION='0.3.4';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -493,7 +500,7 @@ const fGet=id=>tx('files','readonly',s=>s.get(id));
 const fDel=id=>tx('files','readwrite',s=>s.delete(id));
 const kvSet=(k,v)=>tx('kv','readwrite',s=>s.put(v,k));
 const kvGet=k=>tx('kv','readonly',s=>s.get(k));
-let saveT=0;function saveSongs(){clearTimeout(saveT);saveT=setTimeout(()=>{kvSet('lib',lib).catch(()=>{});kvSet('sets',sets).catch(()=>{});kvSet('curSet',curSet).catch(()=>{});kvSet('looks',looks).catch(()=>{});},250);}
+let saveT=0;function saveSongs(){clearTimeout(saveT);saveT=setTimeout(()=>{kvSet('lib',lib).catch(()=>{});kvSet('sets',sets).catch(()=>{});kvSet('curSet',curSet).catch(()=>{});kvSet('looks',looks).catch(()=>{});kvSet('pcover',pcover||'').catch(()=>{});},250);}
 // ===== Raccolta brani e scalette =====
 // Un brano ha solo: Base (audio), Click, Video e Audio del video. Le altre strisce del mixer sono gli ingressi della scheda.
 function normSong(s){const T=s.tracks||[];const v=T.find(t=>t.vid),c=T.find(t=>!t.vid&&(t.click!=null?t.click:isClick(t.name))),b=T.find(t=>t!==v&&t!==c);
@@ -502,9 +509,22 @@ function normSong(s){const T=s.tracks||[];const v=T.find(t=>t.vid),c=T.find(t=>!
   s.tracks=[b,c,v].filter(Boolean);return s;}
 function curSetObj(){let x=sets.find(y=>y.id===curSet);if(!x){if(!sets.length)sets.push({id:uid(),title:(LANG==='en'?'Setlist 1':'Scaletta 1'),items:[]});x=sets[0];curSet=x.id;}return x;}
 function rebuild(){const m={};lib.forEach(x=>m[x.id]=x);const st=curSetObj();st.items=st.items.filter(id=>m[id]);songs=st.items.map(id=>m[id]);}
-function projData(p){p=p||{};if(p.lib)return {lib:p.lib,sets:p.sets&&p.sets.length?p.sets:[{id:uid(),title:(LANG==='en'?'Setlist 1':'Scaletta 1'),items:p.lib.map(x=>x.id)}],curSet:p.curSet,looks:p.looks||{}};
-  const L=(p.songs||[]).map(x=>Object.assign({},x,{id:x.id||uid()}));return {lib:L,sets:[{id:uid(),title:(LANG==='en'?'Setlist 1':'Scaletta 1'),items:L.map(x=>x.id)}],curSet:null,looks:p.looks||{}};}
-function setProject(d){lib=d.lib||[];lib.forEach(normSong);sets=d.sets||[];curSet=d.curSet||null;looks=d.looks||{};cur=-1;rebuild();}
+function projData(p){p=p||{};if(p.lib)return {lib:p.lib,sets:p.sets&&p.sets.length?p.sets:[{id:uid(),title:(LANG==='en'?'Setlist 1':'Scaletta 1'),items:p.lib.map(x=>x.id)}],curSet:p.curSet,looks:p.looks||{},cover:p.cover||''};
+  const L=(p.songs||[]).map(x=>Object.assign({},x,{id:x.id||uid()}));return {lib:L,sets:[{id:uid(),title:(LANG==='en'?'Setlist 1':'Scaletta 1'),items:L.map(x=>x.id)}],curSet:null,looks:p.looks||{},cover:p.cover||''};}
+let pcover='';
+// copertina automatica del progetto: ogni volta diversa (colori, disegno e iniziali del nome)
+function genCover(name){const c=document.createElement('canvas');c.width=c.height=480;const g=c.getContext('2d'),R=Math.random,h=Math.floor(R()*360),h2=(h+60+Math.floor(R()*180))%360;
+  const gr=g.createLinearGradient(0,0,480*R(),480);gr.addColorStop(0,`hsl(${h},70%,${35+R()*15}%)`);gr.addColorStop(1,`hsl(${h2},75%,${18+R()*14}%)`);g.fillStyle=gr;g.fillRect(0,0,480,480);
+  const kind=Math.floor(R()*4);g.globalAlpha=.28;
+  for(let i=0;i<14;i++){g.fillStyle=g.strokeStyle=`hsl(${(h+i*37)%360},90%,${55+R()*30}%)`;g.lineWidth=6+R()*24;
+    if(kind===0){g.beginPath();g.arc(R()*480,R()*480,20+R()*150,0,7);g.fill();}
+    else if(kind===1){g.save();g.translate(240,240);g.rotate(R()*3.2);g.fillRect(-400,-200+i*40,800,10+R()*22);g.restore();}
+    else if(kind===2){g.beginPath();g.moveTo(0,R()*480);for(let x=0;x<=480;x+=40)g.lineTo(x,240+Math.sin(x/60+i)*(40+R()*120));g.stroke();}
+    else{const x=i*34+10,hh=40+R()*360;g.fillRect(x,480-hh,22,hh);}}
+  g.globalAlpha=1;const ini=String(name||'A').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'A';
+  g.fillStyle='rgba(0,0,0,.25)';g.fillRect(0,330,480,150);g.fillStyle='#fff';g.font='800 150px -apple-system,system-ui,sans-serif';g.textAlign='center';g.textBaseline='middle';g.shadowColor='rgba(0,0,0,.45)';g.shadowBlur=18;g.fillText(ini,240,200);
+  g.shadowBlur=0;g.font='700 34px -apple-system,system-ui,sans-serif';g.fillText(String(name||'').slice(0,22),240,410);return c.toDataURL('image/jpeg',.85);}
+function setProject(d){pcover=d.cover||'';lib=d.lib||[];lib.forEach(normSong);sets=d.sets||[];curSet=d.curSet||null;looks=d.looks||{};cur=-1;rebuild();}
 async function addFile(name,blob){const id=uid();await fPut(id,name,blob);return id;}
 
 // ===== Attività (importazione / esportazione) con barra di avanzamento =====
@@ -1068,8 +1088,8 @@ $('miGray').onclick=()=>{cfg.gray=!cfg.gray;saveCfg();applyTheme();closeMenus();
 function applyTheme(){document.body.classList.toggle('mixac',!!cfg.mixAC);$('miAC').classList.toggle('on',!!cfg.mixAC);setTimeout(fitFaders,30);document.documentElement.dataset.theme=cfg.gray?'gray':'';$('miGray').classList.toggle('on',cfg.gray);}
 function showProj(){$('projN').textContent='Progetto: '+(cfg.proj||'(non salvato)');}
 async function projects(){return (await kvGet('projects').catch(()=>null))||{};}
-const projNow=()=>JSON.parse(JSON.stringify({lib,sets,curSet,looks}));
-async function saveProj(name){const P=await projects();P[name]=Object.assign(projNow(),{saved:Date.now()});
+const projNow=()=>JSON.parse(JSON.stringify({lib,sets,curSet,looks,cover:pcover}));
+async function saveProj(name){if(!pcover||cfg.proj!==name&&!(await projects())[name])pcover=genCover(name);const P=await projects();P[name]=Object.assign(projNow(),{saved:Date.now()});
   await kvSet('projects',P);cfg.proj=name;saveCfg();showProj();if(document.body.classList.contains('pgProj'))renderProj();status('Progetto «'+name+'» salvato ('+lib.length+' brani, '+sets.length+' scalett'+(sets.length>1?'e':'a')+').');}
 $('miSave').onclick=async()=>{closeMenus();if(!cfg.proj)return $('miSaveAs').onclick();await saveProj(cfg.proj);};
 $('miSaveAs').onclick=async()=>{closeMenus();const n=prompt('Nome del progetto (scaletta)',cfg.proj||'Concerto');if(!n||!n.trim())return;
@@ -1143,7 +1163,7 @@ $('projList').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
 onPick('fZip2',l=>importZip(l[0]));
 $('miStart').onclick=()=>{closeMenus();showStart();};
 $('miNew').onclick=async()=>{closeMenus();if(lib.length&&!confirm('Iniziare un nuovo progetto vuoto? Salva prima quello attuale se ti serve (i progetti salvati restano).'))return;
-  await stop();const old=lib;setProject({lib:[],sets:[],looks:{}});cfg.proj='';saveCfg();for(const x of old)await purge(x);saveSongs();showProj();renderList();renderMix();showTitle();setVideo(null);status('Nuovo progetto.');};
+  await stop();const old=lib;setProject({lib:[],sets:[],looks:{}});cfg.proj='';pcover='';saveCfg();for(const x of old)await purge(x);saveSongs();showProj();renderList();renderMix();showTitle();setVideo(null);status('Nuovo progetto.');};
 $('miClear').onclick=async()=>{closeMenus();if(!songs.length||!confirm('Svuotare la scaletta «'+curSetObj().title+'»? I brani restano nella raccolta.'))return;
   await stop();curSetObj().items=[];rebuild();cur=-1;saveSongs();renderList();renderMix();showTitle();setVideo(null);status('Scaletta svuotata.');};
 $('miAbout').onclick=()=>{closeMenus();sheet(`<h3>ArnoStage ${VERSION} · PROVA</h3><p>Raccolte di brani (base, click, video e audio del video) da mettere in una o più scalette, con mixer, uscite separate della scheda audio, ingressi per suonare sulle basi e video in sync sull'HDMI.</p><p>${NATIVE?'App '+esc(window.nativeVer||''):'Versione web (browser)'}.</p><p>© 2026 Maurizio Arnone. Tutti i diritti riservati.</p><div style="text-align:right"><button class="btn acc" onclick="closeSheet()">OK</button></div>`);};
@@ -1256,7 +1276,7 @@ const EN_P=[
  ['La scaletta è vuota: «🎵 Nuovi» (un file audio = un brano), «🗂 Importa» (cartelle, .zip di ARNOCLICK) o ＋ per i brani già presenti nel progetto.','The setlist is empty: «🎵 New» (one audio file = one song), «🗂 Import» (folders, ARNOCLICK .zip) or ＋ for songs already in the project.'],
  ['» da questa scaletta? (resta nelle altre)','» from this setlist? (it stays in the others)'],['＋ Aggiungi a «','＋ Add to «'],['Brani del progetto che non sono in questa scaletta:','Project songs not in this setlist:'],['Aggiungi','Add'],[' aggiunti in fondo a «',' added to the end of «'],['Elimina','Delete'],['＋ Ingresso','＋ Input'],['Esci','Exit']
 ].sort((a,b)=>b[0].length-a[0].length);
-const EN_R=[[/(\d+) brani\b/g,'$1 songs'],[/(\d+) tracce\b/g,'$1 tracks'],[/(\d+) scalette\b/g,'$1 setlists'],[/(\d+) scaletta\b/g,'$1 setlist'],[/^Brano (\d+) di (\d+)$/,'Song $1 of $2'],[/ · (\d+) di ([\d.]+ [MG]B)$/,' · $1 of $2']];
+const EN_R=[[/(\d+) brani\b/g,'$1 songs'],[/\b1 brano\b/g,'1 song'],[/(\d+) tracce\b/g,'$1 tracks'],[/(\d+) scalette\b/g,'$1 setlists'],[/(\d+) scaletta\b/g,'$1 setlist'],[/^Brano (\d+) di (\d+)$/,'Song $1 of $2'],[/ · (\d+) di ([\d.]+ [MG]B)$/,' · $1 of $2']];
 function tr(x){if(LANG!=='en'||x==null)return x;x=String(x);if(!/[A-Za-zÀ-ú]/.test(x))return x;const t=x.trim();
   if(EN_X[t]!=null)return x.replace(t,EN_X[t]);let y=x;for(const [a,b] of EN_P)if(y.includes(a))y=y.split(a).join(b);for(const [r,b] of EN_R)y=y.replace(r,b);return y;}
 function trNode(n){if(n.nodeType===3){if(n.parentNode&&/^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentNode.nodeName))return;const v=tr(n.data);if(v!==n.data)n.data=v;}
@@ -1273,17 +1293,24 @@ $('miLang').onclick=()=>{cfg.lang=LANG==='en'?'it':'en';saveCfg();location.reloa
 
 // ===== Menu di accesso all'apertura =====
 async function showStart(){const P=await projects(),names=Object.keys(P).sort((a,b)=>P[b].saved-P[a].saved);
-  const cov=d=>{const c=(d.sets||[]).find(x=>x.cover);return c?`<img src="${c.cover}" alt="">`:'<span class="ph">☰</span>';};
+  {let ch=false;for(const n of names)if(!P[n].cover){P[n].cover=genCover(n);ch=true;if(n===cfg.proj&&!pcover)pcover=P[n].cover;}if(ch)await kvSet('projects',P);}
+  const cov=d=>{const c=d.cover||((d.sets||[]).find(x=>x.cover)||{}).cover;return c?`<img src="${c}" alt="">`:'<span class="ph">☰</span>';};
   $('stVer').textContent=(LANG==='en'?'version ':'versione ')+VERSION+(NATIVE?'':' · web');
-  const cd=cfg.proj&&P[cfg.proj]?projData(P[cfg.proj]):(lib.length?{lib,sets,looks}:null);
-  $('stCont').innerHTML=cd?`<button class="go" data-st="cont">${cov(cd)}<span><small>Continua</small><b>${esc(cfg.proj||'Progetto non salvato')}</b><small>${cd.lib.length} brani · ${cd.sets.length} scalett${cd.sets.length>1?'e':'a'}</small></span></button>`:'';
-  $('stList').innerHTML=names.filter(n=>n!==cfg.proj).slice(0,8).map(n=>{const d=projData(P[n]);return `<button class="pr" data-n="${esc(n)}">${cov(d)}<span><b>${esc(n)}</b><br><small>${d.lib.length} brani · ${new Date(P[n].saved).toLocaleDateString(LANG==='en'?'en-GB':'it-IT')}</small></span></button>`;}).join('')||'<div class="empty">Nessun altro progetto salvato.</div>';
+  const cd=cfg.proj&&P[cfg.proj]?projData(P[cfg.proj]):(lib.length?{lib,sets,looks,cover:pcover}:null);
+  $('stCont').innerHTML=cd?`<button class="go" data-st="cont">${cov(cd)}<span><small>Continua</small><b>${esc(cfg.proj||'Progetto non salvato')}</b><small>${cd.lib.length} ${cd.lib.length===1?'brano':'brani'} · ${cd.sets.length} scalett${cd.sets.length>1?'e':'a'}</small></span></button>`:'';
+  document.querySelector('#start .sgrid').style.display='';document.querySelector('#start .stit').style.display='';
+  $('stList').innerHTML=names.filter(n=>n!==cfg.proj).slice(0,8).map(n=>{const d=projData(P[n]);return `<button class="pr" data-n="${esc(n)}">${cov(d)}<span><b>${esc(n)}</b><br><small>${d.lib.length} ${d.lib.length===1?'brano':'brani'} · ${new Date(P[n].saved).toLocaleDateString(LANG==='en'?'en-GB':'it-IT')}</small></span></button>`;}).join('')||'<div class="empty">Nessun altro progetto salvato.</div>';
   $('start').classList.add('on');setTimeout(sendRect,30);}
+async function showOpenList(){const P=await projects(),names=Object.keys(P).sort((a,b)=>P[b].saved-P[a].saved);
+  $('stCont').innerHTML=`<button class="btn" data-st="back" style="margin-bottom:12px">‹ ${LANG==='en'?'Back':'Indietro'}</button><div class="otit">${LANG==='en'?'Open project':'Apri progetto'}</div>`;
+  document.querySelector('#start .sgrid').style.display='none';document.querySelector('#start .stit').style.display='none';
+  $('stList').innerHTML=names.length?`<div class="ogrid">${names.map(n=>{const d=projData(P[n]),c=d.cover||((d.sets||[]).find(x=>x.cover)||{}).cover;return `<button class="oc" data-n="${esc(n)}">${c?`<img src="${c}" alt="">`:'<span class="ph">☰</span>'}<b>${esc(n)}</b><small>${new Date(P[n].saved).toLocaleDateString(LANG==='en'?'en-GB':'it-IT')}</small></button>`;}).join('')}</div>`:'<div class="empty">Nessun progetto salvato.</div>';}
 function hideStart(){$('start').classList.remove('on');setTimeout(sendRect,30);}
 $('start').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
   if(b.dataset.st==='cont'){hideStart();}
   else if(b.dataset.st==='new'){hideStart();$('miNew').onclick();}
-  else if(b.dataset.st==='open'){hideStart();page('proj');}
+  else if(b.dataset.st==='open'){showOpenList();}
+  else if(b.dataset.st==='back'){showStart();}
   else if(b.dataset.n){hideStart();const P=await projects();if(lib.length&&!(cfg.proj&&P[cfg.proj])&&!confirm('La raccolta aperta non è salvata. Aprire comunque «'+b.dataset.n+'»?'))return showStart();await openProj(b.dataset.n);page('list');}});
 onPick('fZip3',l=>{hideStart();importZip(l[0]);});onPick('fMany3',l=>{hideStart();importFolder(l);});
 // logo iniziale: sfuma nel nero e lascia il menu di accesso (tocco = salta)
@@ -1299,7 +1326,7 @@ window.appResume=()=>{if(!bgAt)return;bgAt=0;if(playing)return;runSplash();showS
 (async()=>{
   leftUI();layout();applyVW();applyTheme();autoUI();$('miPrevH').classList.toggle('on',!!cfg.prevHdmi);$('miPrev').classList.toggle('on',cfg.prev);$('miIn').classList.toggle('on',cfg.inOn&&NATIVE);
   if(!NATIVE)cfg.inOn=false;
-  try{let L=await kvGet('lib');if(L){setProject({lib:L,sets:(await kvGet('sets'))||[],curSet:await kvGet('curSet'),looks:(await kvGet('looks'))||{}});}
+  try{let L=await kvGet('lib');if(L){setProject({lib:L,sets:(await kvGet('sets'))||[],curSet:await kvGet('curSet'),looks:(await kvGet('looks'))||{},cover:(await kvGet('pcover'))||''});}
     else{setProject(projData({songs:(await kvGet('songs'))||[],looks:(await kvGet('looks'))||{}}));saveSongs();}}catch(e){setProject({lib:[],sets:[]});}
   hdmiUI();showProj();
   await refreshCard();
