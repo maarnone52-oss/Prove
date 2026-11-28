@@ -285,6 +285,8 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 #list .it{touch-action:pan-y;position:relative;transition:box-shadow .1s}
 #list .it.dragging{z-index:5;background:var(--card2);box-shadow:0 10px 30px rgba(0,0,0,.7);outline:2px solid var(--acc);transition:none}
 #list.dragmode{user-select:none}
+.runt{display:none;margin-left:8px;padding:1px 6px;border-radius:5px;background:#1a0505;border:1px solid #5a1010;color:#ff3b30;font:700 12px/1.3 ui-monospace,"SF Mono",Menlo,monospace;text-shadow:0 0 6px rgba(255,59,48,.6);vertical-align:1px}
+.runt.on{display:inline-block}
 #list .it button{background:var(--card2);border:1px solid var(--line);color:var(--fg);border-radius:7px;height:30px;min-width:32px;font-size:13px}
 .x7{}
 @media (max-width:500px){.setbar>.lbl{display:none}.setbar .btn{padding:6px 7px}}
@@ -390,7 +392,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.2.6';
+const VERSION='0.2.7';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -612,7 +614,7 @@ function renderSets(){const st=curSetObj();renderCover();$('setSel').innerHTML=s
 function renderList(){
   renderSets();const l=$('list');$('bFromLib').style.display=lib.some(x=>!curSetObj().items.includes(x.id))?'':'none';
   if(!songs.length)l.innerHTML='<div class="empty">La scaletta è vuota: «🎵 Nuovi» (un file audio = un brano), «🗂 Importa» (cartelle, .zip di ARNOCLICK) o ＋ per i brani già presenti nel progetto.</div>';
-  else l.innerHTML=songs.map((s,i)=>`<div class="it${i===cur?' cur':''}" data-i="${i}"><span class="n">${i+1}</span><span class="t">${esc(s.name)}<br><small>${songInfo(s)}</small></span>
+  else l.innerHTML=songs.map((s,i)=>`<div class="it${i===cur?' cur':''}" data-i="${i}"><span class="n">${i+1}</span><span class="t">${esc(s.name)}<br><small>${songInfo(s)}</small>${i===cur?'<span class="runt" id="runT"></span>':''}</span>
     <button data-a="ren" title="Rinomina il brano">✎</button><button data-a="rm" title="Elimina">🗑</button></div>`).join('');
   renderLib();}
 function renderLib(){const st=curSetObj();$('libN').textContent='('+lib.length+')';
@@ -765,7 +767,8 @@ let seeking=false;
 $('seek').addEventListener('input',()=>{seeking=true;$('tCur').textContent=fmt($('seek').value/1000*dur);});
 $('seek').addEventListener('change',()=>{seeking=false;seekTo($('seek').value/1000*dur);});
 document.addEventListener('keydown',e=>{if(e.target.closest('input,select,textarea'))return;if(e.code==='Space'){e.preventDefault();$('bPlay').click();}});
-function updTime(){$('tCur').textContent=fmt(pos);$('tDur').textContent=fmt(dur);if(!seeking)$('seek').value=dur?Math.round(pos/dur*1000):0;}
+function updTime(){const rt=$('runT');if(rt){rt.textContent=fmt(pos);rt.classList.toggle('on',playing||pos>0.05);}
+$('tCur').textContent=fmt(pos);$('tDur').textContent=fmt(dur);if(!seeking)$('seek').value=dur?Math.round(pos/dur*1000):0;}
 let ticking=false;
 async function tick(){if(ticking)return;ticking=true;
   try{while(true){
