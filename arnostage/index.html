@@ -392,6 +392,12 @@ body.menuopen main{pointer-events:none}
 .ptrow{display:flex;align-items:center;gap:10px;margin:2px 2px 8px}
 .ptrow .ptitle{margin:0}
 #projC{width:44px;height:44px;border-radius:9px;object-fit:cover;flex:none;border:1px solid #4a4b55;box-shadow:0 3px 10px rgba(0,0,0,.5)}
+.x16{}
+#stCont .go .golbl{display:block;font-style:normal;font-size:15px;font-weight:800;letter-spacing:.02em;color:#dbe7ff;text-transform:uppercase;margin-bottom:2px}
+#stCont .go b{font-size:20px}
+@keyframes stFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+#start.anim #stCont .go{opacity:0;animation:stFade .6s ease var(--b0) forwards}
+#start.anim #stList .pr{opacity:0;animation:stFade .45s ease var(--d,0s) forwards}
 </style>
 </head>
 <body>
@@ -420,6 +426,7 @@ body.menuopen main{pointer-events:none}
   <div style="position:relative"><button class="mbtn" data-m="mList">Playlist</button>
     <div class="menu" id="mList">
       <button class="chk" id="miAuto">Passa da sola al brano successivo</button>
+      <button class="chk" id="miKeep">Passando a Brano o Mixer la riproduzione continua</button>
     </div></div>
   <div style="position:relative"><button class="mbtn" data-m="mAudio">Audio</button>
     <div class="menu" id="mAudio">
@@ -495,7 +502,7 @@ body.menuopen main{pointer-events:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.3.9';
+const VERSION='0.4.0';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -1114,6 +1121,7 @@ function closeSheet(){setTimeout(sendRect,30);document.body.classList.remove('lk
 $('sheet').onclick=e=>{if(e.target.id==='sheet')closeSheet();};
 function autoUI(){$('miAuto').classList.toggle('on',!!cfg.auto);$('bAuto').classList.toggle('on',!!cfg.auto);$('bAuto').querySelector('small').textContent=cfg.auto?'AUTO':'STOP';$('bAuto').title=cfg.auto?'Avanzamento automatico ACCESO: a fine brano parte il successivo':'Avanzamento automatico SPENTO: a fine brano si ferma e aspetta ⏭';}
 $('bAuto').onclick=()=>$('miAuto').onclick();
+$('miKeep').onclick=()=>{cfg.keepPlay=cfg.keepPlay===false;saveCfg();$('miKeep').classList.toggle('on',cfg.keepPlay!==false);closeMenus();status(cfg.keepPlay!==false?'Passando dalla playlist a Brano o Mixer la riproduzione continua.':'Passando dalla playlist a Brano o Mixer il brano si ferma e torna all\'inizio.');};
 $('miAuto').onclick=()=>{cfg.auto=!cfg.auto;saveCfg();autoUI();$('miPrevH').classList.toggle('on',!!cfg.prevHdmi);closeMenus();status(cfg.auto?'A fine brano parte da solo il successivo.':'A fine brano si ferma.');};
 $('miPrev').onclick=async()=>{cfg.prev=!cfg.prev;saveCfg();lastRect='';$('miPrev').classList.toggle('on',cfg.prev);closeMenus();vFid=-1;await setVideo(songs[cur]);syncVideo(true);};
 $('miAC').onclick=()=>{cfg.mixAC=!cfg.mixAC;saveCfg();applyTheme();closeMenus();};
@@ -1214,7 +1222,7 @@ addEventListener('resize',layout);
 let lastPage='song',listArmed=false;
 function page(l){const p=l===true?'list':l||'song';
   // dalla playlist al brano/mixer: il brano si ferma e torna all'inizio (riparte solo con ▶)
-  if(lastPage==='list'&&(p==='song'||p==='mix')&&songs[cur]){(async()=>{if(playing)await stop();await seekTo(0);})();}
+  if(lastPage==='list'&&(p==='song'||p==='mix')&&songs[cur]&&cfg.keepPlay===false){(async()=>{if(playing)await stop();await seekTo(0);})();}
   if(p==='list'&&lastPage!=='list')listArmed=false;
   lastPage=p;document.body.classList.toggle('pgList',p==='list');document.body.classList.toggle('pgMix',p==='mix');document.body.classList.toggle('pgProj',p==='proj');$('tbProj').classList.toggle('on',p==='proj');if(p==='proj')renderProj();
   $('tbList').classList.toggle('on',p==='list');$('tbSong').classList.toggle('on',p==='song');$('tbMix').classList.toggle('on',p==='mix');setTimeout(fitFaders,30);}
@@ -1309,7 +1317,7 @@ const EN_P=[
  ['Progetto: ','Project: '],['(non salvato)','(not saved)'],['● in playlist','● in playlist'],['● aperto','● open'],[' brani in raccolta',' songs in library'],
  ['La raccolta aperta (','The open library ('],[') non è ancora salvata in un progetto.',') is not saved in a project yet.'],['Hai modifiche non salvate in «','You have unsaved changes in «'],
 
- ['La raccolta è vuota.','The library is empty.'],['La raccolta aperta non è salvata in un progetto e verrà chiusa. Continuare?','The open library is not saved in a project and will be closed. Continue?'],['Tocca la copertina per aprire un progetto (quello aperto viene sostituito: salvalo prima se ti serve).','Tap the cover to open a project (the open one is replaced: save it first if you need it).'],['Progetti recenti','Recent projects'],['Nuovo progetto','New project'],['Apri progetto','Open project'],['Importa .zip','Import .zip'],['Importa brani','Import songs'],['Continua','Continue'],['Progetto non salvato','Unsaved project'],['Nessun altro progetto salvato.','No other saved projects.'],['🏠 Menu iniziale','🏠 Start menu'],['La raccolta aperta non è salvata. Aprire comunque «','The open library is not saved. Open «'],['versione ','version '],['tieni premuto un brano e trascinalo per spostarlo','press and hold a song, then drag it to move it'],['Aggiungi brani già presenti nel progetto','Add songs already in the project'],
+ ['La raccolta è vuota.','The library is empty.'],['Ultimo aperto · Continua','Last opened · Continue'],['Passando a Brano o Mixer la riproduzione continua','Keep playing when switching to Song or Mixer'],['Passando dalla playlist a Brano o Mixer la riproduzione continua.','Switching from the playlist to Song or Mixer keeps playing.'],['Passando dalla playlist a Brano o Mixer il brano si ferma e torna all\'inizio.','Switching from the playlist to Song or Mixer stops and rewinds the song.'],['La raccolta aperta non è salvata in un progetto e verrà chiusa. Continuare?','The open library is not saved in a project and will be closed. Continue?'],['Tocca la copertina per aprire un progetto (quello aperto viene sostituito: salvalo prima se ti serve).','Tap the cover to open a project (the open one is replaced: save it first if you need it).'],['Progetti recenti','Recent projects'],['Nuovo progetto','New project'],['Apri progetto','Open project'],['Importa .zip','Import .zip'],['Importa brani','Import songs'],['Continua','Continue'],['Progetto non salvato','Unsaved project'],['Nessun altro progetto salvato.','No other saved projects.'],['🏠 Menu iniziale','🏠 Start menu'],['La raccolta aperta non è salvata. Aprire comunque «','The open library is not saved. Open «'],['versione ','version '],['tieni premuto un brano e trascinalo per spostarlo','press and hold a song, then drag it to move it'],['Aggiungi brani già presenti nel progetto','Add songs already in the project'],
  ['La playlist è vuota: «🎵 Nuovi» (un file audio = un brano), «🗂 Importa» (cartelle, .zip di ARNOCLICK) o ＋ per i brani già presenti nel progetto.','The playlist is empty: «🎵 New» (one audio file = one song), «🗂 Import» (folders, ARNOCLICK .zip) or ＋ for songs already in the project.'],
  ['» da questa playlist? (resta nelle altre)','» from this playlist? (it stays in the others)'],['＋ Aggiungi a «','＋ Add to «'],['Brani del progetto che non sono in questa playlist:','Project songs not in this playlist:'],['Aggiungi','Add'],[' aggiunti in fondo a «',' added to the end of «'],['Elimina','Delete'],['＋ Ingresso','＋ Input'],['Esci','Exit']
 ].sort((a,b)=>b[0].length-a[0].length);
@@ -1334,9 +1342,12 @@ async function showStart(){const P=await projects(),names=Object.keys(P).sort((a
   const cov=d=>{const c=d.cover||((d.sets||[]).find(x=>x.cover)||{}).cover;return c?`<img src="${c}" alt="">`:'<span class="ph">☰</span>';};
   $('stVer').textContent=(LANG==='en'?'version ':'versione ')+VERSION+(NATIVE?'':' · web');
   const cd=cfg.proj&&P[cfg.proj]?projData(P[cfg.proj]):(lib.length?{lib,sets,looks,cover:pcover}:null);
-  $('stCont').innerHTML=cd?`<button class="go" data-st="cont">${cov(cd)}<span><small>Continua</small><b>${esc(cfg.proj||'Progetto non salvato')}</b><small>${cd.lib.length} ${cd.lib.length===1?'brano':'brani'} · ${cd.sets.length} playlist</small></span></button>`:'';
+  $('stCont').innerHTML=cd?`<button class="go" data-st="cont">${cov(cd)}<span><em class="golbl">Ultimo aperto · Continua</em><b>${esc(cfg.proj||'Progetto non salvato')}</b><small>${cd.lib.length} ${cd.lib.length===1?'brano':'brani'} · ${cd.sets.length} playlist</small></span></button>`:'';
   document.querySelector('#start .sgrid').style.display='';document.querySelector('#start .stit').style.display='';
   $('stList').innerHTML=names.filter(n=>n!==cfg.proj).map(n=>{const d=projData(P[n]);return `<button class="pr" data-n="${esc(n)}">${cov(d)}<span><b>${esc(n)}</b><br><small>${d.lib.length} ${d.lib.length===1?'brano':'brani'} · ${new Date(P[n].saved).toLocaleDateString(LANG==='en'?'en-GB':'it-IT')}</small></span></button>`;}).join('')||'<div class="empty">Nessun altro progetto salvato.</div>';
+  // comparsa in dissolvenza: prima «Continua», poi i progetti recenti uno dopo l'altro (dal più recente)
+  const base=$('splash')?1.85:0.05,st=$('start');st.classList.remove('anim');void st.offsetWidth;st.style.setProperty('--b0',base+'s');
+  [...$('stList').querySelectorAll('.pr')].forEach((x,i)=>x.style.setProperty('--d',(base+0.45+i*0.12).toFixed(2)+'s'));st.classList.add('anim');
   $('start').classList.add('on');setTimeout(sendRect,30);}
 // ===== Nuovo progetto dal menu iniziale: copertina, nome, data di creazione, conferma =====
 let NP=null;
@@ -1386,7 +1397,7 @@ window.appBackground=()=>{bgAt=Date.now();if(!playing){closeSheet();closeMenus()
 window.appResume=()=>{if(!bgAt)return;bgAt=0;if(playing)return;runSplash();showStart();};
 // ===== Avvio =====
 (async()=>{
-  leftUI();layout();applyVW();applyTheme();autoUI();$('miPrevH').classList.toggle('on',!!cfg.prevHdmi);$('miPrev').classList.toggle('on',cfg.prev);$('miIn').classList.toggle('on',cfg.inOn&&NATIVE);
+  $('miKeep').classList.toggle('on',cfg.keepPlay!==false);leftUI();layout();applyVW();applyTheme();autoUI();$('miPrevH').classList.toggle('on',!!cfg.prevHdmi);$('miPrev').classList.toggle('on',cfg.prev);$('miIn').classList.toggle('on',cfg.inOn&&NATIVE);
   if(!NATIVE)cfg.inOn=false;
   try{let L=await kvGet('lib');if(L){setProject({lib:L,sets:(await kvGet('sets'))||[],curSet:await kvGet('curSet'),looks:(await kvGet('looks'))||{},cover:(await kvGet('pcover'))||''});}
     else{setProject(projData({songs:(await kvGet('songs'))||[],looks:(await kvGet('looks'))||{}}));saveSongs();}}catch(e){setProject({lib:[],sets:[]});}
