@@ -427,7 +427,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 </main>
 <div id="tabs"><button id="tbSong" class="on">🎚 Brano</button><button class="tp" id="tbPlay">▶</button><button id="tbMix">🎛 Mixer</button><button id="tbList">☰ Scaletta</button><button id="tbProj">📁 Progetti</button></div>
 <div id="status">Pronto.</div>
-<div id="start"><div class="sbox">
+<div id="start" class="on"><div class="sbox">
   <div class="slogo"><i><svg width="38" height="38" viewBox="0 0 24 24" fill="#fff"><rect x="4" y="3" width="3" height="18" rx="1.5"/><rect x="10.5" y="3" width="3" height="18" rx="1.5"/><rect x="17" y="3" width="3" height="18" rx="1.5"/><rect x="2" y="13" width="7" height="4" rx="1.5"/><rect x="8.5" y="6" width="7" height="4" rx="1.5"/><rect x="15" y="10" width="7" height="4" rx="1.5"/></svg></i><div><b>Arno<span>Stage</span></b><small id="stVer"></small></div></div>
   <div id="stCont"></div>
   <div class="sgrid">
@@ -442,7 +442,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.3.0';
+const VERSION='0.3.1';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
