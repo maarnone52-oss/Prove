@@ -12,6 +12,24 @@ class MainSceneDelegate: UIResponder, UIWindowSceneDelegate {
         w.makeKeyAndVisible()
         window = w
     }
+    /// copertura nera: l'istantanea che iOS mostra alla riapertura non contiene la schermata precedente
+    private var cover: UIView?
+    func sceneWillResignActive(_ scene: UIScene) { addCover() }
+    func sceneDidEnterBackground(_ scene: UIScene) {
+        addCover()
+        Bridge.shared.control?.evaluateJavaScript("window.appBackground&&window.appBackground()", completionHandler: nil)
+    }
+    func sceneDidBecomeActive(_ scene: UIScene) {
+        Bridge.shared.control?.evaluateJavaScript("window.appResume&&window.appResume()", completionHandler: nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            UIView.animate(withDuration: 0.2, animations: { self?.cover?.alpha = 0 }) { _ in self?.cover?.removeFromSuperview(); self?.cover = nil }
+        }
+    }
+    private func addCover() {
+        guard cover == nil, let w = window else { return }
+        let v = UIView(frame: w.bounds); v.backgroundColor = .black; v.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        w.addSubview(v); cover = v
+    }
 }
 
 /// Schermo esterno (cavo HDMI): solo il video, a tutto schermo.

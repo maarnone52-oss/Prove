@@ -453,7 +453,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.3.2';
+const VERSION='0.3.3';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -1287,7 +1287,14 @@ $('start').addEventListener('click',async e=>{const b=e.target.closest('button')
   else if(b.dataset.n){hideStart();const P=await projects();if(lib.length&&!(cfg.proj&&P[cfg.proj])&&!confirm('La raccolta aperta non è salvata. Aprire comunque «'+b.dataset.n+'»?'))return showStart();await openProj(b.dataset.n);page('list');}});
 onPick('fZip3',l=>{hideStart();importZip(l[0]);});onPick('fMany3',l=>{hideStart();importFolder(l);});
 // logo iniziale: sfuma nel nero e lascia il menu di accesso (tocco = salta)
-(()=>{const sp=$('splash');const end=()=>{if(sp.parentNode)sp.remove();};sp.addEventListener('animationend',e=>{if(e.animationName==='splBg')end();});sp.addEventListener('click',end);setTimeout(end,3200);})();
+const SPLASH_HTML="<div id=\"splash\"><div class=\"spl\"><i><svg width=\"70\" height=\"70\" viewBox=\"0 0 24 24\" fill=\"#fff\"><rect x=\"4\" y=\"3\" width=\"3\" height=\"18\" rx=\"1.5\"/><rect x=\"10.5\" y=\"3\" width=\"3\" height=\"18\" rx=\"1.5\"/><rect x=\"17\" y=\"3\" width=\"3\" height=\"18\" rx=\"1.5\"/><rect x=\"2\" y=\"13\" width=\"7\" height=\"4\" rx=\"1.5\"/><rect x=\"8.5\" y=\"6\" width=\"7\" height=\"4\" rx=\"1.5\"/><rect x=\"15\" y=\"10\" width=\"7\" height=\"4\" rx=\"1.5\"/></svg></i><b>Arno<span>Stage</span></b></div></div>";
+function runSplash(){let sp=$('splash');if(!sp){document.body.insertAdjacentHTML('afterbegin',SPLASH_HTML);sp=$('splash');}
+  const end=()=>{if(sp.parentNode)sp.remove();};sp.addEventListener('animationend',e=>{if(e.animationName==='splBg')end();});sp.addEventListener('click',end);setTimeout(end,3200);}
+runSplash();
+// riapertura dell'app: se non sta suonando, ripulisce e riparte da logo + menu di accesso
+let bgAt=0;
+window.appBackground=()=>{bgAt=Date.now();if(!playing){closeSheet();closeMenus();$('start').classList.add('on');sendRect();}};
+window.appResume=()=>{if(!bgAt)return;bgAt=0;if(playing)return;runSplash();showStart();};
 // ===== Avvio =====
 (async()=>{
   leftUI();layout();applyVW();applyTheme();autoUI();$('miPrevH').classList.toggle('on',!!cfg.prevHdmi);$('miPrev').classList.toggle('on',cfg.prev);$('miIn').classList.toggle('on',cfg.inOn&&NATIVE);
