@@ -388,6 +388,10 @@ body.pgProj main #colP{display:flex!important;flex-direction:column;overflow:hid
 /* menu a tendina bloccati: non trascinano la pagina, scorrono al loro interno se lunghi */
 .menu{max-height:calc(100vh - var(--sat) - var(--sab) - 70px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
 body.menuopen main{pointer-events:none}
+.x15{}
+.ptrow{display:flex;align-items:center;gap:10px;margin:2px 2px 8px}
+.ptrow .ptitle{margin:0}
+#projC{width:44px;height:44px;border-radius:9px;object-fit:cover;flex:none;border:1px solid #4a4b55;box-shadow:0 3px 10px rgba(0,0,0,.5)}
 </style>
 </head>
 <body>
@@ -459,7 +463,7 @@ body.menuopen main{pointer-events:none}
  </div>
  <div id="colR">
   <div class="sec">
-    <div class="ptitle" id="projN">Progetto: —</div>
+    <div class="ptrow"><img id="projC" alt="" hidden><div class="ptitle" id="projN">Progetto: —</div></div>
     <div class="setbar"><span class="lbl">Playlist</span><select id="setSel"></select><button class="btn" data-s="new" title="Nuova playlist">＋</button><button class="btn" data-s="ren" title="Rinomina">✎</button><button class="btn" data-s="dup" title="Duplica">⧉</button><label class="btn" title="Copertina (foto)"><input type="file" id="fCover" accept="image/*" hidden>🖼</label><button class="btn" data-s="del" title="Elimina la playlist">🗑</button></div>
     <div class="cover" id="coverBox"></div>
     <div class="sech"><span id="setT">Playlist</span><span class="sp"></span><label class="btn"><input type="file" id="fAud2" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" multiple hidden>🎵 Nuovi</label><label class="btn"><input type="file" id="fMany2" accept="audio/*,video/*,.zip,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac,.mp4,.mov,.m4v" multiple hidden>🗂 Importa</label><button class="btn" id="bFromLib" title="Aggiungi brani già presenti nel progetto">＋</button></div>
@@ -491,7 +495,7 @@ body.menuopen main{pointer-events:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.3.8';
+const VERSION='0.3.9';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -555,7 +559,7 @@ function genCover(name,seed){const c=document.createElement('canvas');c.width=c.
   g.globalAlpha=1;const ini=String(name||'A').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'A';
   g.fillStyle='rgba(0,0,0,.25)';g.fillRect(0,330,480,150);g.fillStyle='#fff';g.font='800 150px -apple-system,system-ui,sans-serif';g.textAlign='center';g.textBaseline='middle';g.shadowColor='rgba(0,0,0,.45)';g.shadowBlur=18;g.fillText(ini,240,200);
   g.shadowBlur=0;g.font='700 34px -apple-system,system-ui,sans-serif';g.fillText(String(name||'').slice(0,22),240,410);return c.toDataURL('image/jpeg',.85);}
-function setProject(d){pcover=d.cover||'';lib=d.lib||[];lib.forEach(normSong);sets=d.sets||[];curSet=d.curSet||null;looks=d.looks||{};cur=-1;rebuild();}
+function setProject(d){pcover=d.cover||'';setTimeout(showProj,0);lib=d.lib||[];lib.forEach(normSong);sets=d.sets||[];curSet=d.curSet||null;looks=d.looks||{};cur=-1;rebuild();}
 async function addFile(name,blob){const id=uid();await fPut(id,name,blob);return id;}
 
 // ===== Attività (importazione / esportazione) con barra di avanzamento =====
@@ -1117,7 +1121,7 @@ $('miPrevH').onclick=()=>{cfg.prevHdmi=!cfg.prevHdmi;saveCfg();$('miPrevH').clas
 function prevMsg(){if(NATIVE)return;const o=previewOff()&&vUrl;$('vph').style.display=o||!vUrl?'flex':'none';if(o)$('vph').innerHTML='Video sul monitor HDMI<br><small>(anteprima in pausa per fluidità — Vista › Anteprima anche con l\'HDMI acceso)</small>';}
 $('miGray').onclick=()=>{cfg.gray=!cfg.gray;saveCfg();applyTheme();closeMenus();};
 function applyTheme(){document.body.classList.toggle('mixac',!!cfg.mixAC);$('miAC').classList.toggle('on',!!cfg.mixAC);setTimeout(fitFaders,30);document.documentElement.dataset.theme=cfg.gray?'gray':'';$('miGray').classList.toggle('on',cfg.gray);}
-function showProj(){$('projN').textContent='Progetto: '+(cfg.proj||'(non salvato)');}
+function showProj(){$('projN').textContent='Progetto: '+(cfg.proj||'(non salvato)');const c=$('projC');if(pcover){c.src=pcover;c.hidden=false;}else c.hidden=true;}
 async function projects(){return (await kvGet('projects').catch(()=>null))||{};}
 const projNow=()=>JSON.parse(JSON.stringify({lib,sets,curSet,looks,cover:pcover}));
 async function saveProj(name){if(!pcover||cfg.proj!==name&&!(await projects())[name])pcover=genCover(name);const P=await projects();const cr=(P[name]&&P[name].created)||(cfg.proj===name&&P[cfg.proj]&&P[cfg.proj].created)||Date.now();P[name]=Object.assign(projNow(),{saved:Date.now(),created:cr});
