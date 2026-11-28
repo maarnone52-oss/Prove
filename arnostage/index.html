@@ -12,7 +12,7 @@
 <link rel="icon" href="icon-192.png">
 <!-- ArnoStage © 2026 Maurizio Arnone. Tutti i diritti riservati. -->
 <style>
-:root{--bg:#000;--fg:#f5f5f3;--mut:#9a9a94;--card:#161616;--card2:#202022;--line:#2e2e2c;--acc:#6b9bff;--ok:#22c55e;--warn:#f59e0b;--del:#ef4444;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);color-scheme:dark}
+:root{--bg:#000;--fg:#f5f5f3;--mut:#b8b8b2;--card:#18181a;--card2:#2a2a2e;--line:#3c3c40;--acc:#6b9bff;--ok:#22c55e;--warn:#f59e0b;--del:#ef4444;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);color-scheme:dark}
 :root[data-theme="gray"]{--bg:#525256;--card:#3f3f44;--card2:#48484d;--line:#68686e;--mut:#d4d4d8}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 *:not(input):not(select):not(textarea){-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -302,6 +302,27 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 .sets .sc .im img{width:100%;height:100%;object-fit:cover;display:block}
 .sets .sc .tt{padding:5px 7px}.sets .sc .tt b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.sets .sc .tt small{color:var(--mut)}
 #setSel{padding-left:6px}
+.x8{}
+/* scaletta: durata e indicatori Video / Click */
+.dur{font-variant-numeric:tabular-nums;color:#e8e8e4;font-weight:600}
+.bdg{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;font-size:11px;font-weight:800;letter-spacing:.02em;vertical-align:1px;line-height:1.45}
+.bdg.v{background:#1e3a8a;color:#dbe7ff;border:1px solid #4f7bff}
+.bdg.c{background:#5a1414;color:#ffd9d6;border:1px solid #ff5a4f}
+/* icone e pulsanti più visibili su fondo scuro */
+.btn,.setbar .btn,#list .it button,.pj .h button,#libList .li button{background:#34343a;border:1px solid #5a5a62;color:#fff;font-size:15px;min-height:34px;min-width:36px;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.btn.acc,.pj .h .acc{background:var(--acc);border-color:#9bbcff}
+.btn:active,#list .it button:active{background:#4a4a52}
+.mbtn{color:#fff;font-weight:600}
+#tabs button{color:#c9c9c4}
+#tabs button.on{color:#8db4ff}
+.tb{background:#2c2c32;border-color:#55555c;color:#fff}
+#mix .tg button,#mix .panc,#mix .x{color:#fff}
+#mix .tg button{background:#34343a;border-color:#5a5a62}
+#mix .x{font-size:14px;color:#ddd}
+#hdmi{color:#d0d0cc;border-color:#5a5a62}
+.lbl{color:var(--mut)}
+#list .it .n{color:#d0d0cc;font-weight:600}
+#list .it .t small{color:#c8c8c2}
 </style>
 </head>
 <body>
@@ -392,7 +413,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.2.7';
+const VERSION='0.2.8';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -609,9 +630,15 @@ $('mix').addEventListener('click',async e=>{if(Date.now()-($('mix')._nd||0)<500)
 
 // ===== Scaletta (più scalette per progetto) e Raccolta brani =====
 let editMode=false;
-const songInfo=x=>{const T=x.tracks||[];return `🎼${T.some(t=>t.click)?' ♩':''}${x.video?' 🎬':''}${x.dur?' · '+fmt(x.dur):''}`;};
+const songInfo=x=>{const T=x.tracks||[];return `<span class="dur">${x.dur?fmt(x.dur):'–:––'}</span>${x.video?'<span class="bdg v" title="Video abbinato">🎬 Video</span>':''}${T.some(t=>t.click)?'<span class="bdg c" title="Click presente">♩ Click</span>':''}`;};
 function renderSets(){const st=curSetObj();renderCover();$('setSel').innerHTML=sets.map(x=>`<option value="${x.id}"${x.id===st.id?' selected':''}>${esc(x.title)} (${x.items.length})</option>`).join('');$('setT').textContent=st.title;}
-function renderList(){
+// durata dei brani non ancora aperti (letta dai metadati del file, senza decodificarlo)
+let durQ=false;async function fillDur(){if(durQ)return;durQ=true;
+  try{for(const x of lib){if(x.dur)continue;const t=(x.tracks||[]).find(y=>!y.click)||x.tracks[0];if(!t)continue;const f=await fGet(t.fid);if(!f)continue;
+    const d=await new Promise(res=>{const u=URL.createObjectURL(f.blob),m=document.createElement(VID.test(f.name)?'video':'audio');m.preload='metadata';
+      const done=v=>{URL.revokeObjectURL(u);m.removeAttribute('src');res(v);};m.onloadedmetadata=()=>done(isFinite(m.duration)?m.duration:0);m.onerror=()=>done(0);setTimeout(()=>done(0),4000);m.src=u;});
+    if(d>0){x.dur=d;saveSongs();renderList();}}}finally{durQ=false;}}
+function renderList(){setTimeout(fillDur,300);
   renderSets();const l=$('list');$('bFromLib').style.display=lib.some(x=>!curSetObj().items.includes(x.id))?'':'none';
   if(!songs.length)l.innerHTML='<div class="empty">La scaletta è vuota: «🎵 Nuovi» (un file audio = un brano), «🗂 Importa» (cartelle, .zip di ARNOCLICK) o ＋ per i brani già presenti nel progetto.</div>';
   else l.innerHTML=songs.map((s,i)=>`<div class="it${i===cur?' cur':''}" data-i="${i}"><span class="n">${i+1}</span><span class="t">${esc(s.name)}<br><small>${songInfo(s)}</small>${i===cur?'<span class="runt" id="runT"></span>':''}</span>
