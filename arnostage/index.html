@@ -285,6 +285,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 #list .it{touch-action:pan-y;position:relative;transition:box-shadow .1s}
 #list .it.dragging{z-index:5;background:var(--card2);box-shadow:0 10px 30px rgba(0,0,0,.7);outline:2px solid var(--acc);transition:none}
 #list.dragmode{user-select:none}
+#list .it button{background:var(--card2);border:1px solid var(--line);color:var(--fg);border-radius:7px;height:30px;min-width:32px;font-size:13px}
 .x7{}
 @media (max-width:500px){.setbar>.lbl{display:none}.setbar .btn{padding:6px 7px}}
 .cover.on+.sech #setT{display:none}
@@ -326,7 +327,6 @@ body.wide.pgMix .transport .tb.auto small{display:none}
   <div style="position:relative"><button class="mbtn" data-m="mList">Scaletta</button>
     <div class="menu" id="mList">
       <button class="chk" id="miAuto">Passa da sola al brano successivo</button>
-      <button class="chk" id="miEdit">Modifica la scaletta (sposta, rinomina, elimina)</button>
     </div></div>
   <div style="position:relative"><button class="mbtn" data-m="mAudio">Audio</button>
     <div class="menu" id="mAudio">
@@ -373,12 +373,10 @@ body.wide.pgMix .transport .tb.auto small{display:none}
     <div class="ptitle" id="projN">Progetto: —</div>
     <div class="setbar"><span class="lbl">Scaletta</span><select id="setSel"></select><button class="btn" data-s="new" title="Nuova scaletta">＋</button><button class="btn" data-s="ren" title="Rinomina">✎</button><button class="btn" data-s="dup" title="Duplica">⧉</button><label class="btn" title="Copertina (foto)"><input type="file" id="fCover" accept="image/*" hidden>🖼</label><button class="btn" data-s="del" title="Elimina la scaletta">🗑</button></div>
     <div class="cover" id="coverBox"></div>
-    <div class="sech"><span id="setT">Scaletta</span><span class="lbl" style="font-weight:400;margin-left:6px">tieni premuto e trascina</span><span class="sp"></span><button class="btn" id="bEdit">✎ Modifica</button></div>
-    <div id="list" class="noedit"></div>
-  </div>
-  <div class="sec">
-    <div class="sech">Raccolta brani <span class="lbl" id="libN"></span><span class="sp"></span><label class="btn"><input type="file" id="fAud2" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" multiple hidden>🎵 Nuovi</label><label class="btn"><input type="file" id="fMany2" accept="audio/*,video/*,.zip,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac,.mp4,.mov,.m4v" multiple hidden>🗂 Importa</label></div>
-    <div id="libList"></div>
+    <div class="sech"><span id="setT">Scaletta</span><span class="sp"></span><label class="btn"><input type="file" id="fAud2" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac" multiple hidden>🎵 Nuovi</label><label class="btn"><input type="file" id="fMany2" accept="audio/*,video/*,.zip,.wav,.aif,.aiff,.mp3,.m4a,.aac,.caf,.flac,.mp4,.mov,.m4v" multiple hidden>🗂 Importa</label><button class="btn" id="bFromLib" title="Aggiungi brani già presenti nel progetto">＋</button></div>
+    <div class="lbl" style="margin:-2px 4px 6px">tieni premuto un brano e trascinalo per spostarlo</div>
+    <div id="list"></div>
+    <div id="libList" style="display:none"></div><span id="libN" style="display:none"></span>
   </div>
  </div>
  <div id="colP">
@@ -392,7 +390,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.2.4';
+const VERSION='0.2.5';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -612,10 +610,10 @@ let editMode=false;
 const songInfo=x=>{const T=x.tracks||[];return `🎼${T.some(t=>t.click)?' ♩':''}${x.video?' 🎬':''}${x.dur?' · '+fmt(x.dur):''}`;};
 function renderSets(){const st=curSetObj();renderCover();$('setSel').innerHTML=sets.map(x=>`<option value="${x.id}"${x.id===st.id?' selected':''}>${esc(x.title)} (${x.items.length})</option>`).join('');$('setT').textContent=st.title;}
 function renderList(){
-  renderSets();const l=$('list');l.classList.toggle('noedit',!editMode);$('bEdit').textContent=editMode?'✓ Fine':'✎ Modifica';$('miEdit').classList.toggle('on',editMode);
-  if(!songs.length)l.innerHTML='<div class="empty">La scaletta è vuota: aggiungi brani dalla raccolta qui sotto (＋).</div>';
+  renderSets();const l=$('list');$('bFromLib').style.display=lib.some(x=>!curSetObj().items.includes(x.id))?'':'none';
+  if(!songs.length)l.innerHTML='<div class="empty">La scaletta è vuota: «🎵 Nuovi» (un file audio = un brano), «🗂 Importa» (cartelle, .zip di ARNOCLICK) o ＋ per i brani già presenti nel progetto.</div>';
   else l.innerHTML=songs.map((s,i)=>`<div class="it${i===cur?' cur':''}" data-i="${i}"><span class="n">${i+1}</span><span class="t">${esc(s.name)}<br><small>${songInfo(s)}</small></span>
-    <button class="ed" data-a="ren" title="Rinomina il brano">✎</button><button class="ed" data-a="rm" title="Togli dalla scaletta">✕</button></div>`).join('');
+    <button data-a="ren" title="Rinomina il brano">✎</button><button data-a="rm" title="Elimina">🗑</button></div>`).join('');
   renderLib();}
 function renderLib(){const st=curSetObj();$('libN').textContent='('+lib.length+')';
   $('libList').innerHTML=lib.length?lib.map(x=>`<div class="li" data-id="${x.id}"><span class="t">${esc(x.name)}${st.items.includes(x.id)?' <span class="in">● in scaletta</span>':''}<br><small>${songInfo(x)}</small></span><button data-a="add" title="Aggiungi in fondo alla scaletta">＋</button><button data-a="ren" title="Rinomina">✎</button><button data-a="del" title="Elimina dalla raccolta">🗑</button></div>`).join(''):'<div class="empty">Nessun brano: «🎵 Nuovi brani» (un file audio = un brano con la sua Base) o File › Importa .zip di ARNOCLICK.</div>';}
@@ -625,7 +623,9 @@ $('list').addEventListener('click',async e=>{if(Date.now()-($('list')._nd||0)<50
   if(a==='up'&&i>0){[I[i-1],I[i]]=[I[i],I[i-1]];if(cur===i)cur--;else if(cur===i-1)cur++;}
   else if(a==='dn'&&i<I.length-1){[I[i+1],I[i]]=[I[i],I[i+1]];if(cur===i)cur++;else if(cur===i+1)cur--;}
   else if(a==='ren'){const n=prompt('Nome del brano',songs[i].name);if(n&&n.trim())songs[i].name=n.trim();if(i===cur)showTitle();}
-  else if(a==='rm'){I.splice(i,1);if(i===cur){await stop();cur=-1;rebuild();if(songs.length)await loadSong(Math.min(i,songs.length-1),false);else{renderMix();showTitle();setVideo(null);}}else if(cur>i)cur--;}
+  else if(a==='rm'){const x=songs[i],other=sets.some(o=>o!==st&&o.items.includes(x.id)),twice=I.filter(y=>y===x.id).length>1;
+    if(!confirm(other||twice?'Togliere «'+x.name+'» da questa scaletta? (resta nelle altre)':'Eliminare «'+x.name+'»?'))return;
+    I.splice(i,1);if(!other&&!twice){lib=lib.filter(y=>y!==x);purge(x);}if(i===cur){await stop();cur=-1;rebuild();if(songs.length)await loadSong(Math.min(i,songs.length-1),false);else{renderMix();showTitle();setVideo(null);}}else if(cur>i)cur--;}
   rebuild();saveSongs();renderList();});
 $('libList').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const id=b.closest('.li').dataset.id,x=lib.find(y=>y.id===id);if(!x)return;const a=b.dataset.a;
   if(a==='add'){curSetObj().items.push(id);rebuild();saveSongs();renderList();status('«'+x.name+'» aggiunto in fondo a «'+curSetObj().title+'».');if(cur<0)await loadSong(songs.length-1,false);}
@@ -646,7 +646,12 @@ function renderCover(){const st=curSetObj(),b=$('coverBox');b.classList.toggle('
   b.innerHTML=st.cover?`<img src="${st.cover}" alt=""><div><b>${esc(st.title)}</b><small>${st.items.length} brani</small><br><button class="btn" id="cvDel">Togli copertina</button></div>`:'';
   if(st.cover)$('cvDel').onclick=()=>{if(confirm('Togliere la copertina di «'+st.title+'»?')){delete st.cover;saveSongs();renderList();}};}
 async function switchSet(id){await stop();curSet=id;cur=-1;rebuild();saveSongs();renderList();renderMix();showTitle();if(songs.length)await loadSong(0,false);else setVideo(null);status('Scaletta «'+curSetObj().title+'» ('+songs.length+' brani).');}
-$('bEdit').onclick=()=>{editMode=!editMode;renderList();};
+// ＋: brani del progetto non presenti in questa scaletta (es. per comporre un'altra scaletta)
+$('bFromLib').onclick=()=>{const st=curSetObj(),L=lib.filter(x=>!st.items.includes(x.id));if(!L.length)return;
+  sheet(`<h3>＋ Aggiungi a «${esc(st.title)}»</h3><p>Brani del progetto che non sono in questa scaletta:</p><div id="flL">${L.map(x=>`<label style="display:flex;gap:10px;align-items:center;padding:8px 2px;border-top:1px solid var(--line)"><input type="checkbox" value="${x.id}" style="width:20px;height:20px"><span style="flex:1">${esc(x.name)}<br><small class="lbl">${songInfo(x)}</small></span></label>`).join('')}</div>
+   <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn" onclick="closeSheet()">Annulla</button><button class="btn acc" id="flOk">Aggiungi</button></div>`);
+  $('flOk').onclick=async()=>{const ids=[...document.querySelectorAll('#flL input:checked')].map(c=>c.value);closeSheet();if(!ids.length)return;
+    st.items.push(...ids);rebuild();saveSongs();renderList();status(ids.length+' brani aggiunti in fondo a «'+st.title+'».');if(cur<0)await loadSong(songs.length-ids.length,false);};};
 // riordino della scaletta: tieni premuto un brano e trascinalo su o giù
 (()=>{const L=$('list'),SC=()=>L.closest('#colR');let drag=null,tm=0,p0=null;
   const stop=()=>{clearTimeout(tm);p0=null;};
@@ -984,7 +989,6 @@ $('sheet').onclick=e=>{if(e.target.id==='sheet')closeSheet();};
 function autoUI(){$('miAuto').classList.toggle('on',!!cfg.auto);$('bAuto').classList.toggle('on',!!cfg.auto);$('bAuto').querySelector('small').textContent=cfg.auto?'AUTO':'STOP';$('bAuto').title=cfg.auto?'Avanzamento automatico ACCESO: a fine brano parte il successivo':'Avanzamento automatico SPENTO: a fine brano si ferma e aspetta ⏭';}
 $('bAuto').onclick=()=>$('miAuto').onclick();
 $('miAuto').onclick=()=>{cfg.auto=!cfg.auto;saveCfg();autoUI();$('miPrevH').classList.toggle('on',!!cfg.prevHdmi);closeMenus();status(cfg.auto?'A fine brano parte da solo il successivo.':'A fine brano si ferma.');};
-$('miEdit').onclick=()=>{editMode=!editMode;renderList();closeMenus();};
 $('miPrev').onclick=async()=>{cfg.prev=!cfg.prev;saveCfg();lastRect='';$('miPrev').classList.toggle('on',cfg.prev);closeMenus();vFid=-1;await setVideo(songs[cur]);syncVideo(true);};
 $('miAC').onclick=()=>{cfg.mixAC=!cfg.mixAC;saveCfg();applyTheme();closeMenus();};
 $('miPrevH').onclick=()=>{cfg.prevHdmi=!cfg.prevHdmi;saveCfg();$('miPrevH').classList.toggle('on',!!cfg.prevHdmi);closeMenus();prevMsg();syncVideo(true);};
@@ -1171,7 +1175,9 @@ const EN_P=[
  ['Progetto: ','Project: '],['(non salvato)','(not saved)'],['● in scaletta','● in setlist'],['● aperto','● open'],[' brani in raccolta',' songs in library'],
  ['La raccolta aperta (','The open library ('],[') non è ancora salvata in un progetto.',') is not saved in a project yet.'],['Hai modifiche non salvate in «','You have unsaved changes in «'],
 
- ['La raccolta è vuota.','The library is empty.'],['＋ Ingresso','＋ Input'],['Esci','Exit']
+ ['La raccolta è vuota.','The library is empty.'],['tieni premuto un brano e trascinalo per spostarlo','press and hold a song, then drag it to move it'],['Aggiungi brani già presenti nel progetto','Add songs already in the project'],
+ ['La scaletta è vuota: «🎵 Nuovi» (un file audio = un brano), «🗂 Importa» (cartelle, .zip di ARNOCLICK) o ＋ per i brani già presenti nel progetto.','The setlist is empty: «🎵 New» (one audio file = one song), «🗂 Import» (folders, ARNOCLICK .zip) or ＋ for songs already in the project.'],
+ ['» da questa scaletta? (resta nelle altre)','» from this setlist? (it stays in the others)'],['＋ Aggiungi a «','＋ Add to «'],['Brani del progetto che non sono in questa scaletta:','Project songs not in this setlist:'],['Aggiungi','Add'],[' aggiunti in fondo a «',' added to the end of «'],['Elimina','Delete'],['＋ Ingresso','＋ Input'],['Esci','Exit']
 ].sort((a,b)=>b[0].length-a[0].length);
 const EN_R=[[/(\d+) brani\b/g,'$1 songs'],[/(\d+) tracce\b/g,'$1 tracks'],[/(\d+) scalette\b/g,'$1 setlists'],[/(\d+) scaletta\b/g,'$1 setlist'],[/^Brano (\d+) di (\d+)$/,'Song $1 of $2'],[/ · (\d+) di ([\d.]+ [MG]B)$/,' · $1 of $2']];
 function tr(x){if(LANG!=='en'||x==null)return x;x=String(x);if(!/[A-Za-zÀ-ú]/.test(x))return x;const t=x.trim();
