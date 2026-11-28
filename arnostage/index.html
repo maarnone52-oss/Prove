@@ -340,6 +340,16 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 #stList .pr{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#17181d;border:1px solid #34353d;border-radius:12px;color:#fff;font:inherit;padding:9px;margin-bottom:8px}
 #stList .pr img,#stList .pr .ph{width:44px;height:44px;border-radius:8px;object-fit:cover;flex:none;background:#2a2b33;display:flex;align-items:center;justify-content:center;font-size:20px}
 #stList .pr small{color:var(--mut)}
+.x10{}
+#splash{position:fixed;inset:0;z-index:200;background:#000;display:flex;align-items:center;justify-content:center;animation:splBg .5s ease 1.9s forwards}
+#splash .spl{display:flex;flex-direction:column;align-items:center;gap:16px;opacity:0;animation:splIn .7s ease .15s forwards,splOut .7s ease 1.25s forwards}
+#splash i{width:120px;height:120px;border-radius:28px;background:linear-gradient(135deg,var(--acc),#1d4ed8);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 50px rgba(59,130,246,.55);position:relative;overflow:hidden}
+#splash i::after{content:"";position:absolute;inset:-40%;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.55) 50%,transparent 60%);transform:translateX(-80%);animation:splShine 1s ease .35s forwards}
+#splash b{font-size:38px;font-weight:800;letter-spacing:.01em}#splash b span{color:var(--acc)}
+@keyframes splIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+@keyframes splOut{to{opacity:0;transform:scale(1.03)}}
+@keyframes splShine{to{transform:translateX(80%)}}
+@keyframes splBg{to{opacity:0;visibility:hidden}}
 </style>
 </head>
 <body>
@@ -427,6 +437,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 </main>
 <div id="tabs"><button id="tbSong" class="on">🎚 Brano</button><button class="tp" id="tbPlay">▶</button><button id="tbMix">🎛 Mixer</button><button id="tbList">☰ Scaletta</button><button id="tbProj">📁 Progetti</button></div>
 <div id="status">Pronto.</div>
+<div id="splash"><div class="spl"><i><svg width="70" height="70" viewBox="0 0 24 24" fill="#fff"><rect x="4" y="3" width="3" height="18" rx="1.5"/><rect x="10.5" y="3" width="3" height="18" rx="1.5"/><rect x="17" y="3" width="3" height="18" rx="1.5"/><rect x="2" y="13" width="7" height="4" rx="1.5"/><rect x="8.5" y="6" width="7" height="4" rx="1.5"/><rect x="15" y="10" width="7" height="4" rx="1.5"/></svg></i><b>Arno<span>Stage</span></b></div></div>
 <div id="start" class="on"><div class="sbox">
   <div class="slogo"><i><svg width="38" height="38" viewBox="0 0 24 24" fill="#fff"><rect x="4" y="3" width="3" height="18" rx="1.5"/><rect x="10.5" y="3" width="3" height="18" rx="1.5"/><rect x="17" y="3" width="3" height="18" rx="1.5"/><rect x="2" y="13" width="7" height="4" rx="1.5"/><rect x="8.5" y="6" width="7" height="4" rx="1.5"/><rect x="15" y="10" width="7" height="4" rx="1.5"/></svg></i><div><b>Arno<span>Stage</span></b><small id="stVer"></small></div></div>
   <div id="stCont"></div>
@@ -442,7 +453,7 @@ body.wide.pgMix .transport .tb.auto small{display:none}
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const VERSION='0.3.1';
+const VERSION='0.3.2';
 // ===== Motore nativo (app) o Web Audio (browser) =====
 const MH=(window.webkit&&window.webkit.messageHandlers)||{};
 const NE=MH.eng||null, NS=MH.store||null, NM=MH.mon||null;
@@ -1275,6 +1286,8 @@ $('start').addEventListener('click',async e=>{const b=e.target.closest('button')
   else if(b.dataset.st==='open'){hideStart();page('proj');}
   else if(b.dataset.n){hideStart();const P=await projects();if(lib.length&&!(cfg.proj&&P[cfg.proj])&&!confirm('La raccolta aperta non è salvata. Aprire comunque «'+b.dataset.n+'»?'))return showStart();await openProj(b.dataset.n);page('list');}});
 onPick('fZip3',l=>{hideStart();importZip(l[0]);});onPick('fMany3',l=>{hideStart();importFolder(l);});
+// logo iniziale: sfuma nel nero e lascia il menu di accesso (tocco = salta)
+(()=>{const sp=$('splash');const end=()=>{if(sp.parentNode)sp.remove();};sp.addEventListener('animationend',e=>{if(e.animationName==='splBg')end();});sp.addEventListener('click',end);setTimeout(end,3200);})();
 // ===== Avvio =====
 (async()=>{
   leftUI();layout();applyVW();applyTheme();autoUI();$('miPrevH').classList.toggle('on',!!cfg.prevHdmi);$('miPrev').classList.toggle('on',cfg.prev);$('miIn').classList.toggle('on',cfg.inOn&&NATIVE);
